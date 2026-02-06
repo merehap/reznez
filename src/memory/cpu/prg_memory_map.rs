@@ -145,7 +145,7 @@ impl PrgMapping {
             PageNumberSpace::Rom(read_status) => {
                 let page_number = self.rom_address_template.resolve_page_number(bank_number.to_raw(), self.page_offset);
                 let mem_type = MemType::Rom(read_status);
-                Some(PageInfo { mem_type, page_number, address_template: self.rom_address_template.clone() })
+                Some(PageInfo { mem_type, page_number, address_template: self.rom_address_template })
             }
             PageNumberSpace::Ram(read_status, write_status) => {
                 let page_number = self.ram_address_template.resolve_page_number(bank_number.to_raw(), self.page_offset);
@@ -155,7 +155,7 @@ impl PrgMapping {
                     (MemType::WorkRam(read_status, write_status), page_number - regs.work_ram_start_page_number())
                 };
 
-                Some(PageInfo { mem_type, page_number, address_template: self.ram_address_template.clone() })
+                Some(PageInfo { mem_type, page_number, address_template: self.ram_address_template })
             }
         }
     }

@@ -59,7 +59,7 @@ const OUTER_BANK_SEGMENT: u8 = 2;
  *              +-----------------------------------------------------------+
  * ```
 **/ 
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct AddressTemplate {
     bit_template: BitTemplate,
     fixed_inner_bank_number: Option<u16>,
@@ -109,6 +109,14 @@ impl AddressTemplate {
         }
 
         address_template
+    }
+
+    pub const fn from_formatted(text: &'static str) -> Result<Self, &'static str> {
+        Self::from_bit_template(BitTemplate::from_formatted(text)?)
+    }
+
+    const fn from_bit_template(bit_template: BitTemplate) -> Result<Self, &'static str> {
+        Ok(Self { bit_template, fixed_inner_bank_number: None })
     }
 
     pub const fn total_width(&self) -> u8 {

@@ -2,7 +2,7 @@ use itertools::Itertools;
 
 use crate::util::const_vec::ConstVec;
 
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct BitTemplate {
     // Segments are stored right-to-left, the reverse of how they are rendered.
     segments: ConstVec<Segment, 3>,

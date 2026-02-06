@@ -2,6 +2,7 @@ use crate::mapper::CiramSide;
 use crate::mapper::NameTableSource;
 use crate::mapper::ReadStatus;
 use crate::mapper::WriteStatus;
+use crate::memory::address_template::AddressTemplate;
 use crate::memory::bank::bank::PrgSourceRegisterId::*;
 use crate::memory::bank::bank::ChrSourceRegisterId::*;
 use crate::memory::bank::bank_number::PageNumberSpace;
@@ -73,7 +74,7 @@ pub struct PrgBank {
     prg_source_provider: PrgSourceProvider,
     read_status_register_id: Option<ReadStatusRegisterId>,
     write_status_register_id: Option<WriteStatusRegisterId>,
-    rom_address_template_override: Option<&'static str>,
+    rom_address_template_override: Option<AddressTemplate>,
 }
 
 impl PrgBank {
@@ -147,6 +148,16 @@ impl PrgBank {
     pub const fn rom_ram_register(mut self, id: PrgSourceRegisterId) -> Self {
         assert!(self.prg_source_provider.is_switchable(), "Only ROM_RAM may have a rom ram register.");
         self.prg_source_provider = PrgSourceProvider::Switchable(id);
+        self
+    }
+
+    pub const fn override_rom_address_template(mut self, template: &'static str) -> Self {
+        assert!(self.prg_source_provider.is_switchable(), "Only ROM_RAM may have a rom ram register.");
+        match AddressTemplate::from_formatted(template) {
+            Ok(template) => self.rom_address_template_override = Some(template),
+            Err(err) => panic!("{}", err),
+        }
+
         self
     }
 
