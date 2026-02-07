@@ -14,6 +14,7 @@ categories = ["emulators", "games"]
 [dependencies]
 arr_macro = "0.2.1"
 bitvec = "1.0.1"
+const_panic = "0.2.15"
 crc32fast = "1.4.2"
 enum-iterator = "2.1.0"
 gilrs = "0.11.0"

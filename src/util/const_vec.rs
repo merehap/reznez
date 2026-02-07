@@ -41,18 +41,35 @@ impl <T: Clone + Copy, const CAPACITY: usize> ConstVec<T, CAPACITY> {
         unsafe { self.backing[index as usize].assume_init_mut() }
     }
 
-    pub const fn push(&mut self, item: T) {
+    pub const fn push(&mut self, new_value: T) {
         self.len = self.len.checked_add(1)
             .expect("not more than 256 items to be pushed");
         assert!((self.len as usize) <= CAPACITY);
 
-        self.backing[self.len as usize - 1].write(item);
+        self.backing[self.len as usize - 1].write(new_value);
+    }
+
+    pub const fn push_front(&mut self, new_value: T) {
+        self.len = self.len.checked_add(1)
+            .expect("not more than 256 items to be pushed");
+        assert!((self.len as usize) <= CAPACITY);
+
+        // Shift all the items to the right so the new item can be put at the front.
+        let mut i = self.len - 1;
+        while i > 0 {
+            // SAFETY: Values before the len have already been set.
+            let value = unsafe { self.backing[i as usize - 1].assume_init() };
+            self.backing[i as usize].write(value);
+            i -= 1;
+        }
+
+        self.backing[0].write(new_value);
     }
 
     pub fn as_iter(self) -> impl DoubleEndedIterator<Item = T> {
         self.backing.into_iter()
             .take(self.len as usize)
-            // SAFETY: Values before the index have already been set.
+            // SAFETY: Values before the len have already been set.
             // TODO: Remove unsafe by implementing Default or similar.
             .map(|value| unsafe { value.assume_init() })
     }

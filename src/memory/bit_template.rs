@@ -36,6 +36,10 @@ impl BitTemplate {
         self.segments.get(segment_index).magnitude()
     }
 
+    pub const fn label_of(&self, segment_index: u8) -> Label {
+        self.segments.get(segment_index).label
+    }
+
     pub fn resolve(&self, raw_values: &[u16]) -> u32 {
         let mut result = 0;
         let mut index = 0;
@@ -59,24 +63,28 @@ impl BitTemplate {
     }
 
     pub const fn from_formatted(text: &str) -> Result<Self, &'static str> {
+        const SEGMENT_ATOM_LENGTH: usize = 7;
+
         let bytes = text.as_bytes();
-        if !bytes.len().is_multiple_of(3) {
-            return Err("BitTemplate length must be a multiple of 3.");
+        if !bytes.len().is_multiple_of(SEGMENT_ATOM_LENGTH) {
+            return Err("BitTemplate byte length must be a multiple of 7 (subscript chars are 3 bytes each).");
         }
 
-        if bytes.len() < 3 {
-            return Err("BitTemplate length must be at least 3.");
+        if bytes.len() < SEGMENT_ATOM_LENGTH {
+            return Err("BitTemplate must have at least one segment (minimally a label and two subscript chars).");
         }
 
         let mut segments: ConstVec<Segment, 3> = ConstVec::new();
-        let mut label = Label::from_char(bytes[0] as char);
-        let mut index = 3;
+        segments.push_front(Segment::from_bytes(&bytes[0..SEGMENT_ATOM_LENGTH])?);
+
+        let mut index = SEGMENT_ATOM_LENGTH;
         while index < bytes.len() {
-            if let Some(old_label) = label.extend_or_replace(bytes[index] as char) {
-                segments.push(Segment { label: old_label, original_magnitude: 0, magnitude: 0, ignored_low_count: 0 });
+            if segments.get_mut(0).label.extend_or_new(bytes[index] as char).is_some() {
+                // The old segment is done, start building a new one.
+                segments.push_front(Segment::from_bytes(&bytes[index..index + SEGMENT_ATOM_LENGTH])?);
             }
 
-            index += 3;
+            index += SEGMENT_ATOM_LENGTH;
         }
 
         Ok(BitTemplate::right_to_left(segments))
@@ -124,6 +132,22 @@ impl Segment {
         }
     }
 
+    pub const fn from_bytes(bytes: &[u8]) -> Result<Self, &'static str> {
+        assert!(bytes.len() == 7);
+
+        let label = Label::from_char(bytes[0] as char);
+        let tens_digit = subscript_utf8_bytes_to_digit(bytes[1], bytes[2], bytes[3])?;
+        let ones_digit = subscript_utf8_bytes_to_digit(bytes[4], bytes[5], bytes[6])?;
+        let subscript = 10 * tens_digit + ones_digit;
+        let magnitude = subscript + 1;
+        Ok(Self {
+            label,
+            original_magnitude: magnitude,
+            magnitude,
+            ignored_low_count: 0,
+        })
+    }
+
     pub fn original_magnitude(&self) -> u8 {
         self.original_magnitude
     }
@@ -163,13 +187,13 @@ impl Segment {
         match self.label {
             Label::Name(_) => {
                 (self.ignored_low_count..self.magnitude).rev()
-                    .map(|i| [self.label_text_at(i - self.ignored_low_count), to_subscript(i)].concat())
+                    .map(|i| [self.label_text_at(i - self.ignored_low_count), subscript_digit_to_string(i)].concat())
                     .join("")
             }
             Label::Constant { lowest_subscript, .. } => {
                 let lowest_visible_subscript = lowest_subscript + self.ignored_low_count;
                 (lowest_visible_subscript..lowest_visible_subscript + self.width()).rev()
-                    .map(|i| [self.label_text_at(i - lowest_subscript), to_subscript(i)].concat())
+                    .map(|i| [self.label_text_at(i - lowest_subscript), subscript_digit_to_string(i)].concat())
                     .join("")
             }
         }
@@ -223,7 +247,7 @@ impl Label {
         }
     }
 
-    const fn extend_or_replace(&mut self, c: char) -> Option<Self> {
+    const fn extend_or_new(&mut self, c: char) -> Option<Self> {
         let new = Self::from_char(c);
         use Label::*;
         match (new, *self) {
@@ -239,10 +263,9 @@ impl Label {
             (Name(new_name), Name(old_name)) if new_name == old_name => {
                 None
             }
-            // If the name changed, or it's a new variant, then a new Label must be made (the old one can't be extended).
+            // If the name changed, or it's a new variant, then a new Label must be made (the old one can't be extended further).
             (Name(_), Name(_) | Constant {..}) | (Constant {..}, Name(_)) => {
-                let old = std::mem::replace(self, new);
-                Some(old)
+                Some(new)
             }
         }
     }
@@ -255,7 +278,7 @@ impl Default for Label {
     }
 }
 
-fn to_subscript(value: u8) -> String {
+fn subscript_digit_to_string(value: u8) -> String {
     let subscript_of = |c| {
         match c {
             '0' => '₀',
@@ -277,4 +300,49 @@ fn to_subscript(value: u8) -> String {
         .chars()
         .map(subscript_of)
         .collect()
+}
+
+const fn subscript_utf8_bytes_to_digit(top: u8, mid: u8, bot: u8) -> Result<u8, &'static str> {
+    // Standard library UTF8 decoding isn't available in const contexts, so re-implement a little bit here.
+    Ok(match (top, mid, bot) {
+        (0xE2, 0x82, 0x80) => 0, // '₀'
+        (0xE2, 0x82, 0x81) => 1, // '₁'
+        (0xE2, 0x82, 0x82) => 2, // '₂'
+        (0xE2, 0x82, 0x83) => 3, // '₃'
+        (0xE2, 0x82, 0x84) => 4, // '₄'
+        (0xE2, 0x82, 0x85) => 5, // '₅'
+        (0xE2, 0x82, 0x86) => 6, // '₆'
+        (0xE2, 0x82, 0x87) => 7, // '₇'
+        (0xE2, 0x82, 0x88) => 8, // '₈'
+        (0xE2, 0x82, 0x89) => 9, // '₉'
+        _ => return Err("Non-subscript character specified."),
+    })
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn subscript_digit() {
+        assert_eq!(subscript_utf8_bytes_to_digit(0xE2, 0x82, 0x80), Ok(0));
+    }
+
+    #[test]
+    fn segment_from_bytes() {
+        let segment = Segment::from_bytes(&[0x61, 0xE2, 0x82, 0x81, 0xE2, 0x82, 0x82]).unwrap();
+        assert_eq!(segment.label, Label::Name('a'));
+        assert_eq!(segment.magnitude, 13);
+    }
+
+    #[test]
+    fn segment_from_formatted() {
+        let text = "o₀₀i₀₀a₀₀";
+        let bit_template = BitTemplate::from_formatted(text).unwrap();
+        let segments: Vec<Segment> = bit_template.segments.as_iter().collect();
+        assert_eq!(segments[0].label, Label::Name('a'));
+        assert_eq!(segments[1].label, Label::Name('i'));
+        assert_eq!(segments[2].label, Label::Name('o'));
+        assert_eq!(bit_template.formatted(), text);
+    }
 }

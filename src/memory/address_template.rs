@@ -116,6 +116,10 @@ impl AddressTemplate {
     }
 
     const fn from_bit_template(bit_template: BitTemplate) -> Result<Self, &'static str> {
+        if bit_template.width() > 32 {
+            return Err("AddressTemplate must not be longer than 32 bits.");
+        }
+
         Ok(Self { bit_template, fixed_inner_bank_number: None })
     }
 

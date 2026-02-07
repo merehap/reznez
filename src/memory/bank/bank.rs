@@ -152,7 +152,7 @@ impl PrgBank {
     }
 
     pub const fn override_rom_address_template(mut self, template: &'static str) -> Self {
-        assert!(self.prg_source_provider.is_switchable(), "Only ROM_RAM may have a rom ram register.");
+        assert!(self.prg_source_provider.is_mapped(), "An ABSENT bank can't have an override ROM address template.");
         match AddressTemplate::from_formatted(template) {
             Ok(template) => self.rom_address_template_override = Some(template),
             Err(err) => panic!("{}", err),
