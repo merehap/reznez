@@ -1,6 +1,6 @@
 use std::num::NonZeroU16;
 
-use crate::memory::address_template::{AddressTemplate, BankSizes};
+use crate::memory::address_template::address_template::{AddressTemplate, BankSizes};
 use crate::memory::bank::bank::PrgBank;
 use crate::memory::bank::bank_number::{ChrBankRegisters, PrgBankRegisterId};
 use crate::util::unit::KIBIBYTE;
@@ -120,10 +120,14 @@ pub struct PrgWindowStart(u16);
 
 impl PrgWindowStart {
     const fn new(address: u16) -> Self {
-        assert!(address >= 0x6000,
-            "PrgWindow start address must be equal to or greater than 0x6000.");
-        assert!(address.is_multiple_of(PRG_SUB_PAGE_SIZE),
-            "PrgWindow start address must be a multiple of 0x80 (128).");
+        assert!(
+            address >= 0x6000,
+            "PrgWindow start address must be equal to or greater than 0x6000."
+        );
+        assert!(
+            address.is_multiple_of(PRG_SUB_PAGE_SIZE),
+            "PrgWindow start address must be a multiple of 0x80 (128)."
+        );
         Self(address)
     }
 }
@@ -133,10 +137,14 @@ pub struct PrgWindowEnd(NonZeroU16);
 
 impl PrgWindowEnd {
     const fn new(address: u16) -> Self {
-        assert!(address > 0x6000,
-            "PrgWindow end address must be greater than 0x6000.");
-        assert!(address.wrapping_add(1).is_multiple_of(PRG_SUB_PAGE_SIZE),
-            "PrgWindow end address must be a multiple of 0x80 (128), minus 1.");
+        assert!(
+            address > 0x6000,
+            "PrgWindow end address must be greater than 0x6000."
+        );
+        assert!(
+            address.wrapping_add(1).is_multiple_of(PRG_SUB_PAGE_SIZE),
+            "PrgWindow end address must be a multiple of 0x80 (128), minus 1."
+        );
         Self(NonZeroU16::new(address).unwrap())
     }
 }
@@ -148,21 +156,33 @@ impl PrgWindowSize {
     pub const MIN: Self = Self(8 * KIBIBYTE as u16);
 
     pub const fn from_raw(size: u32) -> Self {
-        assert!(size >= KIBIBYTE / 8, "PrgWindow sizes must be at least 128 (0x80) bytes.");
-        assert!(size <= 32 * KIBIBYTE, "PrgWindow sizes must be at most 32 kibibytes.");
+        assert!(
+            size >= KIBIBYTE / 8,
+            "PrgWindow sizes must be at least 128 (0x80) bytes."
+        );
+        assert!(
+            size <= 32 * KIBIBYTE,
+            "PrgWindow sizes must be at most 32 kibibytes."
+        );
 
         let size = size as u16;
-        assert!(size.is_multiple_of(PRG_SUB_PAGE_SIZE),
-            "PrgWindow sizes must be multiples of 128 bytes.");
+        assert!(
+            size.is_multiple_of(PRG_SUB_PAGE_SIZE),
+            "PrgWindow sizes must be multiples of 128 bytes."
+        );
 
         Self(size)
     }
 
     const fn new(size: u32, start: PrgWindowStart, end: PrgWindowEnd) -> Self {
-        assert!(end.0.get() > start.0,
-            "PrgWindow end address was less than its start address.");
-        assert!(end.0.get() - start.0 + 1 == size as u16,
-            "PrgWindow size was must equal the end address minus the start address, plus one.");
+        assert!(
+            end.0.get() > start.0,
+            "PrgWindow end address was less than its start address."
+        );
+        assert!(
+            end.0.get() - start.0 + 1 == size as u16,
+            "PrgWindow size was must equal the end address minus the start address, plus one."
+        );
 
         Self::from_raw(size)
     }
@@ -192,10 +212,14 @@ pub struct ChrWindowStart(u16);
 
 impl ChrWindowStart {
     const fn new(address: u16) -> Self {
-        assert!(address < 0x4000,
-            "ChrWindow start address must be less than 0x4000.");
-        assert!(address.is_multiple_of(CHR_PAGE_SIZE),
-            "ChrWindow start address must be a multiple of 0x400.");
+        assert!(
+            address < 0x4000,
+            "ChrWindow start address must be less than 0x4000."
+        );
+        assert!(
+            address.is_multiple_of(CHR_PAGE_SIZE),
+            "ChrWindow start address must be a multiple of 0x400."
+        );
         Self(address)
     }
 }
@@ -205,11 +229,18 @@ pub struct ChrWindowEnd(NonZeroU16);
 
 impl ChrWindowEnd {
     const fn new(address: u16) -> Self {
-        assert!(address < 0x4000,
-            "ChrWindow end address must be less than 0x4000.");
-        assert!(address.wrapping_add(1).is_multiple_of(CHR_PAGE_SIZE),
-            "ChrWindow end address must be a multiple of 0x400, minus 1.");
-        Self(NonZeroU16::new(address).expect("ChrWindow end address to be greater than 0."))
+        assert!(
+            address < 0x4000,
+            "ChrWindow end address must be less than 0x4000."
+        );
+        assert!(
+            address.wrapping_add(1).is_multiple_of(CHR_PAGE_SIZE),
+            "ChrWindow end address must be a multiple of 0x400, minus 1."
+        );
+        Self(
+            NonZeroU16::new(address)
+                .expect("ChrWindow end address to be greater than 0."),
+        )
     }
 }
 
@@ -218,14 +249,24 @@ pub struct ChrWindowSize(u16);
 
 impl ChrWindowSize {
     const fn new(size: u32, start: ChrWindowStart, end: ChrWindowEnd) -> Self {
-        assert!(size >= KIBIBYTE, "ChrWindow sizes must be at least 1 kibibyte.");
-        assert!(size <= 8 * KIBIBYTE, "ChrWindow sizes must be at most 8 kibibytes.");
+        assert!(
+            size >= KIBIBYTE,
+            "ChrWindow sizes must be at least 1 kibibyte."
+        );
+        assert!(
+            size <= 8 * KIBIBYTE,
+            "ChrWindow sizes must be at most 8 kibibytes."
+        );
         let size = size as u16;
 
-        assert!(end.0.get() > start.0,
-            "ChrWindow end address was less than its start address.");
-        assert!(end.0.get() - start.0 + 1 == size,
-            "ChrWindow size was must equal the end address minus the start address, plus one.");
+        assert!(
+            end.0.get() > start.0,
+            "ChrWindow end address was less than its start address."
+        );
+        assert!(
+            end.0.get() - start.0 + 1 == size,
+            "ChrWindow size was must equal the end address minus the start address, plus one."
+        );
 
         Self(size)
     }

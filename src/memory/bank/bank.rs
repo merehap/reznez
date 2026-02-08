@@ -2,12 +2,14 @@ use crate::mapper::CiramSide;
 use crate::mapper::NameTableSource;
 use crate::mapper::ReadStatus;
 use crate::mapper::WriteStatus;
-use crate::memory::address_template::AddressTemplate;
-use crate::memory::bank::bank::PrgSourceRegisterId::*;
+use crate::memory::address_template::address_template::AddressTemplate;
 use crate::memory::bank::bank::ChrSourceRegisterId::*;
-use crate::memory::bank::bank_number::PageNumberSpace;
-use crate::memory::bank::bank_number::{BankNumber, PrgBankRegisters, PrgBankRegisterId, MetaRegisterId};
+use crate::memory::bank::bank::PrgSourceRegisterId::*;
 use crate::memory::bank::bank_number::BankLocation;
+use crate::memory::bank::bank_number::PageNumberSpace;
+use crate::memory::bank::bank_number::{
+    BankNumber, MetaRegisterId, PrgBankRegisterId, PrgBankRegisters,
+};
 
 use super::bank_number::{ChrBankRegisterId, ChrBankRegisters};
 
@@ -58,12 +60,18 @@ pub enum ChrSource {
 }
 
 impl ChrSource {
-    pub fn from_name_table_source(name_table_source: NameTableSource) -> (Self, Option<BankNumber>) {
+    pub fn from_name_table_source(
+        name_table_source: NameTableSource,
+    ) -> (Self, Option<BankNumber>) {
         match name_table_source {
             NameTableSource::Ciram(ciram_side) => (ChrSource::Ciram(ciram_side), None),
             NameTableSource::Rom { bank_number } => (ChrSource::Rom, Some(bank_number)),
-            NameTableSource::Ram { bank_number } => (ChrSource::WorkRam, Some(bank_number)),
-            NameTableSource::MapperCustom { page_number } => (ChrSource::MapperCustom { page_number }, None),
+            NameTableSource::Ram { bank_number } => {
+                (ChrSource::WorkRam, Some(bank_number))
+            }
+            NameTableSource::MapperCustom { page_number } => {
+                (ChrSource::MapperCustom { page_number }, None)
+            }
         }
     }
 }
@@ -115,44 +123,70 @@ impl PrgBank {
     };
 
     pub const fn fixed_number(mut self, index: i16) -> Self {
-        assert!(self.prg_source_provider.is_mapped(), "An ABSENT bank can't be fixed_index.");
-        self.bank_number_provider = PrgBankNumberProvider::Fixed(BankNumber::from_i16(index));
+        assert!(
+            self.prg_source_provider.is_mapped(),
+            "An ABSENT bank can't be fixed_index."
+        );
+        self.bank_number_provider =
+            PrgBankNumberProvider::Fixed(BankNumber::from_i16(index));
         self
     }
 
     pub const fn switchable(mut self, register_id: PrgBankRegisterId) -> Self {
-        assert!(self.prg_source_provider.is_mapped(), "An ABSENT bank can't be switchable.");
+        assert!(
+            self.prg_source_provider.is_mapped(),
+            "An ABSENT bank can't be switchable."
+        );
         self.bank_number_provider = PrgBankNumberProvider::Switchable(register_id);
         self
     }
 
     pub const fn read_status(mut self, read_id: ReadStatusRegisterId) -> Self {
-        assert!(self.prg_source_provider.is_mapped(), "An ABSENT bank can't have a read status register.");
+        assert!(
+            self.prg_source_provider.is_mapped(),
+            "An ABSENT bank can't have a read status register."
+        );
         self.read_status_register_id = Some(read_id);
         self
     }
 
     pub const fn write_status(mut self, write_id: WriteStatusRegisterId) -> Self {
-        assert!(self.prg_source_provider.is_mapped(), "An ABSENT bank can't have a write status register.");
+        assert!(
+            self.prg_source_provider.is_mapped(),
+            "An ABSENT bank can't have a write status register."
+        );
         self.write_status_register_id = Some(write_id);
         self
     }
 
-    pub const fn read_write_status(mut self, read_id: ReadStatusRegisterId, write_id: WriteStatusRegisterId) -> Self {
-        assert!(self.prg_source_provider.is_mapped(), "An ABSENT bank can't have a read or write status register.");
+    pub const fn read_write_status(
+        mut self,
+        read_id: ReadStatusRegisterId,
+        write_id: WriteStatusRegisterId,
+    ) -> Self {
+        assert!(
+            self.prg_source_provider.is_mapped(),
+            "An ABSENT bank can't have a read or write status register."
+        );
         self.read_status_register_id = Some(read_id);
         self.write_status_register_id = Some(write_id);
         self
     }
 
     pub const fn rom_ram_register(mut self, id: PrgSourceRegisterId) -> Self {
-        assert!(self.prg_source_provider.is_switchable(), "Only ROM_RAM may have a rom ram register.");
+        assert!(
+            self.prg_source_provider.is_switchable(),
+            "Only ROM_RAM may have a rom ram register."
+        );
         self.prg_source_provider = PrgSourceProvider::Switchable(id);
         self
     }
 
     pub const fn override_rom_address_template(mut self, template: &'static str) -> Self {
-        assert!(self.prg_source_provider.is_mapped(), "An ABSENT bank can't have an override ROM address template.");
+        assert!(
+            self.prg_source_provider.is_mapped(),
+            "An ABSENT bank can't have an override ROM address template."
+        );
         match AddressTemplate::from_formatted(template) {
             Ok(template) => self.rom_address_template_override = Some(template),
             Err(err) => panic!("{}", err),
@@ -162,13 +196,19 @@ impl PrgBank {
     }
 
     pub const fn is_rom(self) -> bool {
-        matches!(self.prg_source_provider, PrgSourceProvider::Fixed(Some(PrgSource::Rom)) | PrgSourceProvider::Switchable(_))
+        matches!(
+            self.prg_source_provider,
+            PrgSourceProvider::Fixed(Some(PrgSource::Rom))
+                | PrgSourceProvider::Switchable(_)
+        )
     }
 
     pub const fn supports_ram(self) -> bool {
-        matches!(self.prg_source_provider,
+        matches!(
+            self.prg_source_provider,
             PrgSourceProvider::Fixed(Some(PrgSource::RamOrAbsent | PrgSource::RamOrRom))
-                | PrgSourceProvider::Switchable(_))
+                | PrgSourceProvider::Switchable(_)
+        )
     }
 
     pub fn is_rom_ram(self) -> bool {
@@ -209,21 +249,28 @@ impl PrgBank {
             PrgSourceProvider::Switchable(reg_id) => Some(regs.rom_ram_mode(reg_id)),
         }?;
 
-        let read_status = self.read_status_register_id.map_or(ReadStatus::Enabled, |id| regs.read_status(id));
-        let write_status = self.write_status_register_id.map_or(WriteStatus::Enabled, |id| regs.write_status(id));
+        let read_status = self
+            .read_status_register_id
+            .map_or(ReadStatus::Enabled, |id| regs.read_status(id));
+        let write_status = self
+            .write_status_register_id
+            .map_or(WriteStatus::Enabled, |id| regs.write_status(id));
 
         // There's currently no way to set make the ROM ReadStatus of a RomRam bank switchable.
-        if self.is_rom_ram() && (prg_source == PrgSource::Rom || !regs.cartridge_has_ram()) {
+        if self.is_rom_ram()
+            && (prg_source == PrgSource::Rom || !regs.cartridge_has_ram())
+        {
             return Some(PageNumberSpace::Rom(ReadStatus::Enabled));
         }
 
         match prg_source {
-            PrgSource::RamOrRom | PrgSource::RamOrAbsent if regs.cartridge_has_ram() =>
-                Some(PageNumberSpace::Ram(read_status, write_status)),
-            PrgSource::Rom | PrgSource::RamOrRom =>
-                Some(PageNumberSpace::Rom(read_status)),
-            PrgSource::RamOrAbsent =>
-                None,
+            PrgSource::RamOrRom | PrgSource::RamOrAbsent if regs.cartridge_has_ram() => {
+                Some(PageNumberSpace::Ram(read_status, write_status))
+            }
+            PrgSource::Rom | PrgSource::RamOrRom => {
+                Some(PageNumberSpace::Rom(read_status))
+            }
+            PrgSource::RamOrAbsent => None,
         }
     }
 }
@@ -330,8 +377,12 @@ pub enum ChrSourceRegisterId {
 }
 
 impl ChrSourceRegisterId {
-    pub const ALL_NAME_TABLE_SOURCE_IDS: [Self; 4] =
-        [ChrSourceRegisterId::NT0, ChrSourceRegisterId::NT1, ChrSourceRegisterId::NT2, ChrSourceRegisterId::NT3];
+    pub const ALL_NAME_TABLE_SOURCE_IDS: [Self; 4] = [
+        ChrSourceRegisterId::NT0,
+        ChrSourceRegisterId::NT1,
+        ChrSourceRegisterId::NT2,
+        ChrSourceRegisterId::NT3,
+    ];
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -377,7 +428,9 @@ impl ChrBank {
     pub const fn ciram(ciram_side: CiramSide) -> Self {
         Self {
             bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
-            chr_source_provider: ChrSourceProvider::Fixed(Some(ChrSource::Ciram(ciram_side))),
+            chr_source_provider: ChrSourceProvider::Fixed(Some(ChrSource::Ciram(
+                ciram_side,
+            ))),
             read_status_register_id: None,
             write_status_register_id: None,
         }
@@ -395,7 +448,9 @@ impl ChrBank {
     pub const fn mapper_sourced(page_number: u8) -> Self {
         Self {
             bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
-            chr_source_provider: ChrSourceProvider::Fixed(Some(ChrSource::MapperCustom { page_number })),
+            chr_source_provider: ChrSourceProvider::Fixed(Some(
+                ChrSource::MapperCustom { page_number },
+            )),
             read_status_register_id: None,
             write_status_register_id: None,
         }
@@ -421,15 +476,25 @@ impl ChrBank {
     }
 
     pub fn is_rom(self) -> bool {
-        matches!(self.chr_source_provider, ChrSourceProvider::Fixed(Some(ChrSource::Rom)) | ChrSourceProvider::Switchable(_))
+        matches!(
+            self.chr_source_provider,
+            ChrSourceProvider::Fixed(Some(ChrSource::Rom))
+                | ChrSourceProvider::Switchable(_)
+        )
     }
 
     pub fn is_ram(self) -> bool {
-        matches!(self.chr_source_provider,
-            ChrSourceProvider::Fixed(Some(ChrSource::WorkRam | ChrSource::SaveRam)) | ChrSourceProvider::Switchable(_))
+        matches!(
+            self.chr_source_provider,
+            ChrSourceProvider::Fixed(Some(ChrSource::WorkRam | ChrSource::SaveRam))
+                | ChrSourceProvider::Switchable(_)
+        )
     }
 
-    pub const fn register_id(&self, regs: &ChrBankRegisters) -> Option<ChrBankRegisterId> {
+    pub const fn register_id(
+        &self,
+        regs: &ChrBankRegisters,
+    ) -> Option<ChrBankRegisterId> {
         self.bank_number_provider.register_id(regs)
     }
 
@@ -450,15 +515,22 @@ impl ChrBank {
     }
 
     pub fn bank_location(self, regs: &ChrBankRegisters) -> Option<BankLocation> {
-        self.location().ok().map(|provider| BankLocation::Index(provider.bank_location(regs)))
+        self.location()
+            .ok()
+            .map(|provider| BankLocation::Index(provider.bank_location(regs)))
     }
 
     pub fn bank_number(self, regs: &ChrBankRegisters) -> Option<BankNumber> {
-        self.location().ok().map(|provider| provider.bank_location(regs))
+        self.location()
+            .ok()
+            .map(|provider| provider.bank_location(regs))
     }
 
     pub const fn chr_source(mut self, id: ChrSourceRegisterId) -> Self {
-        assert!(matches!(self.chr_source_provider, ChrSourceProvider::Switchable(_)));
+        assert!(matches!(
+            self.chr_source_provider,
+            ChrSourceProvider::Switchable(_)
+        ));
         self.chr_source_provider = ChrSourceProvider::Switchable(id);
         self
     }
@@ -475,7 +547,11 @@ impl ChrBank {
         self
     }
 
-    pub const fn read_write_status(mut self, read_id: ReadStatusRegisterId, write_id: WriteStatusRegisterId) -> Self {
+    pub const fn read_write_status(
+        mut self,
+        read_id: ReadStatusRegisterId,
+        write_id: WriteStatusRegisterId,
+    ) -> Self {
         assert!(self.chr_source_provider.is_mapped());
         self.read_status_register_id = Some(read_id);
         self.write_status_register_id = Some(write_id);
@@ -484,8 +560,14 @@ impl ChrBank {
 
     const fn set_location(mut self, location: ChrBankNumberProvider) -> Self {
         assert!(self.chr_source_provider.is_mapped());
-        assert!(self.read_status_register_id.is_none(), "Location must be set before read status register.");
-        assert!(self.write_status_register_id.is_none(), "Location must be set before write status register.");
+        assert!(
+            self.read_status_register_id.is_none(),
+            "Location must be set before read status register."
+        );
+        assert!(
+            self.write_status_register_id.is_none(),
+            "Location must be set before write status register."
+        );
         self.bank_number_provider = location;
         self
     }
@@ -509,11 +591,16 @@ impl ChrBankNumberProvider {
         }
     }
 
-    pub const fn register_id(self, registers: &ChrBankRegisters) -> Option<ChrBankRegisterId> {
+    pub const fn register_id(
+        self,
+        registers: &ChrBankRegisters,
+    ) -> Option<ChrBankRegisterId> {
         match self {
             Self::Fixed(_) => None,
             Self::Switchable(register_id) => Some(register_id),
-            Self::MetaSwitchable(meta_id) => Some(registers.get_register_id_from_meta(meta_id)),
+            Self::MetaSwitchable(meta_id) => {
+                Some(registers.get_register_id_from_meta(meta_id))
+            }
         }
     }
 }

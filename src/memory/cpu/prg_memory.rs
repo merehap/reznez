@@ -1,8 +1,11 @@
-use log::{info, warn};
 use crate::mapper::{BankNumber, KIBIBYTE, PrgBankRegisterId};
-use crate::memory::address_template::BankSizes;
-use crate::memory::bank::bank::{PrgSource, ReadStatusRegisterId, PrgSourceRegisterId, WriteStatusRegisterId};
-use crate::memory::bank::bank_number::{MemType, PrgBankRegisters, ReadStatus, WriteStatus};
+use crate::memory::address_template::address_template::BankSizes;
+use crate::memory::bank::bank::{
+    PrgSource, PrgSourceRegisterId, ReadStatusRegisterId, WriteStatusRegisterId,
+};
+use crate::memory::bank::bank_number::{
+    MemType, PrgBankRegisters, ReadStatus, WriteStatus,
+};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::{PrgLayout, PrgLayouts};
 use crate::memory::cpu::prg_memory_map::{PageInfo, PrgMemoryMap, PrgPageIdSlot};
@@ -10,6 +13,7 @@ use crate::memory::layout::OuterBankLayout;
 use crate::memory::raw_memory::{RawMemory, SaveRam};
 use crate::memory::read_result::ReadResult;
 use crate::memory::window::PrgWindow;
+use log::{info, warn};
 
 pub struct PrgMemory {
     layouts: PrgLayouts,
@@ -34,8 +38,10 @@ impl PrgMemory {
         regs: PrgBankRegisters,
     ) -> PrgMemory {
         if !layouts.ram_supported() && (!work_ram.is_empty() || !save_ram.is_empty()) {
-            warn!("The PRG RAM that was specified in the rom file will be ignored since it is not \
-                    configured in the Layout for this mapper.");
+            warn!(
+                "The PRG RAM that was specified in the rom file will be ignored since it is not \
+                    configured in the Layout for this mapper."
+            );
             work_ram = RawMemory::new(0);
             save_ram = SaveRam::empty();
         }
@@ -43,15 +49,22 @@ impl PrgMemory {
         let rom_outer_bank_count = rom_outer_bank_layout.outer_bank_count(rom.size());
         let rom_outer_bank_size = rom.size() / rom_outer_bank_count.get() as u32;
 
-        let rom_bank_sizes = BankSizes::new(rom.size(), rom_outer_bank_size, layouts.rom_max_bank_sizes().inner_bank_size());
+        let rom_bank_sizes = BankSizes::new(
+            rom.size(),
+            rom_outer_bank_size,
+            layouts.rom_max_bank_sizes().inner_bank_size(),
+        );
 
         // When a mapper has both Work RAM and Save RAM, the bank/page numbers are shared (save ram gets the lower numbers).
         let ram_size = work_ram.size() + save_ram.size();
         // FIXME: Hard-coded RAM bank size.
         let ram_bank_sizes = BankSizes::new(ram_size, ram_size, 8 * KIBIBYTE);
 
-        let memory_maps = layouts.iter()
-            .map(|initial_layout| PrgMemoryMap::new(initial_layout, &rom_bank_sizes, &ram_bank_sizes, &regs))
+        let memory_maps = layouts
+            .iter()
+            .map(|initial_layout| {
+                PrgMemoryMap::new(initial_layout, &rom_bank_sizes, &ram_bank_sizes, &regs)
+            })
             .collect();
 
         PrgMemory {
@@ -71,13 +84,21 @@ impl PrgMemory {
     }
 
     pub fn peek(&self, address: CpuAddress) -> ReadResult {
-        if let Some((mem_type, index)) = self.memory_maps[self.memory_map_index as usize].index_for_address(self.rom_outer_bank_number, address) {
+        if let Some((mem_type, index)) = self.memory_maps[self.memory_map_index as usize]
+            .index_for_address(self.rom_outer_bank_number, address)
+        {
             match (mem_type, mem_type.read_status()) {
-                (_                   , ReadStatus::Disabled     ) => ReadResult::OPEN_BUS,
-                (_                   , ReadStatus::ReadOnlyZeros) => ReadResult::full(0),
-                (MemType::WorkRam(..), ReadStatus::Enabled      ) => ReadResult::full(self.work_ram[index]),
-                (MemType::SaveRam(..), ReadStatus::Enabled      ) => ReadResult::full(self.save_ram[index % self.save_ram.size()]),
-                (MemType::Rom(..)    , ReadStatus::Enabled      ) => ReadResult::full(self.rom[index]),
+                (_, ReadStatus::Disabled) => ReadResult::OPEN_BUS,
+                (_, ReadStatus::ReadOnlyZeros) => ReadResult::full(0),
+                (MemType::WorkRam(..), ReadStatus::Enabled) => {
+                    ReadResult::full(self.work_ram[index])
+                }
+                (MemType::SaveRam(..), ReadStatus::Enabled) => {
+                    ReadResult::full(self.save_ram[index % self.save_ram.size()])
+                }
+                (MemType::Rom(..), ReadStatus::Enabled) => {
+                    ReadResult::full(self.rom[index])
+                }
             }
         } else {
             ReadResult::OPEN_BUS
@@ -89,7 +110,8 @@ impl PrgMemory {
     }
 
     pub fn write(&mut self, address: CpuAddress, value: u8) {
-        let prg_source_and_index = self.memory_maps[self.memory_map_index as usize].index_for_address(self.rom_outer_bank_number, address);
+        let prg_source_and_index = self.memory_maps[self.memory_map_index as usize]
+            .index_for_address(self.rom_outer_bank_number, address);
         use MemType::*;
         match prg_source_and_index {
             Some((WorkRam(_, WriteStatus::Enabled), index)) => {
@@ -101,18 +123,33 @@ impl PrgMemory {
                 self.save_ram[index] = value;
                 info!(target: "mapperramwrites", "Setting PRG [${address}]=${value:02} (Save RAM @ ${index:X})");
             }
-            Some((Rom {..} | WorkRam(_, WriteStatus::Disabled) | SaveRam(_, WriteStatus::Disabled), _)) | None => {
+            Some((
+                Rom { .. }
+                | WorkRam(_, WriteStatus::Disabled)
+                | SaveRam(_, WriteStatus::Disabled),
+                _,
+            ))
+            | None => {
                 /* Writes to ROM, absent banks, and disabled banks do nothing. */
             }
         }
     }
 
-    pub fn set_bank_register<INDEX: Into<u16>>(&mut self, id: PrgBankRegisterId, value: INDEX) {
+    pub fn set_bank_register<INDEX: Into<u16>>(
+        &mut self,
+        id: PrgBankRegisterId,
+        value: INDEX,
+    ) {
         self.regs.set(id, BankNumber::from_u16(value.into()));
         self.update_page_ids();
     }
 
-    pub fn set_bank_register_bits(&mut self, id: PrgBankRegisterId, new_value: u16, mask: u16) {
+    pub fn set_bank_register_bits(
+        &mut self,
+        id: PrgBankRegisterId,
+        new_value: u16,
+        mask: u16,
+    ) {
         self.regs.set_bits(id, new_value, mask);
         self.update_page_ids();
     }
@@ -131,7 +168,11 @@ impl PrgMemory {
         self.update_page_ids();
     }
 
-    pub fn set_write_status(&mut self, id: WriteStatusRegisterId, write_status: WriteStatus) {
+    pub fn set_write_status(
+        &mut self,
+        id: WriteStatusRegisterId,
+        write_status: WriteStatus,
+    ) {
         self.regs.set_write_status(id, write_status);
         self.update_page_ids();
     }
@@ -203,9 +244,21 @@ impl PrgMemory {
                         None => "E".to_string(),
                         // FIXME: This should be bank number, not page number.
                         // TODO: Add Read/Write status to the output
-                        Some(PageInfo { mem_type: MemType::Rom(..), page_number, .. }) => page_number.to_string(),
-                        Some(PageInfo { mem_type: MemType::WorkRam(..), page_number, .. }) => format!("W{page_number}"),
-                        Some(PageInfo { mem_type: MemType::SaveRam(..), page_number, .. }) => format!("S{page_number}"),
+                        Some(PageInfo {
+                            mem_type: MemType::Rom(..),
+                            page_number,
+                            ..
+                        }) => page_number.to_string(),
+                        Some(PageInfo {
+                            mem_type: MemType::WorkRam(..),
+                            page_number,
+                            ..
+                        }) => format!("W{page_number}"),
+                        Some(PageInfo {
+                            mem_type: MemType::SaveRam(..),
+                            page_number,
+                            ..
+                        }) => format!("S{page_number}"),
                     }
                 }
                 PrgPageIdSlot::Multi(_) => "M".to_string(),
@@ -219,7 +272,8 @@ impl PrgMemory {
                 left_padding_len = 0;
                 right_padding_len = 0;
             } else {
-                let padding_size = window_size - 2u16.saturating_sub(u16::try_from(bank_string.len()).unwrap());
+                let padding_size = window_size
+                    - 2u16.saturating_sub(u16::try_from(bank_string.len()).unwrap());
                 left_padding_len = padding_size / 2;
                 right_padding_len = padding_size - left_padding_len;
             }

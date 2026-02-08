@@ -56,7 +56,8 @@ impl BitTemplate {
     }
 
     pub fn formatted(&self) -> String {
-        self.segments.as_iter()
+        self.segments
+            .as_iter()
             .rev()
             .map(Segment::formatted)
             .join("")
@@ -67,11 +68,15 @@ impl BitTemplate {
 
         let mut bytes = text.as_bytes();
         if !bytes.len().is_multiple_of(SEGMENT_ATOM_LENGTH) {
-            return Err("BitTemplate byte length must be a multiple of 7 (subscript chars are 3 bytes each).");
+            return Err(
+                "BitTemplate byte length must be a multiple of 7 (subscript chars are 3 bytes each).",
+            );
         }
 
         if bytes.len() < SEGMENT_ATOM_LENGTH {
-            return Err("BitTemplate must have at least one segment (minimally a label and two subscript chars).");
+            return Err(
+                "BitTemplate must have at least one segment (minimally a label and two subscript chars).",
+            );
         }
 
         let mut segments: ConstVec<Segment, 3> = ConstVec::new();
@@ -85,15 +90,28 @@ impl BitTemplate {
         Ok(BitTemplate::right_to_left(segments))
     }
 
-    pub const fn increase_segment_magnitude(&mut self, segment_index: u8, new_magnitude: u8) {
+    pub const fn increase_segment_magnitude(
+        &mut self,
+        segment_index: u8,
+        new_magnitude: u8,
+    ) {
         assert!(segment_index < self.segments.len());
 
-        let mut ignored_low_count = self.segments.get_mut(segment_index).increase_magnitude_to(new_magnitude);
+        let mut ignored_low_count = self
+            .segments
+            .get_mut(segment_index)
+            .increase_magnitude_to(new_magnitude);
 
         let mut index = segment_index + 1;
         while index < self.segments.len() {
-            ignored_low_count = self.segments.get_mut(index).increase_ignored_low_count(ignored_low_count);
-            assert!(ignored_low_count == 0, "Overshift occurred. Outer bank bits shouldn't be lost to large inner bank sizes.");
+            ignored_low_count = self
+                .segments
+                .get_mut(index)
+                .increase_ignored_low_count(ignored_low_count);
+            assert!(
+                ignored_low_count == 0,
+                "Overshift occurred. Outer bank bits shouldn't be lost to large inner bank sizes."
+            );
             index += 1;
         }
     }
@@ -117,7 +135,12 @@ impl Segment {
         }
     }
 
-    pub const fn constant(value: u16, lowest_subscript: u8, magnitude: u8, ignored_low_count: u8) -> Self {
+    pub const fn constant(
+        value: u16,
+        lowest_subscript: u8,
+        magnitude: u8,
+        ignored_low_count: u8,
+    ) -> Self {
         Self {
             label: Label::Constant { value, lowest_subscript },
             magnitude,
@@ -131,20 +154,25 @@ impl Segment {
         }
 
         // TODO: Move this case into the loop. Just have to extract the magnitude before the loop.
-        let (mut label, mut subscript) = Self::atom_from_bytes(&bytes[0..Self::SEGMENT_ATOM_LENGTH])?;
+        let (mut label, mut subscript) =
+            Self::atom_from_bytes(&bytes[0..Self::SEGMENT_ATOM_LENGTH])?;
         let magnitude = subscript + 1;
         bytes = &bytes[Self::SEGMENT_ATOM_LENGTH..];
 
         let mut expected_subscript = subscript;
         while !bytes.is_empty() && subscript > 0 {
-            let (new_label, new_subscript) = Self::atom_from_bytes(&bytes[0..Self::SEGMENT_ATOM_LENGTH])?;
+            let (new_label, new_subscript) =
+                Self::atom_from_bytes(&bytes[0..Self::SEGMENT_ATOM_LENGTH])?;
             use Label::*;
             match (new_label, label) {
                 // If both the new label and old label are Constants, then append the new bit onto the old constant.
-                (Constant { value: old_value, .. }, Constant { value: new_value, lowest_subscript }) => {
+                (
+                    Constant { value: old_value, .. },
+                    Constant { value: new_value, lowest_subscript },
+                ) => {
                     label = Constant {
                         value: (old_value << 1) | new_value,
-                        lowest_subscript
+                        lowest_subscript,
                     };
                     bytes = &bytes[Self::SEGMENT_ATOM_LENGTH..];
                     subscript = new_subscript;
@@ -155,7 +183,7 @@ impl Segment {
                     subscript = new_subscript;
                 }
                 // If the name changed, or it's a new variant, then a new Label must be made (the old one can't be extended further).
-                (Name(_), Name(_) | Constant {..}) | (Constant {..}, Name(_)) => {
+                (Name(_), Name(_) | Constant { .. }) | (Constant { .. }, Name(_)) => {
                     break;
                 }
             }
@@ -213,15 +241,27 @@ impl Segment {
 
     pub fn formatted(self) -> String {
         match self.label {
-            Label::Name(_) => {
-                (self.ignored_low_count..self.magnitude).rev()
-                    .map(|i| [self.label_text_at(i - self.ignored_low_count), subscript_digit_to_string(i)].concat())
-                    .join("")
-            }
+            Label::Name(_) => (self.ignored_low_count..self.magnitude)
+                .rev()
+                .map(|i| {
+                    [
+                        self.label_text_at(i - self.ignored_low_count),
+                        subscript_digit_to_string(i),
+                    ]
+                    .concat()
+                })
+                .join(""),
             Label::Constant { lowest_subscript, .. } => {
                 let lowest_visible_subscript = lowest_subscript + self.ignored_low_count;
-                (lowest_visible_subscript..lowest_visible_subscript + self.width()).rev()
-                    .map(|i| [self.label_text_at(i - lowest_subscript), subscript_digit_to_string(i)].concat())
+                (lowest_visible_subscript..lowest_visible_subscript + self.width())
+                    .rev()
+                    .map(|i| {
+                        [
+                            self.label_text_at(i - lowest_subscript),
+                            subscript_digit_to_string(i),
+                        ]
+                        .concat()
+                    })
                     .join("")
             }
         }
@@ -272,28 +312,19 @@ impl Label {
     }
 }
 
-// TODO: Remove this? Why have a default at all?
-impl Default for Label {
-    fn default() -> Self {
-        Self::Name('a')
-    }
-}
-
 fn subscript_digit_to_string(value: u8) -> String {
-    let subscript_of = |c| {
-        match c {
-            '0' => '₀',
-            '1' => '₁',
-            '2' => '₂',
-            '3' => '₃',
-            '4' => '₄',
-            '5' => '₅',
-            '6' => '₆',
-            '7' => '₇',
-            '8' => '₈',
-            '9' => '₉',
-            _ => unreachable!(),
-        }
+    let subscript_of = |c| match c {
+        '0' => '₀',
+        '1' => '₁',
+        '2' => '₂',
+        '3' => '₃',
+        '4' => '₄',
+        '5' => '₅',
+        '6' => '₆',
+        '7' => '₇',
+        '8' => '₈',
+        '9' => '₉',
+        _ => unreachable!(),
     };
 
     format!("{value:02}")
@@ -303,7 +334,11 @@ fn subscript_digit_to_string(value: u8) -> String {
         .collect()
 }
 
-const fn subscript_utf8_bytes_to_digit(top: u8, mid: u8, bot: u8) -> Result<u8, &'static str> {
+const fn subscript_utf8_bytes_to_digit(
+    top: u8,
+    mid: u8,
+    bot: u8,
+) -> Result<u8, &'static str> {
     // Standard library UTF8 decoding isn't available in const contexts, so re-implement a little bit here.
     Ok(match (top, mid, bot) {
         (0xE2, 0x82, 0x80) => 0, // '₀'
@@ -331,7 +366,9 @@ mod test {
 
     #[test]
     fn segment_atom_from_bytes() {
-        let (label, subscript) = Segment::atom_from_bytes(&[0x61, 0xE2, 0x82, 0x81, 0xE2, 0x82, 0x82]).unwrap();
+        let (label, subscript) =
+            Segment::atom_from_bytes(&[0x61, 0xE2, 0x82, 0x81, 0xE2, 0x82, 0x82])
+                .unwrap();
         assert_eq!(label, Label::Name('a'));
         assert_eq!(subscript, 12);
     }
@@ -352,8 +389,22 @@ mod test {
         let text = "i₀₃i₀₂i₀₁a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀";
         let bit_template = BitTemplate::from_formatted(text).unwrap();
         let segments: Vec<Segment> = bit_template.segments.as_iter().collect();
-        assert_eq!(segments[0], Segment { label: Label::Name('a'), magnitude: 15, ignored_low_count: 0 });
-        assert_eq!(segments[1], Segment { label: Label::Name('i'), magnitude: 4, ignored_low_count: 1 });
+        assert_eq!(
+            segments[0],
+            Segment {
+                label: Label::Name('a'),
+                magnitude: 15,
+                ignored_low_count: 0
+            }
+        );
+        assert_eq!(
+            segments[1],
+            Segment {
+                label: Label::Name('i'),
+                magnitude: 4,
+                ignored_low_count: 1
+            }
+        );
         assert_eq!(bit_template.formatted(), text);
     }
 }

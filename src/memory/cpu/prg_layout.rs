@@ -1,6 +1,6 @@
 use std::ops::Index;
 
-use crate::memory::address_template::BankSizes;
+use crate::memory::address_template::address_template::BankSizes;
 use crate::memory::bank::bank_number::PrgBankRegisterId;
 use crate::memory::window::PrgWindow;
 use crate::util::const_vec::ConstVec;
@@ -14,7 +14,11 @@ pub struct PrgLayouts {
 
 impl PrgLayouts {
     #[allow(clippy::large_types_passed_by_value)]
-    pub const fn new(rom_size: u32, outer_bank_count: u8, layouts: ConstVec<PrgLayout, 16>) -> Self {
+    pub const fn new(
+        rom_size: u32,
+        outer_bank_count: u8,
+        layouts: ConstVec<PrgLayout, 16>,
+    ) -> Self {
         let mut inner_bank_size = layouts.get(0).smallest_rom_window_size() as u32;
         let mut i = 1;
         while i < layouts.len() {
@@ -26,7 +30,8 @@ impl PrgLayouts {
         inner_bank_size = std::cmp::max(inner_bank_size, 8 * KIBIBYTE);
 
         let outer_bank_size = outer_bank_count as u32 * inner_bank_size;
-        let rom_max_bank_sizes = BankSizes::new(rom_size, outer_bank_size, inner_bank_size);
+        let rom_max_bank_sizes =
+            BankSizes::new(rom_size, outer_bank_size, inner_bank_size);
         PrgLayouts { rom_max_bank_sizes, layouts }
     }
 
@@ -71,17 +76,23 @@ impl PrgLayout {
     pub const fn new(windows: &'static [PrgWindow]) -> PrgLayout {
         assert!(!windows.is_empty(), "No PRG windows specified.");
 
-        assert!(windows[0].start() <= 0x6000,
-            "The first PRG window must start at 0x6000 at highest.");
+        assert!(
+            windows[0].start() <= 0x6000,
+            "The first PRG window must start at 0x6000 at highest."
+        );
 
-        assert!(windows[windows.len() - 1].end().get() == 0xFFFF,
-                "The last PRG window must end at 0xFFFF.");
+        assert!(
+            windows[windows.len() - 1].end().get() == 0xFFFF,
+            "The last PRG window must end at 0xFFFF."
+        );
 
         let mut has_rom = false;
         let mut i = 1;
         while i < windows.len() {
-            assert!(windows[i].start() == windows[i - 1].end().get() + 1,
-                "There must be no gaps nor overlap between PRG windows.");
+            assert!(
+                windows[i].start() == windows[i - 1].end().get() + 1,
+                "There must be no gaps nor overlap between PRG windows."
+            );
             if windows[i].bank().is_rom() {
                 has_rom = true;
             }
@@ -127,7 +138,8 @@ impl PrgLayout {
     }
 
     pub fn active_register_ids(&self) -> Vec<PrgBankRegisterId> {
-        self.0.iter()
+        self.0
+            .iter()
             .filter_map(|window| window.register_id())
             .collect()
     }
