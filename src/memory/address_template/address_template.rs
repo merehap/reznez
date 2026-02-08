@@ -64,7 +64,6 @@ const OUTER_BANK_SEGMENT: u8 = 2;
 pub struct AddressTemplate {
     bit_template: BitTemplate,
     inner_bank_width: u8,
-    fixed_inner_bank_number: Option<u16>,
 }
 
 impl AddressTemplate {
@@ -97,8 +96,7 @@ impl AddressTemplate {
                 Segment::named('i', bank_sizes.inner_bank_number_width())
             };
 
-        let outer_bank_segment =
-            Segment::named('o', bank_sizes.outer_bank_number_width());
+        let outer_bank_segment = Segment::named('o', bank_sizes.outer_bank_number_width());
 
         let mut segments = ConstVec::new();
         segments.push(address_bus_segment);
@@ -116,11 +114,7 @@ impl AddressTemplate {
             );
         }
 
-        let address_template = Self {
-            bit_template,
-            inner_bank_width,
-            fixed_inner_bank_number,
-        };
+        let address_template = Self { bit_template, inner_bank_width };
         assert!(address_template.total_width() <= MAX_WIDTH);
 
         if window.size().page_multiple() == 0 {
@@ -141,11 +135,7 @@ impl AddressTemplate {
 
         let inner_bank_width = bit_template.width_of(BASE_ADDRESS_SEGMENT)
             + bit_template.ignored_low_count_of(INNER_BANK_SEGMENT);
-        Ok(Self {
-            bit_template,
-            inner_bank_width,
-            fixed_inner_bank_number: None,
-        })
+        Ok(Self { bit_template, inner_bank_width })
     }
 
     pub const fn total_width(&self) -> u8 {
