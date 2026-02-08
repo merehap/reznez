@@ -45,27 +45,34 @@ impl BitTemplate {
         let mut width = 0;
         let mut index = 0;
         while index < self.segments.len() {
-            width += self.segments.get(index).width();
+            if let Some(segment) = self.segments.maybe_get(index) {
+                width += segment.width();
+            }
+
             index += 1;
         }
 
         width
     }
 
-    pub const fn width_of(&self, segment_index: u8) -> u8 {
-        self.segments.get(segment_index).width()
+    pub const fn width_of(&self, segment_index: u8) -> Option<u8> {
+        let segment = self.segments.maybe_get(segment_index)?;
+        Some(segment.width())
     }
 
-    pub const fn magnitude_of(&self, segment_index: u8) -> u8 {
-        self.segments.get(segment_index).magnitude()
+    pub const fn magnitude_of(&self, segment_index: u8) -> Option<u8> {
+        let segment = self.segments.maybe_get(segment_index)?;
+        Some(segment.magnitude())
     }
 
-    pub const fn ignored_low_count_of(&self, segment_index: u8) -> u8 {
-        self.segments.get(segment_index).ignored_low_count()
+    pub const fn ignored_low_count_of(&self, segment_index: u8) -> Option<u8> {
+        let segment = self.segments.maybe_get(segment_index)?;
+        Some(segment.ignored_low_count())
     }
 
-    pub const fn label_of(&self, segment_index: u8) -> Label {
-        self.segments.get(segment_index).label
+    pub const fn label_of(&self, segment_index: u8) -> Option<Label> {
+        let segment = self.segments.maybe_get(segment_index)?;
+        Some(segment.label)
     }
 
     pub fn resolve(&self, raw_values: &[u16]) -> u32 {
@@ -80,7 +87,10 @@ impl BitTemplate {
     }
 
     pub fn resolve_segment(&self, segment_index: u8, raw_value: u16) -> u16 {
-        self.segments.get(segment_index).resolve(raw_value)
+        match self.segments.maybe_get(segment_index) {
+            None => 0,
+            Some(segment) => segment.resolve(raw_value),
+        }
     }
 
     pub fn formatted(&self) -> String {
@@ -98,17 +108,14 @@ impl BitTemplate {
     ) {
         assert!(segment_index < self.segments.len());
 
-        let mut ignored_low_count = self
-            .segments
-            .get_mut(segment_index)
-            .increase_magnitude_to(new_magnitude);
+        let mut ignored_low_count = self.segments.get_mut(segment_index).increase_magnitude_to(new_magnitude);
 
         let mut index = segment_index + 1;
         while index < self.segments.len() {
-            ignored_low_count = self
-                .segments
-                .get_mut(index)
-                .increase_ignored_low_count(ignored_low_count);
+            ignored_low_count = match self.segments.maybe_get_mut(index) {
+                None => ignored_low_count,
+                Some(segment) => segment.increase_ignored_low_count(ignored_low_count),
+            };
             assert!(
                 ignored_low_count == 0,
                 "Overshift occurred. Outer bank bits shouldn't be lost to large inner bank sizes."

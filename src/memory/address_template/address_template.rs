@@ -107,7 +107,7 @@ impl AddressTemplate {
         // Don't expand the bank size larger than the total memory size.
         let new_base_address_bit_count =
             std::cmp::min(window.size().bit_count(), bit_template.width());
-        if new_base_address_bit_count > bit_template.magnitude_of(BASE_ADDRESS_SEGMENT) {
+        if new_base_address_bit_count > bit_template.magnitude_of(BASE_ADDRESS_SEGMENT).unwrap() {
             bit_template.increase_segment_magnitude(
                 BASE_ADDRESS_SEGMENT,
                 new_base_address_bit_count,
@@ -133,8 +133,15 @@ impl AddressTemplate {
             return Err("AddressTemplate must not be longer than 32 bits.");
         }
 
-        let inner_bank_width = bit_template.width_of(BASE_ADDRESS_SEGMENT)
-            + bit_template.ignored_low_count_of(INNER_BANK_SEGMENT);
+        let Some(base_address_width) = bit_template.width_of(BASE_ADDRESS_SEGMENT) else {
+            panic!();
+        };
+        let inner_bank_ignored_low_count = match bit_template.ignored_low_count_of(INNER_BANK_SEGMENT) {
+            None => 0,
+            Some(count) => count,
+        };
+        let inner_bank_width = base_address_width + inner_bank_ignored_low_count;
+
         Ok(Self { bit_template, inner_bank_width })
     }
 
@@ -151,11 +158,17 @@ impl AddressTemplate {
     }
 
     pub fn inner_bank_count(&self) -> u16 {
-        1 << self.bit_template.magnitude_of(INNER_BANK_SEGMENT)
+        match self.bit_template.magnitude_of(INNER_BANK_SEGMENT) {
+            None => 1,
+            Some(magnitude) => 1 << magnitude,
+        }
     }
 
     pub fn outer_bank_count(&self) -> u8 {
-        1 << self.bit_template.magnitude_of(OUTER_BANK_SEGMENT)
+        match self.bit_template.magnitude_of(OUTER_BANK_SEGMENT) {
+            None => 1,
+            Some(magnitude) => 1 << magnitude,
+        }
     }
 
     pub fn outer_bank_size(&self) -> u32 {

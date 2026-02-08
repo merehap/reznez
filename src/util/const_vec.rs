@@ -29,6 +29,15 @@ impl <T: Clone + Copy, const CAPACITY: usize> ConstVec<T, CAPACITY> {
         unsafe { self.backing[index as usize].assume_init() }
     }
 
+    pub const fn maybe_get(&self, index: u8) -> Option<T> {
+        if index >= self.len {
+            return None;
+        }
+
+        // SAFETY: The assertion above ensures that the index is initialized.
+        unsafe { Some(self.backing[index as usize].assume_init()) }
+    }
+
     pub const fn get_ref(&self, index: u8) -> &T {
         assert!(index < self.len);
         // SAFETY: The assertion above ensures that the index is initialized.
@@ -39,6 +48,15 @@ impl <T: Clone + Copy, const CAPACITY: usize> ConstVec<T, CAPACITY> {
         assert!(index < self.len);
         // SAFETY: The assertion above ensures that the index is initialized.
         unsafe { self.backing[index as usize].assume_init_mut() }
+    }
+
+    pub const fn maybe_get_mut(&mut self, index: u8) -> Option<&mut T> {
+        if index >= self.len {
+            return None;
+        }
+
+        // SAFETY: The assertion above ensures that the index is initialized.
+        unsafe { Some(self.backing[index as usize].assume_init_mut()) }
     }
 
     pub const fn push(&mut self, new_value: T) {
