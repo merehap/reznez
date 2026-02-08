@@ -65,7 +65,7 @@ impl BitTemplate {
     pub const fn from_formatted(text: &str) -> Result<Self, &'static str> {
         const SEGMENT_ATOM_LENGTH: usize = 7;
 
-        let bytes = text.as_bytes();
+        let mut bytes = text.as_bytes();
         if !bytes.len().is_multiple_of(SEGMENT_ATOM_LENGTH) {
             return Err("BitTemplate byte length must be a multiple of 7 (subscript chars are 3 bytes each).");
         }
@@ -75,16 +75,11 @@ impl BitTemplate {
         }
 
         let mut segments: ConstVec<Segment, 3> = ConstVec::new();
-        segments.push_front(Segment::from_bytes(&bytes[0..SEGMENT_ATOM_LENGTH])?);
 
-        let mut index = SEGMENT_ATOM_LENGTH;
-        while index < bytes.len() {
-            if segments.get_mut(0).label.extend_or_new(bytes[index] as char).is_some() {
-                // The old segment is done, start building a new one.
-                segments.push_front(Segment::from_bytes(&bytes[index..index + SEGMENT_ATOM_LENGTH])?);
-            }
-
-            index += SEGMENT_ATOM_LENGTH;
+        while !bytes.is_empty() {
+            let segment;
+            (segment, bytes) = Segment::parse(bytes)?;
+            segments.push_front(segment);
         }
 
         Ok(BitTemplate::right_to_left(segments))
@@ -112,6 +107,8 @@ pub struct Segment {
 }
 
 impl Segment {
+    const SEGMENT_ATOM_LENGTH: usize = 7;
+
     pub const fn named(name: char, magnitude: u8) -> Self {
         Self {
             label: Label::Name(name),
@@ -128,7 +125,28 @@ impl Segment {
         }
     }
 
-    pub const fn from_bytes(bytes: &[u8]) -> Result<Self, &'static str> {
+    pub const fn parse(bytes: &[u8]) -> Result<(Self, &[u8]), &'static str> {
+        if bytes.len() < Self::SEGMENT_ATOM_LENGTH {
+            return Err("A segment must have at least one atom in it.");
+        }
+
+        let (mut label, magnitude) = Segment::atom_from_bytes(&bytes[0..Self::SEGMENT_ATOM_LENGTH])?;
+        let mut index = 0;
+        while index < bytes.len() {
+            let extended = label.extend(bytes[index] as char);
+            if !extended {
+                break;
+            }
+
+            index += Self::SEGMENT_ATOM_LENGTH;
+        }
+
+        let segment = Segment { label, magnitude, ignored_low_count: 0 };
+        let unparsed_remainder = &bytes[index..];
+        Ok((segment, unparsed_remainder))
+    }
+
+    const fn atom_from_bytes(bytes: &[u8]) -> Result<(Label, u8), &'static str> {
         assert!(bytes.len() == 7);
 
         let label = Label::from_char(bytes[0] as char);
@@ -136,11 +154,7 @@ impl Segment {
         let ones_digit = subscript_utf8_bytes_to_digit(bytes[4], bytes[5], bytes[6])?;
         let subscript = 10 * tens_digit + ones_digit;
         let magnitude = subscript + 1;
-        Ok(Self {
-            label,
-            magnitude,
-            ignored_low_count: 0,
-        })
+        Ok((label, magnitude))
     }
 
     pub const fn magnitude(&self) -> u8 {
@@ -190,13 +204,13 @@ impl Segment {
         }
     }
 
-    pub const fn increase_magnitude_to(&mut self, magnitude: u8) -> u8 {
+    const fn increase_magnitude_to(&mut self, magnitude: u8) -> u8 {
         let increase_amount = magnitude.strict_sub(self.magnitude);
         self.magnitude = magnitude;
         increase_amount
     }
 
-    pub const fn increase_ignored_low_count(&mut self, increase_amount: u8) -> u8 {
+    const fn increase_ignored_low_count(&mut self, increase_amount: u8) -> u8 {
         let already_empty = self.width() == 0;
         self.ignored_low_count = self.ignored_low_count.strict_add(increase_amount);
 
@@ -234,7 +248,7 @@ impl Label {
         }
     }
 
-    const fn extend_or_new(&mut self, c: char) -> Option<Self> {
+    const fn extend(&mut self, c: char) -> bool {
         let new = Self::from_char(c);
         use Label::*;
         match (new, *self) {
@@ -244,15 +258,15 @@ impl Label {
                     value: (old_value << 1) | new_value,
                     lowest_subscript
                 };
-                None
+                true
             }
             // If the name stayed the same, then the current Label is "extended" by doing nothing.
             (Name(new_name), Name(old_name)) if new_name == old_name => {
-                None
+                true
             }
             // If the name changed, or it's a new variant, then a new Label must be made (the old one can't be extended further).
             (Name(_), Name(_) | Constant {..}) | (Constant {..}, Name(_)) => {
-                Some(new)
+                false
             }
         }
     }
@@ -317,9 +331,9 @@ mod test {
 
     #[test]
     fn segment_from_bytes() {
-        let segment = Segment::from_bytes(&[0x61, 0xE2, 0x82, 0x81, 0xE2, 0x82, 0x82]).unwrap();
-        assert_eq!(segment.label, Label::Name('a'));
-        assert_eq!(segment.magnitude, 13);
+        let (label, magnitude) = Segment::atom_from_bytes(&[0x61, 0xE2, 0x82, 0x81, 0xE2, 0x82, 0x82]).unwrap();
+        assert_eq!(label, Label::Name('a'));
+        assert_eq!(magnitude, 13);
     }
 
     #[test]
