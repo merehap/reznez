@@ -1,5 +1,6 @@
 use crate::mapper::PrgWindow;
-use crate::memory::address_template::address_template::{AddressTemplate, BankSizes};
+use crate::memory::address_template::address_template::AddressTemplate;
+use crate::memory::address_template::bank_sizes::BankSizes;
 use crate::memory::bank::bank::PrgBank;
 use crate::memory::bank::bank_number::{MemType, PageNumberSpace, PrgBankRegisters};
 use crate::memory::cpu::cpu_address::CpuAddress;

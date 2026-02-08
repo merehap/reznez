@@ -1,6 +1,7 @@
 use std::num::NonZeroU16;
 
-use crate::memory::address_template::address_template::{AddressTemplate, BankSizes};
+use crate::memory::address_template::address_template::AddressTemplate;
+use crate::memory::address_template::bank_sizes::BankSizes;
 use crate::memory::bank::bank::PrgBank;
 use crate::memory::bank::bank_number::{ChrBankRegisters, PrgBankRegisterId};
 use crate::util::unit::KIBIBYTE;

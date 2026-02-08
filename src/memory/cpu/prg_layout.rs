@@ -1,6 +1,6 @@
 use std::ops::Index;
 
-use crate::memory::address_template::address_template::BankSizes;
+use crate::memory::address_template::bank_sizes::BankSizes;
 use crate::memory::bank::bank_number::PrgBankRegisterId;
 use crate::memory::window::PrgWindow;
 use crate::util::const_vec::ConstVec;

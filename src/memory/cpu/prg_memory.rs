@@ -1,5 +1,5 @@
 use crate::mapper::{BankNumber, KIBIBYTE, PrgBankRegisterId};
-use crate::memory::address_template::address_template::BankSizes;
+use crate::memory::address_template::bank_sizes::BankSizes;
 use crate::memory::bank::bank::{
     PrgSource, PrgSourceRegisterId, ReadStatusRegisterId, WriteStatusRegisterId,
 };
