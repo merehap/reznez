@@ -14,6 +14,33 @@ impl BitTemplate {
         Self { segments }
     }
 
+    pub const fn from_formatted(text: &str) -> Result<Self, &'static str> {
+        const SEGMENT_ATOM_LENGTH: usize = 7;
+
+        let mut bytes = text.as_bytes();
+        if !bytes.len().is_multiple_of(SEGMENT_ATOM_LENGTH) {
+            return Err(
+                "BitTemplate byte length must be a multiple of 7 (subscript chars are 3 bytes each).",
+            );
+        }
+
+        if bytes.len() < SEGMENT_ATOM_LENGTH {
+            return Err(
+                "BitTemplate must have at least one segment (minimally a label and two subscript chars).",
+            );
+        }
+
+        let mut segments: ConstVec<Segment, 3> = ConstVec::new();
+
+        while !bytes.is_empty() {
+            let segment;
+            (segment, bytes) = Segment::parse(bytes)?;
+            segments.push_front(segment);
+        }
+
+        Ok(BitTemplate::right_to_left(segments))
+    }
+
     pub const fn width(&self) -> u8 {
         let mut width = 0;
         let mut index = 0;
@@ -62,33 +89,6 @@ impl BitTemplate {
             .rev()
             .map(Segment::formatted)
             .join("")
-    }
-
-    pub const fn from_formatted(text: &str) -> Result<Self, &'static str> {
-        const SEGMENT_ATOM_LENGTH: usize = 7;
-
-        let mut bytes = text.as_bytes();
-        if !bytes.len().is_multiple_of(SEGMENT_ATOM_LENGTH) {
-            return Err(
-                "BitTemplate byte length must be a multiple of 7 (subscript chars are 3 bytes each).",
-            );
-        }
-
-        if bytes.len() < SEGMENT_ATOM_LENGTH {
-            return Err(
-                "BitTemplate must have at least one segment (minimally a label and two subscript chars).",
-            );
-        }
-
-        let mut segments: ConstVec<Segment, 3> = ConstVec::new();
-
-        while !bytes.is_empty() {
-            let segment;
-            (segment, bytes) = Segment::parse(bytes)?;
-            segments.push_front(segment);
-        }
-
-        Ok(BitTemplate::right_to_left(segments))
     }
 
     pub const fn increase_segment_magnitude(
