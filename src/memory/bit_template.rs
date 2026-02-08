@@ -28,12 +28,12 @@ impl BitTemplate {
         self.segments.get(segment_index).width()
     }
 
-    pub fn original_magnitude_of(&self, segment_index: u8) -> u8 {
-        self.segments.get(segment_index).original_magnitude()
-    }
-
     pub const fn magnitude_of(&self, segment_index: u8) -> u8 {
         self.segments.get(segment_index).magnitude()
+    }
+
+    pub const fn ignored_low_count_of(&self, segment_index: u8) -> u8 {
+        self.segments.get(segment_index).ignored_low_count()
     }
 
     pub const fn label_of(&self, segment_index: u8) -> Label {
@@ -107,8 +107,6 @@ impl BitTemplate {
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct Segment {
     label: Label,
-    // TODO: Remove this, then make all Segment fields pub.
-    original_magnitude: u8,
     magnitude: u8,
     ignored_low_count: u8,
 }
@@ -117,7 +115,6 @@ impl Segment {
     pub const fn named(name: char, magnitude: u8) -> Self {
         Self {
             label: Label::Name(name),
-            original_magnitude: magnitude,
             magnitude,
             ignored_low_count: 0,
         }
@@ -126,7 +123,6 @@ impl Segment {
     pub const fn constant(value: u16, lowest_subscript: u8, magnitude: u8, ignored_low_count: u8) -> Self {
         Self {
             label: Label::Constant { value, lowest_subscript },
-            original_magnitude: magnitude,
             magnitude,
             ignored_low_count,
         }
@@ -142,14 +138,9 @@ impl Segment {
         let magnitude = subscript + 1;
         Ok(Self {
             label,
-            original_magnitude: magnitude,
             magnitude,
             ignored_low_count: 0,
         })
-    }
-
-    pub fn original_magnitude(&self) -> u8 {
-        self.original_magnitude
     }
 
     pub const fn magnitude(&self) -> u8 {
@@ -160,7 +151,7 @@ impl Segment {
         self.magnitude.saturating_sub(self.ignored_low_count)
     }
 
-    pub fn ignored_low_count(&self) -> u8 {
+    pub const fn ignored_low_count(&self) -> u8 {
         self.ignored_low_count
     }
 
@@ -215,10 +206,6 @@ impl Segment {
         } else {
             self.ignored_low_count.saturating_sub(self.magnitude)
         }
-    }
-
-    pub fn constify(&mut self, value: u16, lowest_subscript: u8 ) {
-        self.label = Label::Constant { value, lowest_subscript };
     }
 
     fn label_text_at(&self, index: u8) -> String {

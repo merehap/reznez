@@ -62,6 +62,7 @@ const OUTER_BANK_SEGMENT: u8 = 2;
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct AddressTemplate {
     bit_template: BitTemplate,
+    inner_bank_width: u8,
     fixed_inner_bank_number: Option<u16>,
 }
 
@@ -78,10 +79,11 @@ impl AddressTemplate {
     pub const fn prg(window: &PrgWindow, bank_sizes: &BankSizes) -> Self {
         let fixed_inner_bank_number = window.bank().fixed_bank_number().map(BankNumber::to_raw);
 
-        let address_bus_segment = Segment::named('a', bank_sizes.inner_bank_width());
+        let inner_bank_width = bank_sizes.inner_bank_width();
+        let address_bus_segment = Segment::named('a', inner_bank_width);
         let inner_bank_segment = if let Some(fixed_inner_bank_number) = fixed_inner_bank_number {
             // o₀₁o₀₀1₁₆1₁₅1₁₄1₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
-            Segment::constant(fixed_inner_bank_number, bank_sizes.inner_bank_width(), bank_sizes.inner_bank_number_width(), 0)
+            Segment::constant(fixed_inner_bank_number, inner_bank_width, bank_sizes.inner_bank_number_width(), 0)
         } else {
             // o₀₁o₀₀i₀₃i₀₂i₀₁i₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
             Segment::named('i', bank_sizes.inner_bank_number_width())
@@ -101,7 +103,7 @@ impl AddressTemplate {
             bit_template.increase_segment_magnitude(BASE_ADDRESS_SEGMENT, new_base_address_bit_count);
         }
 
-        let address_template = Self { bit_template, fixed_inner_bank_number };
+        let address_template = Self { bit_template, inner_bank_width, fixed_inner_bank_number };
         assert!(address_template.total_width() <= MAX_WIDTH);
 
         if window.size().page_multiple() == 0 {
@@ -120,15 +122,21 @@ impl AddressTemplate {
             return Err("AddressTemplate must not be longer than 32 bits.");
         }
 
-        Ok(Self { bit_template, fixed_inner_bank_number: None })
+        let inner_bank_width = bit_template.width_of(BASE_ADDRESS_SEGMENT)
+                             + bit_template.ignored_low_count_of(INNER_BANK_SEGMENT);
+        Ok(Self { bit_template, inner_bank_width, fixed_inner_bank_number: None })
     }
 
     pub const fn total_width(&self) -> u8 {
         self.bit_template.width()
     }
 
+    pub fn inner_bank_width(&self) -> u8 {
+        self.inner_bank_width
+    }
+
     pub fn inner_bank_size(&self) -> u16 {
-        1 << self.bit_template.original_magnitude_of(BASE_ADDRESS_SEGMENT)
+        1 << self.inner_bank_width
     }
 
     pub fn inner_bank_count(&self) -> u16 {
