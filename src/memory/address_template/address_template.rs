@@ -1,6 +1,7 @@
 use std::fmt;
 
-use crate::memory::address_template::bit_template::{BitTemplate, Segment};
+use crate::memory::address_template::bit_template::BitTemplate;
+use crate::memory::address_template::segment::Segment;
 use crate::memory::bank::bank_number::BankNumber;
 use crate::memory::window::PrgWindow;
 use crate::util::const_vec::ConstVec;
