@@ -105,17 +105,15 @@ impl Segment {
 
     // TODO: Cache mask.
     pub fn resolve(&self, raw_value: u16) -> u16 {
-        match &self.label {
-            Label::Name(_) => {
-                let max_value = (1 << self.magnitude) - 1;
-                let ignored_low = (1 << self.ignored_low_count) - 1;
-                let mask = max_value & !ignored_low;
-                raw_value & mask
-            }
-            Label::Constant { value, .. } => {
-                *value & !((1 << self.ignored_low_count) - 1)
-            }
-        }
+        let value = match &self.label {
+            Label::Name(_) => raw_value,
+            Label::Constant { value, .. } => *value,
+        };
+
+        let max_value = (1 << self.magnitude) - 1;
+        let ignored_low = (1 << self.ignored_low_count) - 1;
+        let mask = max_value & !ignored_low;
+        value & mask
     }
 
     pub fn resolve_shifted(&self, raw_value: u16, shift: u8) -> u32 {
