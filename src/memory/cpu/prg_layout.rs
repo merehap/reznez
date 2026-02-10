@@ -30,8 +30,7 @@ impl PrgLayouts {
         inner_bank_size = std::cmp::max(inner_bank_size, 8 * KIBIBYTE);
 
         let outer_bank_size = outer_bank_count as u32 * inner_bank_size;
-        let rom_max_bank_sizes =
-            BankSizes::new(rom_size, outer_bank_size, inner_bank_size);
+        let rom_max_bank_sizes = BankSizes::new(rom_size, outer_bank_size, inner_bank_size);
         PrgLayouts { rom_max_bank_sizes, layouts }
     }
 
@@ -73,7 +72,7 @@ impl Index<u8> for PrgLayouts {
 pub struct PrgLayout(&'static [PrgWindow]);
 
 impl PrgLayout {
-    pub const fn new(windows: &'static [PrgWindow]) -> PrgLayout {
+    pub const fn new(windows: &'static [PrgWindow], max_rom_size: u32) -> PrgLayout {
         assert!(!windows.is_empty(), "No PRG windows specified.");
 
         assert!(
@@ -86,9 +85,13 @@ impl PrgLayout {
             "The last PRG window must end at 0xFFFF."
         );
 
+        windows[0].validate_rom_address_template_width(max_rom_size);
+
         let mut has_rom = false;
         let mut i = 1;
         while i < windows.len() {
+            windows[i].validate_rom_address_template_width(max_rom_size);
+
             assert!(
                 windows[i].start() == windows[i - 1].end().get() + 1,
                 "There must be no gaps nor overlap between PRG windows."

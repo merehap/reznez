@@ -234,7 +234,7 @@ impl PrgBank {
         }
     }
 
-    pub fn rom_address_template_override(self) -> Option<AddressTemplate> {
+    pub const fn rom_address_template_override(self) -> Option<AddressTemplate> {
         self.rom_address_template
     }
 

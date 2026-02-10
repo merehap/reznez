@@ -19,15 +19,11 @@ impl BitTemplate {
 
         let mut bytes = text.as_bytes();
         if !bytes.len().is_multiple_of(SEGMENT_ATOM_LENGTH) {
-            return Err(
-                "BitTemplate byte length must be a multiple of 7 (subscript chars are 3 bytes each).",
-            );
+            return Err("BitTemplate byte length must be a multiple of 7 (subscript chars are 3 bytes each).");
         }
 
         if bytes.len() < SEGMENT_ATOM_LENGTH {
-            return Err(
-                "BitTemplate must have at least one segment (minimally a label and two subscript chars).",
-            );
+            return Err("BitTemplate must have at least one segment (minimally a label and two subscript chars).");
         }
 
         let mut segments: ConstVec<Segment, 3> = ConstVec::new();

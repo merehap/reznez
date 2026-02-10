@@ -64,6 +64,15 @@ impl PrgWindow {
     pub fn ram_address_template(&self, bank_sizes: &BankSizes) -> AddressTemplate {
         AddressTemplate::prg(self, bank_sizes)
     }
+
+    pub const fn validate_rom_address_template_width(&self, max_rom_size: u32) {
+        if let Some(rom_address_template) = self.bank().rom_address_template_override() {
+            let max_width = (max_rom_size - 1).count_ones() as u8;
+            let template_width = rom_address_template.total_width();
+            const_panic::concat_assert!(template_width == max_width,
+                "Override ROM Address Template was not the correct bit width. Expected ", max_width, ", Found ", template_width);
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
