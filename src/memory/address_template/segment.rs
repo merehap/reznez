@@ -166,6 +166,18 @@ impl Segment {
         }
     }
 
+    pub const fn decrease_width_by(&mut self, mut amount: u8) -> u8 {
+        if self.width() >= amount {
+            self.magnitude -= amount;
+            amount = 0;
+        } else {
+            self.magnitude = 0;
+            amount -= self.width();
+        }
+
+        amount
+    }
+
     fn label_text_at(&self, index: u8) -> String {
         match &self.label {
             Label::Name(name) => (*name).to_string(),

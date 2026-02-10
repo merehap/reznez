@@ -1,6 +1,6 @@
 use crate::util::unit::KIBIBYTE;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct BankSizes {
     full_size: u32,
     outer_bank_size: u32,

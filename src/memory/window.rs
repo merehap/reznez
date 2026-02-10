@@ -55,7 +55,13 @@ impl PrgWindow {
         }
     }
 
-    pub fn address_template(&self, bank_sizes: &BankSizes) -> AddressTemplate {
+    pub fn rom_address_template(&self, bank_sizes: &BankSizes) -> AddressTemplate {
+        self.bank().rom_address_template_override()
+            .map(|template| template.reduced(bank_sizes))
+            .unwrap_or(AddressTemplate::prg(self, bank_sizes))
+    }
+
+    pub fn ram_address_template(&self, bank_sizes: &BankSizes) -> AddressTemplate {
         AddressTemplate::prg(self, bank_sizes)
     }
 }

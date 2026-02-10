@@ -67,11 +67,7 @@ impl PrgMemoryMap {
                     };
                     (
                         *mem_type,
-                        address_template.resolve_index(
-                            outer_bank_number,
-                            *page_number,
-                            offset_in_page,
-                        ),
+                        address_template.resolve_index(outer_bank_number, *page_number, offset_in_page),
                     )
                 },
             ),
@@ -115,8 +111,7 @@ impl PrgMemoryMap {
                         page_ids.push((page_id, *offset));
                     }
 
-                    self.page_ids[i] =
-                        PrgPageIdSlot::Multi(Box::new(page_ids.try_into().unwrap()));
+                    self.page_ids[i] = PrgPageIdSlot::Multi(Box::new(page_ids.try_into().unwrap()));
                 }
             }
         }
@@ -131,8 +126,8 @@ impl PrgMemoryMap {
             .map(|sub_page_offset| {
                 let mapping = PrgMapping {
                     bank: window.bank(),
-                    rom_address_template: window.address_template(rom_bank_sizes),
-                    ram_address_template: window.address_template(ram_bank_sizes),
+                    rom_address_template: window.rom_address_template(rom_bank_sizes),
+                    ram_address_template: window.ram_address_template(ram_bank_sizes),
                     page_offset: sub_page_offset / 64,
                 };
                 (mapping, sub_page_offset)

@@ -82,7 +82,7 @@ pub struct PrgBank {
     prg_source_provider: PrgSourceProvider,
     read_status_register_id: Option<ReadStatusRegisterId>,
     write_status_register_id: Option<WriteStatusRegisterId>,
-    rom_address_template_override: Option<AddressTemplate>,
+    rom_address_template: Option<AddressTemplate>,
 }
 
 impl PrgBank {
@@ -91,35 +91,35 @@ impl PrgBank {
         prg_source_provider: PrgSourceProvider::Fixed(None),
         read_status_register_id: None,
         write_status_register_id: None,
-        rom_address_template_override: None,
+        rom_address_template: None,
     };
     pub const RAM_OR_ABSENT: PrgBank = PrgBank {
         bank_number_provider: PrgBankNumberProvider::FIXED_ZERO,
         prg_source_provider: PrgSourceProvider::Fixed(Some(PrgSource::RamOrAbsent)),
         read_status_register_id: None,
         write_status_register_id: None,
-        rom_address_template_override: None,
+        rom_address_template: None,
     };
     pub const ROM: PrgBank = PrgBank {
         bank_number_provider: PrgBankNumberProvider::FIXED_ZERO,
         prg_source_provider: PrgSourceProvider::Fixed(Some(PrgSource::Rom)),
         read_status_register_id: None,
         write_status_register_id: None,
-        rom_address_template_override: None,
+        rom_address_template: None,
     };
     pub const WORK_RAM_OR_ROM: PrgBank = PrgBank {
         bank_number_provider: PrgBankNumberProvider::FIXED_ZERO,
         prg_source_provider: PrgSourceProvider::Fixed(Some(PrgSource::RamOrRom)),
         read_status_register_id: None,
         write_status_register_id: None,
-        rom_address_template_override: None,
+        rom_address_template: None,
     };
     pub const ROM_RAM: PrgBank = PrgBank {
         bank_number_provider: PrgBankNumberProvider::FIXED_ZERO,
         prg_source_provider: PrgSourceProvider::Switchable(PS0),
         read_status_register_id: None,
         write_status_register_id: None,
-        rom_address_template_override: None,
+        rom_address_template: None,
     };
 
     pub const fn fixed_number(mut self, index: i16) -> Self {
@@ -182,13 +182,13 @@ impl PrgBank {
         self
     }
 
-    pub const fn override_rom_address_template(mut self, template: &'static str) -> Self {
+    pub const fn rom_address_template(mut self, template: &'static str) -> Self {
         assert!(
             self.prg_source_provider.is_mapped(),
             "An ABSENT bank can't have an override ROM address template."
         );
         match AddressTemplate::from_formatted(template) {
-            Ok(template) => self.rom_address_template_override = Some(template),
+            Ok(template) => self.rom_address_template = Some(template),
             Err(err) => panic!("{}", err),
         }
 
@@ -232,6 +232,10 @@ impl PrgBank {
             PrgBankNumberProvider::Fixed(_) => None,
             PrgBankNumberProvider::Switchable(reg_id) => Some(reg_id),
         }
+    }
+
+    pub fn rom_address_template_override(self) -> Option<AddressTemplate> {
+        self.rom_address_template
     }
 
     pub fn read_status_register_id(self) -> Option<ReadStatusRegisterId> {

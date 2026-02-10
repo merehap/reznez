@@ -41,6 +41,15 @@ impl BitTemplate {
         Ok(BitTemplate::right_to_left(segments))
     }
 
+    pub fn shorten(&mut self, new_width: u8) {
+        let mut shorten_amount = self.width().strict_sub(new_width);
+        for i in (0..self.segments.len()).rev() {
+            shorten_amount = self.segments.get_mut(i).decrease_width_by(shorten_amount);
+        }
+
+        assert_eq!(shorten_amount, 0);
+    }
+
     pub const fn width(&self) -> u8 {
         let mut width = 0;
         let mut index = 0;

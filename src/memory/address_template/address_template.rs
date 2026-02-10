@@ -108,10 +108,7 @@ impl AddressTemplate {
         let new_base_address_bit_count =
             std::cmp::min(window.size().bit_count(), bit_template.width());
         if new_base_address_bit_count > bit_template.magnitude_of(BASE_ADDRESS_SEGMENT).unwrap() {
-            bit_template.increase_segment_magnitude(
-                BASE_ADDRESS_SEGMENT,
-                new_base_address_bit_count,
-            );
+            bit_template.increase_segment_magnitude(BASE_ADDRESS_SEGMENT, new_base_address_bit_count);
         }
 
         let address_template = Self { bit_template, inner_bank_width };
@@ -143,6 +140,13 @@ impl AddressTemplate {
         let inner_bank_width = base_address_width + inner_bank_ignored_low_count;
 
         Ok(Self { bit_template, inner_bank_width })
+    }
+
+    pub fn reduced(&self, bank_sizes: &BankSizes) -> Self {
+        let mut result = self.clone();
+        result.bit_template.shorten(bank_sizes.full_width());
+        result.inner_bank_width = bank_sizes.inner_bank_width();
+        result
     }
 
     pub const fn total_width(&self) -> u8 {
@@ -204,8 +208,7 @@ impl AddressTemplate {
             .bit_template
             .resolve_segment(INNER_BANK_SEGMENT, raw_inner_bank_number);
         let page_offset = page_offset % self.prg_pages_per_outer_bank();
-        let raw_page_number =
-            inner_bank_number * u16::from(self.prg_pages_per_inner_bank()) + page_offset;
+        let raw_page_number = inner_bank_number * u16::from(self.prg_pages_per_inner_bank()) + page_offset;
         raw_page_number & self.page_number_mask()
     }
 
