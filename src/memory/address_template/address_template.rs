@@ -153,52 +153,6 @@ impl AddressTemplate {
         self.bit_template.width()
     }
 
-    pub fn inner_bank_width(&self) -> u8 {
-        self.inner_bank_width
-    }
-
-    pub fn inner_bank_size(&self) -> u16 {
-        1 << self.inner_bank_width
-    }
-
-    pub fn inner_bank_count(&self) -> u16 {
-        match self.bit_template.magnitude_of(INNER_BANK_SEGMENT) {
-            None => 1,
-            Some(magnitude) => 1 << magnitude,
-        }
-    }
-
-    pub fn outer_bank_count(&self) -> u8 {
-        match self.bit_template.magnitude_of(OUTER_BANK_SEGMENT) {
-            None => 1,
-            Some(magnitude) => 1 << magnitude,
-        }
-    }
-
-    pub fn outer_bank_size(&self) -> u32 {
-        u32::from(self.inner_bank_count()) * u32::from(self.inner_bank_size())
-    }
-
-    pub fn rom_size(&self) -> u32 {
-        u32::from(self.outer_bank_count()) * self.outer_bank_size()
-    }
-
-    pub fn prg_pages_per_inner_bank(&self) -> u8 {
-        u8::try_from(self.inner_bank_size() / Self::PRG_PAGE_SIZE).unwrap()
-    }
-
-    pub fn prg_pages_per_outer_bank(&self) -> u16 {
-        u16::try_from(self.outer_bank_size() / u32::from(Self::PRG_PAGE_SIZE)).unwrap()
-    }
-
-    pub fn total_prg_pages(&self) -> u16 {
-        u16::try_from(self.rom_size() / u32::from(Self::PRG_PAGE_SIZE)).unwrap()
-    }
-
-    pub fn page_number_mask(&self) -> u16 {
-        self.prg_pages_per_outer_bank() - 1
-    }
-
     pub fn resolve_page_number(
         &self,
         raw_inner_bank_number: u16,
@@ -245,6 +199,33 @@ impl AddressTemplate {
 
     pub fn formatted(&self) -> String {
         self.bit_template.formatted()
+    }
+
+    fn inner_bank_count(&self) -> u16 {
+        match self.bit_template.magnitude_of(INNER_BANK_SEGMENT) {
+            None => 1,
+            Some(magnitude) => 1 << magnitude,
+        }
+    }
+
+    fn inner_bank_size(&self) -> u16 {
+        1 << self.inner_bank_width
+    }
+
+    fn outer_bank_size(&self) -> u32 {
+        u32::from(self.inner_bank_count()) * u32::from(self.inner_bank_size())
+    }
+
+    fn prg_pages_per_inner_bank(&self) -> u8 {
+        u8::try_from(self.inner_bank_size() / Self::PRG_PAGE_SIZE).unwrap()
+    }
+
+    fn prg_pages_per_outer_bank(&self) -> u16 {
+        u16::try_from(self.outer_bank_size() / u32::from(Self::PRG_PAGE_SIZE)).unwrap()
+    }
+
+    fn page_number_mask(&self) -> u16 {
+        self.prg_pages_per_outer_bank() - 1
     }
 }
 
