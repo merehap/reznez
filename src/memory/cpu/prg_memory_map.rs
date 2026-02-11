@@ -170,26 +170,22 @@ impl PrgMapping {
 
         match page_number_space {
             PageNumberSpace::Rom(read_status) => {
-                let page_number = self
-                    .rom_address_template
-                    .resolve_page_number(bank_number.to_raw(), self.page_offset);
-                let mem_type = MemType::Rom(read_status);
-                Some(PageInfo { mem_type, page_number, address_template: self.rom_address_template })
+                Some(PageInfo {
+                    mem_type: MemType::Rom(read_status),
+                    address_template: self.rom_address_template,
+                })
             }
             PageNumberSpace::Ram(read_status, write_status) => {
                 let page_number = self
                     .ram_address_template
                     .resolve_page_number(bank_number.to_raw(), self.page_offset);
-                let (mem_type, page_number) =
+                let mem_type =
                     if page_number < regs.work_ram_start_page_number() {
-                        (MemType::SaveRam(read_status, write_status), page_number)
+                        MemType::SaveRam(read_status, write_status)
                     } else {
-                        (
-                            MemType::WorkRam(read_status, write_status),
-                            page_number - regs.work_ram_start_page_number(),
-                        )
+                        MemType::WorkRam(read_status, write_status)
                     };
-                Some(PageInfo { mem_type, page_number, address_template: self.ram_address_template })
+                Some(PageInfo { mem_type, address_template: self.ram_address_template })
             }
         }
     }
@@ -207,12 +203,10 @@ pub enum PrgPageIdSlot {
     Multi(Box<[(Option<PageInfo>, SubPageOffset); PRG_SUB_SLOT_COUNT]>),
 }
 
-type PageNumber = u16;
 type PrgIndex = u32;
 
 #[derive(Clone, Debug)]
 pub struct PageInfo {
     pub mem_type: MemType,
-    pub page_number: PageNumber,
     pub address_template: AddressTemplate,
 }

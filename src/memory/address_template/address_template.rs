@@ -184,6 +184,10 @@ impl AddressTemplate {
         raw_page_number & self.page_number_mask()
     }
 
+    pub fn resolve_inner_bank_number(&self) -> u16 {
+        self.bit_template.resolve_segment(INNER_BANK_SEGMENT, self.raw_inner_bank_number)
+    }
+
     pub fn resolve_index(&self, addr: CpuAddress) -> u32 {
         self.bit_template.resolve(&[*addr, self.raw_inner_bank_number, self.raw_outer_bank_number])
     }

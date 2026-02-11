@@ -235,19 +235,19 @@ impl PrgMemory {
                         // TODO: Add Read/Write status to the output
                         Some(PageInfo {
                             mem_type: MemType::Rom(..),
-                            page_number,
+                            address_template,
                             ..
-                        }) => page_number.to_string(),
+                        }) => address_template.resolve_inner_bank_number().to_string(),
                         Some(PageInfo {
                             mem_type: MemType::WorkRam(..),
-                            page_number,
+                            address_template,
                             ..
-                        }) => format!("W{page_number}"),
+                        }) => format!("W{}", address_template.resolve_inner_bank_number()),
                         Some(PageInfo {
                             mem_type: MemType::SaveRam(..),
-                            page_number,
+                            address_template,
                             ..
-                        }) => format!("S{page_number}"),
+                        }) => format!("S{}", address_template.resolve_inner_bank_number()),
                     }
                 }
                 PrgPageIdSlot::Multi(_) => "M".to_string(),
