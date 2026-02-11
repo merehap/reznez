@@ -11,7 +11,6 @@ use crate::util::const_vec::ConstVec;
 const MAX_WIDTH: u8 = 32;
 const BASE_ADDRESS_SEGMENT: u8 = 0;
 const INNER_BANK_SEGMENT: u8 = 1;
-const OUTER_BANK_SEGMENT: u8 = 2;
 
 /**
  * ```text
@@ -77,7 +76,6 @@ pub struct AddressTemplate {
 impl AddressTemplate {
     pub const PRG_PAGE_NUMBER_WIDTH: u8 = 13;
     pub const PRG_PAGE_SIZE: u16 = 2u16.pow(Self::PRG_PAGE_NUMBER_WIDTH as u32);
-    const PRG_SUB_PAGE_SIZE: u16 = Self::PRG_PAGE_SIZE / 64;
 
     /**
      * PRG Address                           A₁₇A₁₆A₁₅A₁₄ A₁₃ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
@@ -113,8 +111,7 @@ impl AddressTemplate {
         let mut bit_template = BitTemplate::right_to_left(segments);
 
         // Don't expand the bank size larger than the total memory size.
-        let new_base_address_bit_count =
-            std::cmp::min(window.size().bit_count(), bit_template.width());
+        let new_base_address_bit_count = std::cmp::min(window.size().bit_count(), bit_template.width());
         if new_base_address_bit_count > bit_template.magnitude_of(BASE_ADDRESS_SEGMENT).unwrap() {
             bit_template.increase_segment_magnitude(BASE_ADDRESS_SEGMENT, new_base_address_bit_count);
         }
@@ -187,31 +184,12 @@ impl AddressTemplate {
         raw_page_number & self.page_number_mask()
     }
 
-    pub fn resolve_index(
-        &self,
-        _raw_outer_bank_number: u8,
-        _page_number: u16,
-        _offset_in_page: u16,
-        addr: CpuAddress,
-    ) -> u32 {
+    pub fn resolve_index(&self, addr: CpuAddress) -> u32 {
         self.bit_template.resolve(&[*addr, self.raw_inner_bank_number, self.raw_outer_bank_number])
     }
 
-    pub fn resolve_subpage_index(
-        &self,
-        raw_outer_bank_number: u8,
-        page_number: u16,
-        sub_page_offset: u16,
-        offset_in_page: u16,
-    ) -> u32 {
-        let outer_bank_number = self
-            .bit_template
-            .resolve_segment(OUTER_BANK_SEGMENT, raw_outer_bank_number.into());
-        let outer_bank_start = u32::from(outer_bank_number) * self.outer_bank_size();
-        let page_start = u32::from(page_number) * Self::PRG_PAGE_SIZE as u32;
-        let subpage_start = Self::PRG_SUB_PAGE_SIZE as u32 * sub_page_offset as u32;
-        let offset_in_subpage = u32::from(offset_in_page % Self::PRG_SUB_PAGE_SIZE);
-        outer_bank_start | page_start | subpage_start | offset_in_subpage
+    pub fn resolve_subpage_index(&self, addr: CpuAddress) -> u32 {
+        self.bit_template.resolve(&[*addr, self.raw_inner_bank_number, self.raw_outer_bank_number])
     }
 
     pub fn formatted(&self) -> String {

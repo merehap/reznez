@@ -84,9 +84,7 @@ impl PrgMemory {
     }
 
     pub fn peek(&self, address: CpuAddress) -> ReadResult {
-        if let Some((mem_type, index)) = self.memory_maps[self.memory_map_index as usize]
-            .index_for_address(self.rom_outer_bank_number, address)
-        {
+        if let Some((mem_type, index)) = self.memory_maps[self.memory_map_index as usize].index_for_address(address) {
             match (mem_type, mem_type.read_status()) {
                 (_, ReadStatus::Disabled) => ReadResult::OPEN_BUS,
                 (_, ReadStatus::ReadOnlyZeros) => ReadResult::full(0),
@@ -110,8 +108,7 @@ impl PrgMemory {
     }
 
     pub fn write(&mut self, address: CpuAddress, value: u8) {
-        let prg_source_and_index = self.memory_maps[self.memory_map_index as usize]
-            .index_for_address(self.rom_outer_bank_number, address);
+        let prg_source_and_index = self.memory_maps[self.memory_map_index as usize].index_for_address(address);
         use MemType::*;
         match prg_source_and_index {
             Some((WorkRam(_, WriteStatus::Enabled), index)) => {

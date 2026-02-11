@@ -46,11 +46,7 @@ impl PrgMemoryMap {
         memory_map
     }
 
-    pub fn index_for_address(
-        &self,
-        rom_outer_bank_number: u8,
-        addr: CpuAddress,
-    ) -> Option<(MemType, PrgIndex)> {
+    pub fn index_for_address(&self, addr: CpuAddress) -> Option<(MemType, PrgIndex)> {
         assert!(matches!(*addr, 0x6000..=0xFFFF));
 
         let raw_addr = *addr - 0x6000;
@@ -58,36 +54,14 @@ impl PrgMemoryMap {
         let offset_in_page = raw_addr % PAGE_SIZE;
 
         match &self.page_ids[mapping_index as usize] {
-            PrgPageIdSlot::Normal(page_info) => page_info.as_ref().map(
-                |PageInfo { mem_type, page_number, address_template }| {
-                    let outer_bank_number = if mem_type.is_rom() {
-                        rom_outer_bank_number
-                    } else {
-                        0
-                    };
-                    (
-                        *mem_type,
-                        address_template.resolve_index(outer_bank_number, *page_number, offset_in_page, addr),
-                    )
-                },
+            PrgPageIdSlot::Normal(page_info) => page_info
+                    .as_ref()
+                    .map(|PageInfo { mem_type, address_template, .. }| (*mem_type, address_template.resolve_index(addr))
             ),
             PrgPageIdSlot::Multi(page_infos) => {
                 let sub_mapping_index = offset_in_page / (KIBIBYTE as u16 / 8);
-                let (page_info, sub_page_offset) = page_infos[sub_mapping_index as usize].clone();
-                page_info.map(|PageInfo { mem_type, page_number, address_template }| {
-                    let outer_bank_number = if mem_type.is_rom() {
-                        rom_outer_bank_number
-                    } else {
-                        0
-                    };
-                    let index = address_template.resolve_subpage_index(
-                        outer_bank_number,
-                        page_number,
-                        sub_page_offset,
-                        offset_in_page,
-                    );
-                    (mem_type, index)
-                })
+                let (page_info, _) = page_infos[sub_mapping_index as usize].clone();
+                page_info.map(|PageInfo { mem_type, address_template, .. }| (mem_type, address_template.resolve_index(addr)))
             }
         }
     }
