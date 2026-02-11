@@ -1,9 +1,10 @@
 use std::fmt;
 
+use crate::mapper::{CpuAddress, PrgBankRegisterId};
 use crate::memory::address_template::bank_sizes::BankSizes;
 use crate::memory::address_template::bit_template::BitTemplate;
 use crate::memory::address_template::segment::Segment;
-use crate::memory::bank::bank_number::BankNumber;
+use crate::memory::bank::bank_number::{BankNumber, PrgBankRegisters};
 use crate::memory::window::PrgWindow;
 use crate::util::const_vec::ConstVec;
 
@@ -62,8 +63,15 @@ const OUTER_BANK_SEGMENT: u8 = 2;
 **/
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct AddressTemplate {
+    // Never changed after initialization.
     bit_template: BitTemplate,
+    // Never changed after initialization.
     inner_bank_width: u8,
+
+    raw_outer_bank_number: u16,
+    raw_inner_bank_number: u16,
+
+    reg_id: Option<PrgBankRegisterId>,
 }
 
 impl AddressTemplate {
@@ -111,7 +119,13 @@ impl AddressTemplate {
             bit_template.increase_segment_magnitude(BASE_ADDRESS_SEGMENT, new_base_address_bit_count);
         }
 
-        let address_template = Self { bit_template, inner_bank_width };
+        let address_template = Self {
+            bit_template,
+            inner_bank_width,
+            raw_outer_bank_number: 0,
+            raw_inner_bank_number: 0,
+            reg_id: window.register_id(),
+        };
         assert!(address_template.total_width() <= MAX_WIDTH);
 
         if window.size().page_multiple() == 0 {
@@ -139,7 +153,14 @@ impl AddressTemplate {
         };
         let inner_bank_width = base_address_width + inner_bank_ignored_low_count;
 
-        Ok(Self { bit_template, inner_bank_width })
+        Ok(Self {
+            bit_template,
+            inner_bank_width,
+            raw_outer_bank_number: 0,
+            raw_inner_bank_number: 0,
+            // TODO: Parse this from the template.
+            reg_id: None,
+        })
     }
 
     pub fn reduced(&self, bank_sizes: &BankSizes) -> Self {
@@ -168,16 +189,12 @@ impl AddressTemplate {
 
     pub fn resolve_index(
         &self,
-        raw_outer_bank_number: u8,
-        page_number: u16,
-        offset_in_page: u16,
+        _raw_outer_bank_number: u8,
+        _page_number: u16,
+        _offset_in_page: u16,
+        addr: CpuAddress,
     ) -> u32 {
-        let outer_bank_number = self
-            .bit_template
-            .resolve_segment(OUTER_BANK_SEGMENT, raw_outer_bank_number.into());
-        let outer_bank_start = u32::from(outer_bank_number) * self.outer_bank_size();
-        let page_start = u32::from(page_number) * u32::from(Self::PRG_PAGE_SIZE);
-        outer_bank_start | page_start | u32::from(offset_in_page)
+        self.bit_template.resolve(&[*addr, self.raw_inner_bank_number, self.raw_outer_bank_number])
     }
 
     pub fn resolve_subpage_index(
@@ -199,6 +216,16 @@ impl AddressTemplate {
 
     pub fn formatted(&self) -> String {
         self.bit_template.formatted()
+    }
+
+    pub fn set_raw_outer_bank_number(&mut self, number: u16) {
+        self.raw_outer_bank_number = number;
+    }
+
+    pub fn update_inner_bank_number(&mut self, regs: &PrgBankRegisters) {
+        if let Some(reg_id) = self.reg_id {
+            self.raw_inner_bank_number = regs.get(reg_id).index().unwrap().to_raw();
+        }
     }
 
     fn inner_bank_count(&self) -> u16 {

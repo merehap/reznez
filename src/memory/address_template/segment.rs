@@ -117,7 +117,7 @@ impl Segment {
     }
 
     pub fn resolve_shifted(&self, raw_value: u16, shift: u8) -> u32 {
-        u32::from(self.resolve(raw_value)) << shift
+        u32::from(self.resolve(raw_value) >> self.ignored_low_count) << shift
     }
 
     pub fn formatted(self) -> String {

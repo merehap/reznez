@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use crate::memory::address_template::segment::{Label, Segment};
+use crate::memory::address_template::segment::Segment;
 use crate::util::const_vec::ConstVec;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -75,11 +75,6 @@ impl BitTemplate {
         Some(segment.ignored_low_count())
     }
 
-    pub const fn label_of(&self, segment_index: u8) -> Option<Label> {
-        let segment = self.segments.maybe_get(segment_index)?;
-        Some(segment.label)
-    }
-
     pub fn resolve(&self, raw_values: &[u16]) -> u32 {
         let mut result = 0;
         let mut index = 0;
@@ -133,7 +128,7 @@ impl BitTemplate {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::memory::address_template::segment::Segment;
+    use crate::memory::address_template::segment::{Segment, Label};
 
     #[test]
     fn template_from_formatted() {

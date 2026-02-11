@@ -91,10 +91,10 @@ impl PrgMemory {
                 (_, ReadStatus::Disabled) => ReadResult::OPEN_BUS,
                 (_, ReadStatus::ReadOnlyZeros) => ReadResult::full(0),
                 (MemType::WorkRam(..), ReadStatus::Enabled) => {
-                    ReadResult::full(self.work_ram[index])
+                    ReadResult::full(self.work_ram[index - self.save_ram.size()])
                 }
                 (MemType::SaveRam(..), ReadStatus::Enabled) => {
-                    ReadResult::full(self.save_ram[index % self.save_ram.size()])
+                    ReadResult::full(self.save_ram[index])
                 }
                 (MemType::Rom(..), ReadStatus::Enabled) => {
                     ReadResult::full(self.rom[index])
@@ -115,31 +115,20 @@ impl PrgMemory {
         use MemType::*;
         match prg_source_and_index {
             Some((WorkRam(_, WriteStatus::Enabled), index)) => {
-                self.work_ram[index] = value;
+                self.work_ram[index - self.save_ram.size()] = value;
                 info!(target: "mapperramwrites", "Setting PRG [${address}]=${value:02} (Work RAM @ ${index:X})");
             }
             Some((SaveRam(_, WriteStatus::Enabled), index)) => {
-                let index = index % self.save_ram.size();
                 self.save_ram[index] = value;
                 info!(target: "mapperramwrites", "Setting PRG [${address}]=${value:02} (Save RAM @ ${index:X})");
             }
-            Some((
-                Rom { .. }
-                | WorkRam(_, WriteStatus::Disabled)
-                | SaveRam(_, WriteStatus::Disabled),
-                _,
-            ))
-            | None => {
+            Some((Rom { .. } | WorkRam(_, WriteStatus::Disabled) | SaveRam(_, WriteStatus::Disabled), _)) | None => {
                 /* Writes to ROM, absent banks, and disabled banks do nothing. */
             }
         }
     }
 
-    pub fn set_bank_register<INDEX: Into<u16>>(
-        &mut self,
-        id: PrgBankRegisterId,
-        value: INDEX,
-    ) {
+    pub fn set_bank_register<INDEX: Into<u16>>(&mut self, id: PrgBankRegisterId, value: INDEX) {
         self.regs.set(id, BankNumber::from_u16(value.into()));
         self.update_page_ids();
     }
@@ -213,6 +202,9 @@ impl PrgMemory {
 
     pub fn set_prg_rom_outer_bank_number(&mut self, number: u8) {
         self.rom_outer_bank_number = number;
+        for memory_map in &mut self.memory_maps {
+            memory_map.set_rom_outer_bank_number(&self.regs, number.into());
+        }
     }
 
     pub fn set_prg_rom_outer_bank_size(&mut self, _new_size: u32) {

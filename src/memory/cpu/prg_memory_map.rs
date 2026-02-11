@@ -53,9 +53,9 @@ impl PrgMemoryMap {
     ) -> Option<(MemType, PrgIndex)> {
         assert!(matches!(*addr, 0x6000..=0xFFFF));
 
-        let addr = *addr - 0x6000;
-        let mapping_index = addr / PAGE_SIZE;
-        let offset_in_page = addr % PAGE_SIZE;
+        let raw_addr = *addr - 0x6000;
+        let mapping_index = raw_addr / PAGE_SIZE;
+        let offset_in_page = raw_addr % PAGE_SIZE;
 
         match &self.page_ids[mapping_index as usize] {
             PrgPageIdSlot::Normal(page_info) => page_info.as_ref().map(
@@ -67,14 +67,13 @@ impl PrgMemoryMap {
                     };
                     (
                         *mem_type,
-                        address_template.resolve_index(outer_bank_number, *page_number, offset_in_page),
+                        address_template.resolve_index(outer_bank_number, *page_number, offset_in_page, addr),
                     )
                 },
             ),
             PrgPageIdSlot::Multi(page_infos) => {
                 let sub_mapping_index = offset_in_page / (KIBIBYTE as u16 / 8);
-                let (page_info, sub_page_offset) =
-                    page_infos[sub_mapping_index as usize].clone();
+                let (page_info, sub_page_offset) = page_infos[sub_mapping_index as usize].clone();
                 page_info.map(|PageInfo { mem_type, page_number, address_template }| {
                     let outer_bank_number = if mem_type.is_rom() {
                         rom_outer_bank_number
@@ -99,14 +98,18 @@ impl PrgMemoryMap {
 
     pub fn update_page_ids(&mut self, regs: &PrgBankRegisters) {
         for i in 0..PRG_SLOT_COUNT {
-            match &self.page_mappings[i] {
+            match &mut self.page_mappings[i] {
                 PrgMappingSlot::Normal(mapping) => {
+                    (&mut mapping.rom_address_template).update_inner_bank_number(regs);
+                    (&mut mapping.ram_address_template).update_inner_bank_number(regs);
                     let page_id = mapping.page_info(regs);
                     self.page_ids[i] = PrgPageIdSlot::Normal(page_id);
                 }
                 PrgMappingSlot::Multi(mappings) => {
                     let mut page_ids = Vec::new();
-                    for (mapping, offset) in mappings.iter() {
+                    for (mapping, offset) in mappings.iter_mut() {
+                        (&mut mapping.rom_address_template).update_inner_bank_number(regs);
+                        (&mut mapping.ram_address_template).update_inner_bank_number(regs);
                         let page_id = mapping.page_info(regs);
                         page_ids.push((page_id, *offset));
                     }
@@ -115,6 +118,23 @@ impl PrgMemoryMap {
                 }
             }
         }
+    }
+
+    pub fn set_rom_outer_bank_number(&mut self, regs: &PrgBankRegisters, raw_outer_bank_number: u16) {
+        for i in 0..PRG_SLOT_COUNT {
+            match &mut self.page_mappings[i] {
+                PrgMappingSlot::Normal(mapping) => {
+                    (&mut mapping.rom_address_template).set_raw_outer_bank_number(raw_outer_bank_number);
+                }
+                PrgMappingSlot::Multi(mappings) => {
+                    for (mapping, _) in mappings.iter_mut() {
+                        (&mut mapping.rom_address_template).set_raw_outer_bank_number(raw_outer_bank_number);
+                    }
+                }
+            }
+        }
+
+        self.update_page_ids(regs);
     }
 
     fn window_to_sub_mappings(
@@ -170,10 +190,7 @@ type SubPageOffset = u16;
 
 impl PrgMapping {
     pub fn page_info(&self, regs: &PrgBankRegisters) -> Option<PageInfo> {
-        let (Ok(bank_number), Some(page_number_space)) = (
-            self.bank.bank_number(regs),
-            self.bank.page_number_space(regs),
-        ) else {
+        let (Ok(bank_number), Some(page_number_space)) = (self.bank.bank_number(regs), self.bank.page_number_space(regs)) else {
             return None;
         };
 
@@ -183,11 +200,7 @@ impl PrgMapping {
                     .rom_address_template
                     .resolve_page_number(bank_number.to_raw(), self.page_offset);
                 let mem_type = MemType::Rom(read_status);
-                Some(PageInfo {
-                    mem_type,
-                    page_number,
-                    address_template: self.rom_address_template,
-                })
+                Some(PageInfo { mem_type, page_number, address_template: self.rom_address_template })
             }
             PageNumberSpace::Ram(read_status, write_status) => {
                 let page_number = self
@@ -202,21 +215,14 @@ impl PrgMapping {
                             page_number - regs.work_ram_start_page_number(),
                         )
                     };
-
-                Some(PageInfo {
-                    mem_type,
-                    page_number,
-                    address_template: self.ram_address_template,
-                })
+                Some(PageInfo { mem_type, page_number, address_template: self.ram_address_template })
             }
         }
     }
 
     pub fn same_templates_as(&self, other: &Self) -> bool {
-        let rom_template_matches =
-            self.rom_address_template == other.rom_address_template;
-        let ram_template_matches =
-            self.ram_address_template == other.ram_address_template;
+        let rom_template_matches = self.rom_address_template == other.rom_address_template;
+        let ram_template_matches = self.ram_address_template == other.ram_address_template;
         rom_template_matches || ram_template_matches
     }
 }
