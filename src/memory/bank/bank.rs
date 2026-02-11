@@ -2,7 +2,7 @@ use crate::mapper::CiramSide;
 use crate::mapper::NameTableSource;
 use crate::mapper::ReadStatus;
 use crate::mapper::WriteStatus;
-use crate::memory::address_template::address_template::AddressTemplate;
+use crate::memory::address_template::address_resolver::AddressResolver;
 use crate::memory::bank::bank::ChrSourceRegisterId::*;
 use crate::memory::bank::bank::PrgSourceRegisterId::*;
 use crate::memory::bank::bank_number::BankLocation;
@@ -82,7 +82,7 @@ pub struct PrgBank {
     prg_source_provider: PrgSourceProvider,
     read_status_register_id: Option<ReadStatusRegisterId>,
     write_status_register_id: Option<WriteStatusRegisterId>,
-    rom_address_template: Option<AddressTemplate>,
+    rom_address_template: Option<AddressResolver>,
 }
 
 impl PrgBank {
@@ -187,7 +187,7 @@ impl PrgBank {
             self.prg_source_provider.is_mapped(),
             "An ABSENT bank can't have an override ROM address template."
         );
-        match AddressTemplate::from_formatted(template) {
+        match AddressResolver::from_formatted(template) {
             Ok(template) => self.rom_address_template = Some(template),
             Err(err) => panic!("{}", err),
         }
@@ -234,7 +234,7 @@ impl PrgBank {
         }
     }
 
-    pub const fn rom_address_template_override(self) -> Option<AddressTemplate> {
+    pub const fn rom_address_template_override(self) -> Option<AddressResolver> {
         self.rom_address_template
     }
 

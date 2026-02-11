@@ -1,5 +1,5 @@
 use crate::mapper::PrgWindow;
-use crate::memory::address_template::address_template::AddressTemplate;
+use crate::memory::address_template::address_resolver::AddressResolver;
 use crate::memory::address_template::bank_sizes::BankSizes;
 use crate::memory::bank::bank::PrgBank;
 use crate::memory::bank::bank_number::{MemType, PageNumberSpace, PrgBankRegisters};
@@ -155,8 +155,8 @@ impl PrgMappingSlot {
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct PrgMapping {
     bank: PrgBank,
-    rom_address_template: AddressTemplate,
-    ram_address_template: AddressTemplate,
+    rom_address_template: AddressResolver,
+    ram_address_template: AddressResolver,
     page_offset: u16,
 }
 
@@ -208,5 +208,5 @@ type PrgIndex = u32;
 #[derive(Clone, Debug)]
 pub struct PageInfo {
     pub mem_type: MemType,
-    pub address_template: AddressTemplate,
+    pub address_template: AddressResolver,
 }

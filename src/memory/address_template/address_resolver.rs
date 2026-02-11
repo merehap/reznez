@@ -61,7 +61,7 @@ const INNER_BANK_SEGMENT: u8 = 1;
  * ```
 **/
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub struct AddressTemplate {
+pub struct AddressResolver {
     // Never changed after initialization.
     bit_template: BitTemplate,
     // Never changed after initialization.
@@ -73,7 +73,7 @@ pub struct AddressTemplate {
     reg_id: Option<PrgBankRegisterId>,
 }
 
-impl AddressTemplate {
+impl AddressResolver {
     pub const PRG_PAGE_NUMBER_WIDTH: u8 = 13;
     pub const PRG_PAGE_SIZE: u16 = 2u16.pow(Self::PRG_PAGE_NUMBER_WIDTH as u32);
 
@@ -238,7 +238,7 @@ impl AddressTemplate {
     }
 }
 
-impl fmt::Display for AddressTemplate {
+impl fmt::Display for AddressResolver {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.formatted())
     }

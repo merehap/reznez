@@ -1,6 +1,6 @@
 use std::num::NonZeroU16;
 
-use crate::memory::address_template::address_template::AddressTemplate;
+use crate::memory::address_template::address_resolver::AddressResolver;
 use crate::memory::address_template::bank_sizes::BankSizes;
 use crate::memory::bank::bank::PrgBank;
 use crate::memory::bank::bank_number::{ChrBankRegisters, PrgBankRegisterId};
@@ -55,14 +55,14 @@ impl PrgWindow {
         }
     }
 
-    pub fn rom_address_template(&self, bank_sizes: &BankSizes) -> AddressTemplate {
+    pub fn rom_address_template(&self, bank_sizes: &BankSizes) -> AddressResolver {
         self.bank().rom_address_template_override()
             .map(|template| template.reduced(bank_sizes))
-            .unwrap_or(AddressTemplate::prg(self, bank_sizes))
+            .unwrap_or(AddressResolver::prg(self, bank_sizes))
     }
 
-    pub fn ram_address_template(&self, bank_sizes: &BankSizes) -> AddressTemplate {
-        AddressTemplate::prg(self, bank_sizes)
+    pub fn ram_address_template(&self, bank_sizes: &BankSizes) -> AddressResolver {
+        AddressResolver::prg(self, bank_sizes)
     }
 
     pub const fn validate_rom_address_template_width(&self, max_rom_size: u32) {
