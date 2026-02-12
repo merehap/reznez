@@ -58,11 +58,11 @@ impl PrgWindow {
     pub fn rom_address_template(&self, bank_sizes: &BankSizes) -> AddressResolver {
         self.bank().rom_address_template_override()
             .map(|template| template.reduced(bank_sizes))
-            .unwrap_or(AddressResolver::prg(self, bank_sizes))
+            .unwrap_or(AddressResolver::prg(self, bank_sizes, 0))
     }
 
-    pub fn ram_address_template(&self, bank_sizes: &BankSizes) -> AddressResolver {
-        AddressResolver::prg(self, bank_sizes)
+    pub fn ram_address_template(&self, bank_sizes: &BankSizes, work_ram_start_inner_bank_number: u16) -> AddressResolver {
+        AddressResolver::prg(self, bank_sizes, work_ram_start_inner_bank_number)
     }
 
     pub const fn validate_rom_address_template_width(&self, max_rom_size: u32) {

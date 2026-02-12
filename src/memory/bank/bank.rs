@@ -187,7 +187,7 @@ impl PrgBank {
             self.prg_source_provider.is_mapped(),
             "An ABSENT bank can't have an override ROM address template."
         );
-        match AddressResolver::from_formatted(template) {
+        match AddressResolver::from_formatted(template, 0) {
             Ok(template) => self.rom_address_template = Some(template),
             Err(err) => panic!("{}", err),
         }
@@ -261,8 +261,7 @@ impl PrgBank {
             .map_or(WriteStatus::Enabled, |id| regs.write_status(id));
 
         // There's currently no way to set make the ROM ReadStatus of a RomRam bank switchable.
-        if self.is_rom_ram() && (prg_source == PrgSource::Rom || !regs.cartridge_has_ram())
-        {
+        if self.is_rom_ram() && (prg_source == PrgSource::Rom || !regs.cartridge_has_ram()) {
             return Some(PageNumberSpace::Rom(ReadStatus::Enabled));
         }
 

@@ -71,6 +71,8 @@ pub struct AddressResolver {
     raw_inner_bank_number: u16,
 
     reg_id: Option<PrgBankRegisterId>,
+    // TODO: This should only be present for RAM resolvers.
+    work_ram_start_inner_bank_number: u16,
 }
 
 impl AddressResolver {
@@ -82,9 +84,8 @@ impl AddressResolver {
      * Components Before (8 KiB inner banks) O₀₁O₀₀I₀₂I₀₁ I₀₀ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
      * Components After (16 KiB inner banks) O₀₁O₀₀I₀₂I₀₁ A₁₃ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
      */
-    pub const fn prg(window: &PrgWindow, bank_sizes: &BankSizes) -> Self {
-        let fixed_inner_bank_number =
-            window.bank().fixed_bank_number().map(BankNumber::to_raw);
+    pub const fn prg(window: &PrgWindow, bank_sizes: &BankSizes, work_ram_start_inner_bank_number: u16) -> Self {
+        let fixed_inner_bank_number = window.bank().fixed_bank_number().map(BankNumber::to_raw);
 
         let inner_bank_width = bank_sizes.inner_bank_width();
         let address_bus_segment = Segment::named('a', inner_bank_width);
@@ -122,17 +123,18 @@ impl AddressResolver {
             raw_outer_bank_number: 0,
             raw_inner_bank_number: 0,
             reg_id: window.register_id(),
+            work_ram_start_inner_bank_number,
         };
         assert!(address_template.total_width() <= MAX_WIDTH);
 
         address_template
     }
 
-    pub const fn from_formatted(text: &'static str) -> Result<Self, &'static str> {
-        Self::from_bit_template(BitTemplate::from_formatted(text)?)
+    pub const fn from_formatted(text: &'static str, work_ram_start_inner_bank_number: u16) -> Result<Self, &'static str> {
+        Self::from_bit_template(BitTemplate::from_formatted(text)?, work_ram_start_inner_bank_number)
     }
 
-    const fn from_bit_template(bit_template: BitTemplate) -> Result<Self, &'static str> {
+    const fn from_bit_template(bit_template: BitTemplate, work_ram_start_inner_bank_number: u16) -> Result<Self, &'static str> {
         if bit_template.width() > 32 {
             return Err("AddressTemplate must not be longer than 32 bits.");
         }
@@ -153,6 +155,7 @@ impl AddressResolver {
             raw_inner_bank_number: 0,
             // TODO: Parse this from the template.
             reg_id: None,
+            work_ram_start_inner_bank_number,
         })
     }
 
@@ -165,6 +168,10 @@ impl AddressResolver {
 
     pub const fn total_width(&self) -> u8 {
         self.bit_template.width()
+    }
+
+    pub fn is_currently_resolving_to_save_ram(&self) -> bool {
+        self.resolve_inner_bank_number() < self.work_ram_start_inner_bank_number
     }
 
     pub fn resolve_inner_bank_number(&self) -> u16 {
@@ -191,14 +198,6 @@ impl AddressResolver {
         if let Some(reg_id) = self.reg_id {
             self.raw_inner_bank_number = regs.get(reg_id).index().unwrap().to_raw();
         }
-    }
-
-    fn inner_bank_size(&self) -> u16 {
-        1 << self.inner_bank_width
-    }
-
-    pub fn prg_pages_per_inner_bank(&self) -> u8 {
-        u8::try_from(self.inner_bank_size() / Self::PRG_PAGE_SIZE).unwrap()
     }
 }
 

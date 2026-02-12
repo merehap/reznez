@@ -24,11 +24,14 @@ impl PrgMemoryMap {
         ram_bank_sizes: &BankSizes,
         regs: &PrgBankRegisters,
     ) -> Self {
+        let mut ram_pages_per_inner_bank = u8::try_from(ram_bank_sizes.inner_bank_size() / u32::from(AddressResolver::PRG_PAGE_SIZE)).unwrap();
+        ram_pages_per_inner_bank = std::cmp::max(ram_pages_per_inner_bank, 1);
+        let work_ram_start_inner_bank_number = regs.work_ram_start_page_number() / u16::from(ram_pages_per_inner_bank);
         let sub_page_mappings: Vec<_> = initial_layout
             .windows()
             .iter()
             .flat_map(|window| {
-                Self::window_to_sub_mappings(window, rom_bank_sizes, ram_bank_sizes)
+                Self::window_to_sub_mappings(window, rom_bank_sizes, ram_bank_sizes, work_ram_start_inner_bank_number)
             })
             .collect();
         let page_mappings: Vec<PrgMappingSlot> = sub_page_mappings
@@ -115,14 +118,14 @@ impl PrgMemoryMap {
         window: &PrgWindow,
         rom_bank_sizes: &BankSizes,
         ram_bank_sizes: &BankSizes,
+        work_ram_start_inner_bank_number: u16,
     ) -> Vec<(PrgMapping, u16)> {
         (0..window.size().to_raw() / 128)
             .map(|sub_page_offset| {
                 let mapping = PrgMapping {
                     bank: window.bank(),
                     rom_address_resolver: window.rom_address_template(rom_bank_sizes),
-                    ram_address_resolver: window.ram_address_template(ram_bank_sizes),
-                    page_offset: sub_page_offset / 64,
+                    ram_address_resolver: window.ram_address_template(ram_bank_sizes, work_ram_start_inner_bank_number),
                 };
                 (mapping, sub_page_offset)
             })
@@ -157,7 +160,6 @@ pub struct PrgMapping {
     bank: PrgBank,
     rom_address_resolver: AddressResolver,
     ram_address_resolver: AddressResolver,
-    page_offset: u16,
 }
 
 type SubPageOffset = u16;
@@ -176,9 +178,7 @@ impl PrgMapping {
                 })
             }
             PageNumberSpace::Ram(read_status, write_status) => {
-                let inner_bank_number = self.ram_address_resolver.resolve_inner_bank_number();
-                let work_ram_start_inner_bank_number = regs.work_ram_start_page_number() / u16::from(self.ram_address_resolver.prg_pages_per_inner_bank());
-                let mem_type = if inner_bank_number < work_ram_start_inner_bank_number {
+                let mem_type = if self.ram_address_resolver.is_currently_resolving_to_save_ram() {
                     MemType::SaveRam(read_status, write_status)
                 } else {
                     MemType::WorkRam(read_status, write_status)
