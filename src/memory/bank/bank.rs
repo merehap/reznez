@@ -261,8 +261,7 @@ impl PrgBank {
             .map_or(WriteStatus::Enabled, |id| regs.write_status(id));
 
         // There's currently no way to set make the ROM ReadStatus of a RomRam bank switchable.
-        if self.is_rom_ram()
-            && (prg_source == PrgSource::Rom || !regs.cartridge_has_ram())
+        if self.is_rom_ram() && (prg_source == PrgSource::Rom || !regs.cartridge_has_ram())
         {
             return Some(PageNumberSpace::Rom(ReadStatus::Enabled));
         }

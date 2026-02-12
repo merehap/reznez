@@ -125,10 +125,6 @@ impl AddressResolver {
         };
         assert!(address_template.total_width() <= MAX_WIDTH);
 
-        if window.size().page_multiple() == 0 {
-            return address_template;
-        }
-
         address_template
     }
 
@@ -171,19 +167,6 @@ impl AddressResolver {
         self.bit_template.width()
     }
 
-    pub fn resolve_page_number(
-        &self,
-        raw_inner_bank_number: u16,
-        page_offset: u16,
-    ) -> u16 {
-        let inner_bank_number = self
-            .bit_template
-            .resolve_segment(INNER_BANK_SEGMENT, raw_inner_bank_number);
-        let page_offset = page_offset % self.prg_pages_per_outer_bank();
-        let raw_page_number = inner_bank_number * u16::from(self.prg_pages_per_inner_bank()) + page_offset;
-        raw_page_number & self.page_number_mask()
-    }
-
     pub fn resolve_inner_bank_number(&self) -> u16 {
         self.bit_template.resolve_segment(INNER_BANK_SEGMENT, self.raw_inner_bank_number)
     }
@@ -210,31 +193,12 @@ impl AddressResolver {
         }
     }
 
-    fn inner_bank_count(&self) -> u16 {
-        match self.bit_template.magnitude_of(INNER_BANK_SEGMENT) {
-            None => 1,
-            Some(magnitude) => 1 << magnitude,
-        }
-    }
-
     fn inner_bank_size(&self) -> u16 {
         1 << self.inner_bank_width
     }
 
-    fn outer_bank_size(&self) -> u32 {
-        u32::from(self.inner_bank_count()) * u32::from(self.inner_bank_size())
-    }
-
-    fn prg_pages_per_inner_bank(&self) -> u8 {
+    pub fn prg_pages_per_inner_bank(&self) -> u8 {
         u8::try_from(self.inner_bank_size() / Self::PRG_PAGE_SIZE).unwrap()
-    }
-
-    fn prg_pages_per_outer_bank(&self) -> u16 {
-        u16::try_from(self.outer_bank_size() / u32::from(Self::PRG_PAGE_SIZE)).unwrap()
-    }
-
-    fn page_number_mask(&self) -> u16 {
-        self.prg_pages_per_outer_bank() - 1
     }
 }
 

@@ -75,7 +75,6 @@ impl Layout {
             u16::try_from(metadata.prg_save_ram_size / (8 * KIBIBYTE)).unwrap()
         };
 
-
         let cartridge_has_ram = metadata.prg_work_ram_size > 0 ||  metadata.prg_save_ram_size > 0;
         let mut prg_bank_registers = PrgBankRegisters::new(cartridge_has_ram, prg_save_ram_page_count);
         for (register_id, bank_number) in self.bank_register_overrides.as_iter() {
