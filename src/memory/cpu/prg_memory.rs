@@ -8,7 +8,7 @@ use crate::memory::bank::bank_number::{
 };
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::{PrgLayout, PrgLayouts};
-use crate::memory::cpu::prg_memory_map::{PageInfo, PrgMemoryMap, PrgPageIdSlot};
+use crate::memory::cpu::prg_memory_map::{PrgMappingSlot, PrgMemoryMap};
 use crate::memory::layout::OuterBankLayout;
 use crate::memory::raw_memory::{RawMemory, SaveRam};
 use crate::memory::read_result::ReadResult;
@@ -226,31 +226,17 @@ impl PrgMemory {
 
     pub fn prg_rom_bank_string(&self) -> String {
         let mut result = String::new();
-        for prg_page_id_slot in self.current_memory_map().page_id_slots() {
+        for prg_page_id_slot in self.current_memory_map().page_mappings() {
             let bank_string = match prg_page_id_slot {
-                PrgPageIdSlot::Normal(prg_source_and_page_number) => {
-                    match prg_source_and_page_number {
+                PrgMappingSlot::Normal(mapping) => {
+                    match mapping.inner_bank_number() {
                         None => "E".to_string(),
-                        // FIXME: This should be bank number, not page number.
-                        // TODO: Add Read/Write status to the output
-                        Some(PageInfo {
-                            mem_type: MemType::Rom(..),
-                            address_template,
-                            ..
-                        }) => address_template.resolve_inner_bank_number().to_string(),
-                        Some(PageInfo {
-                            mem_type: MemType::WorkRam(..),
-                            address_template,
-                            ..
-                        }) => format!("W{}", address_template.resolve_inner_bank_number()),
-                        Some(PageInfo {
-                            mem_type: MemType::SaveRam(..),
-                            address_template,
-                            ..
-                        }) => format!("S{}", address_template.resolve_inner_bank_number()),
+                        Some((MemType::Rom(..), inner_bank_number)) => inner_bank_number.to_string(),
+                        Some((MemType::WorkRam(..), inner_bank_number)) => format!("W{}", inner_bank_number),
+                        Some((MemType::SaveRam(..), inner_bank_number)) => format!("S{}", inner_bank_number),
                     }
                 }
-                PrgPageIdSlot::Multi(_) => "M".to_string(),
+                PrgMappingSlot::Multi(_) => "M".to_string(),
             };
 
             let window_size = 8;

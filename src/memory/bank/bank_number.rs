@@ -332,6 +332,7 @@ impl MemType {
     }
 }
 
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub enum PageNumberSpace {
     Rom(ReadStatus),
     Ram(ReadStatus, WriteStatus),

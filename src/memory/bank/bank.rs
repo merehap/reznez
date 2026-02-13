@@ -211,6 +211,10 @@ impl PrgBank {
         )
     }
 
+    pub fn is_absent(self) -> bool {
+        self.prg_source_provider == PrgSourceProvider::Fixed(None)
+    }
+
     pub fn is_rom_ram(self) -> bool {
         matches!(self.prg_source_provider, PrgSourceProvider::Switchable(_))
     }

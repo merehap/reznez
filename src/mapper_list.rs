@@ -559,7 +559,7 @@ mod tests {
     use crate::mapper::KIBIBYTE;
 
     use crate::cartridge::cartridge::test_data::*;
-    use crate::memory::cpu::prg_memory_map::{PageInfo, PrgPageIdSlot};
+    use crate::memory::cpu::prg_memory_map::PrgMappingSlot;
 
     /**
      * NROM, 32KiB PRG ROM
@@ -754,14 +754,16 @@ mod tests {
 
         let (prg_memory, _, _) = mapper.layout().make_mapper_params(&metadata, &cartridge, false).unwrap();
         for (memory_map, mem_map_expected) in prg_memory.memory_maps().iter().zip(params.expected) {
-            for (slot, slot_expected) in memory_map.page_id_slots().iter().zip(mem_map_expected) {
+            for (slot, slot_expected) in memory_map.page_mappings().iter().zip(mem_map_expected) {
                 match slot {
-                    PrgPageIdSlot::Normal(None) => assert!(slot_expected.is_none()),
-                    PrgPageIdSlot::Normal(Some(PageInfo { address_template, .. })) => {
-                        let expected = slot_expected.unwrap();
-                        assert_eq!(address_template.to_string(), expected);
+                    PrgMappingSlot::Normal(mapping) => {
+                        if let Some(address_resolver) = mapping.maybe_address_resolver() {
+                            assert_eq!(Some(address_resolver.to_string()), slot_expected.map(ToString::to_string));
+                        } else {
+                            assert!(slot_expected.is_none());
+                        }
                     }
-                    PrgPageIdSlot::Multi(..) => todo!(),
+                    PrgMappingSlot::Multi(..) => todo!(),
                 }
             }
         }
