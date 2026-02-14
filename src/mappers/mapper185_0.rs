@@ -4,11 +4,11 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(32 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P)),
     ])
     .chr_rom_max_size(8 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.fixed_index(0).read_status(R0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.fixed_index(0).read_status(RS0)),
     ])
     .fixed_name_table_mirroring()
     .build();
@@ -23,10 +23,10 @@ impl Mapper for Mapper185_0 {
     fn on_cpu_read(&mut self, bus: &mut Bus, addr: CpuAddress, _value: u8) {
         if *addr == 0x2007 {
             if self.ppu_data_read_count < 2 {
-                bus.set_reads_enabled(R0, false);
+                bus.set_reads_enabled(RS0, false);
                 self.ppu_data_read_count += 1;
             } else {
-                bus.set_reads_enabled(R0, true);
+                bus.set_reads_enabled(RS0, true);
             }
         }
     }

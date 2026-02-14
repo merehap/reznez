@@ -5,23 +5,23 @@ use crate::bus::Bus;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.write_status(W0)),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.write_status(WS0)),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(R)),
         PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     // TODO: Support CHR ROM and RAM
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
-        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C1)),
-        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C2)),
-        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C3)),
-        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C4)),
-        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C5)),
-        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C6)),
-        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C7)),
+        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
+        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(D)),
+        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(E)),
+        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(F)),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(G)),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(H)),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(I)),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(J)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,
@@ -46,22 +46,22 @@ impl Mapper for Mapper085_2 {
     fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
-            0x8000 => bus.set_prg_register(P0, value & 0b0011_1111),
-            0x8010 => bus.set_prg_register(P1, value & 0b0011_1111),
-            0x9000 => bus.set_prg_register(P2, value & 0b0011_1111),
+            0x8000 => bus.set_prg_register(P, value & 0b0011_1111),
+            0x8010 => bus.set_prg_register(Q, value & 0b0011_1111),
+            0x9000 => bus.set_prg_register(R, value & 0b0011_1111),
             0x9010 | 0x9030 => { /* TODO: Expansion Audio */ }
-            0xA000 => bus.set_chr_register(C0, value),
-            0xA010 => bus.set_chr_register(C1, value),
-            0xB000 => bus.set_chr_register(C2, value),
-            0xB010 => bus.set_chr_register(C3, value),
-            0xC000 => bus.set_chr_register(C4, value),
-            0xC010 => bus.set_chr_register(C5, value),
-            0xD000 => bus.set_chr_register(C6, value),
-            0xD010 => bus.set_chr_register(C7, value),
+            0xA000 => bus.set_chr_register(C, value),
+            0xA010 => bus.set_chr_register(D, value),
+            0xB000 => bus.set_chr_register(E, value),
+            0xB010 => bus.set_chr_register(F, value),
+            0xC000 => bus.set_chr_register(G, value),
+            0xC010 => bus.set_chr_register(H, value),
+            0xD000 => bus.set_chr_register(I, value),
+            0xD010 => bus.set_chr_register(J, value),
             0xE000 => {
                 // TODO: Silence expansion audio
                 let fields = splitbits!(value, "ws....mm");
-                bus.set_writes_enabled(W0, fields.w);
+                bus.set_writes_enabled(WS0, fields.w);
                 bus.set_name_table_mirroring(fields.m);
             }
             0xE010 => self.irq_state.set_reload_value(value),

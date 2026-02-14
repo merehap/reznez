@@ -7,11 +7,11 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P)),
     ])
     .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
     ])
     .fixed_name_table_mirroring()
     .build();
@@ -35,9 +35,9 @@ impl Mapper for Mapper036 {
 
     fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         if *addr & 0xE200 == 0x4200 {
-            bus.set_chr_register(C0, value & 0b1111);
+            bus.set_chr_register(C, value & 0b1111);
         } else if *addr & 0x8000 == 0x8000 {
-            bus.set_prg_register(P0, self.rr);
+            bus.set_prg_register(P, self.rr);
         } else {
             match *addr & 0xE103 {
                 0x4100 => {

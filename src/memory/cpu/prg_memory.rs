@@ -247,8 +247,7 @@ impl PrgMemory {
                 left_padding_len = 0;
                 right_padding_len = 0;
             } else {
-                let padding_size = window_size
-                    - 2u16.saturating_sub(u16::try_from(bank_string.len()).unwrap());
+                let padding_size = window_size - 2u16.saturating_sub(u16::try_from(bank_string.len()).unwrap());
                 left_padding_len = padding_size / 2;
                 right_padding_len = padding_size - left_padding_len;
             }

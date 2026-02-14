@@ -4,11 +4,11 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(256 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P)),
     ])
     .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM.switchable(C)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,
@@ -31,14 +31,14 @@ impl Mapper for Mapper041 {
             0x6000..=0x67FF => {
                 let fields = splitbits!(value, "........ ..mccppp");
                 bus.set_name_table_mirroring(fields.m as u8);
-                bus.set_chr_bank_register_bits(C0, (fields.c << 2).into(), 0b0000_1100);
+                bus.set_chr_bank_register_bits(C, (fields.c << 2).into(), 0b0000_1100);
                 self.inner_bank_select_enabled = fields.p & 0b100 != 0;
-                bus.set_prg_register(P0, fields.p);
+                bus.set_prg_register(P, fields.p);
             }
             0x6800..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
                 if self.inner_bank_select_enabled {
-                    bus.set_chr_bank_register_bits(C0, value.into(), 0b0000_0011);
+                    bus.set_chr_bank_register_bits(C, value.into(), 0b0000_0011);
                 }
             }
         }

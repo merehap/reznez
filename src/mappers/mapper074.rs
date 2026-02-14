@@ -11,24 +11,24 @@ pub const LAYOUT: Layout = Layout::builder()
     // Same as MMC3, except each window can be dynamically toggled from ROM to RAM.
     .chr_layout(&[
         // Big windows.
-        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::with_switchable_source(CS0).switchable(C0)),
-        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::with_switchable_source(CS1).switchable(C1)),
+        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::with_switchable_source(CS0).switchable(C)),
+        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::with_switchable_source(CS1).switchable(D)),
         // Small windows.
-        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS2).switchable(C2)),
-        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS3).switchable(C3)),
-        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS4).switchable(C4)),
-        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS5).switchable(C5)),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS2).switchable(E)),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS3).switchable(F)),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS4).switchable(G)),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS5).switchable(H)),
     ])
     // Same as MMC3, except each window can be dynamically toggled from ROM to RAM.
     .chr_layout(&[
         // Small windows.
-        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS2).switchable(C2)),
-        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS3).switchable(C3)),
-        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS4).switchable(C4)),
-        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS5).switchable(C5)),
+        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS2).switchable(E)),
+        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS3).switchable(F)),
+        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS4).switchable(G)),
+        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS5).switchable(H)),
         // Big windows.
-        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::with_switchable_source(CS0).switchable(C0)),
-        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::with_switchable_source(CS1).switchable(C1)),
+        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::with_switchable_source(CS0).switchable(C)),
+        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::with_switchable_source(CS1).switchable(D)),
     ])
     // All the CHR banks start as ROM, and are only redirected to RAM on certain banks.
     .default_chr_source(ChrSource::Rom)

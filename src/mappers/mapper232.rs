@@ -2,12 +2,12 @@ use crate::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
     // The last bank for any of the mapper 232 PRG "blocks".
-    .override_prg_bank_register(P1, 0b11)
+    .override_prg_bank_register(Q, 0b11)
     .prg_rom_max_size(256 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
-        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P)),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
     ])
     .chr_rom_max_size(8 * KIBIBYTE)
     .chr_layout(&[
@@ -30,14 +30,14 @@ impl Mapper for Mapper232 {
                 let set_high_bank_bits = |bank_number| {
                     (bank_number & 0b0011) | ((value & 0b1_1000) >> 1)
                 };
-                bus.update_prg_register(P0, &set_high_bank_bits);
-                bus.update_prg_register(P1, &set_high_bank_bits);
+                bus.update_prg_register(P, &set_high_bank_bits);
+                bus.update_prg_register(Q, &set_high_bank_bits);
             }
             0xC000..=0xFFFF => {
                 let set_low_bank_bits = |bank_number| {
                     (bank_number & 0b1100) | (value & 0b0011)
                 };
-                bus.update_prg_register(P0, &set_low_bank_bits);
+                bus.update_prg_register(P, &set_low_bank_bits);
             }
         }
     }

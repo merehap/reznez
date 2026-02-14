@@ -5,7 +5,7 @@ use crate::bus::Bus;
 const LAYOUT_WITH_SWITCHABLE_CHR_ROM: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
         PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-4)),
         PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-3)),
         PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-2)),
@@ -13,7 +13,7 @@ const LAYOUT_WITH_SWITCHABLE_CHR_ROM: Layout = Layout::builder()
     ])
     .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM.switchable(C)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,
@@ -25,7 +25,7 @@ const LAYOUT_WITH_SWITCHABLE_CHR_ROM: Layout = Layout::builder()
 const LAYOUT_WITH_FIXED_CHR_RAM: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
         PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-4)),
         PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-3)),
         PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-2)),
@@ -73,8 +73,8 @@ pub struct Mapper042 {
 impl Mapper for Mapper042 {
     fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr & 0xE003 {
-            0x8000 => bus.set_chr_register(C0, value & 0b1111),
-            0xE000 => bus.set_prg_register(P0, value & 0b1111),
+            0x8000 => bus.set_chr_register(C, value & 0b1111),
+            0xE000 => bus.set_prg_register(P, value & 0b1111),
             0xE001 => {
                 let mirroring = splitbits_named!(value, "....m...");
                 bus.set_name_table_mirroring(mirroring as u8);

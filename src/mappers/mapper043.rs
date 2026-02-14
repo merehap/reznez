@@ -10,12 +10,12 @@ const LAYOUT: Layout = Layout::builder()
         PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(2)),
         PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(1)),
         PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(0)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
         PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(9)),
     ])
     .chr_rom_max_size(8 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
     ])
     .fixed_name_table_mirroring()
     .build();
@@ -53,7 +53,7 @@ impl Mapper for Mapper043 {
             0x4022 => {
                 // The bank index is scrambled for some reason.
                 let index = INDEXES[usize::from(value & 0b111)];
-                bus.set_prg_register(P0, index);
+                bus.set_prg_register(P, index);
             }
             0x4122 | 0x8122 => {
                 if value & 1 == 1 {

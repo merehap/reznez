@@ -8,25 +8,25 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(256 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P3)),
-        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)), // P0 can only ever be 15 or 31
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(R)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(S)),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)), // P0 can only ever be 15 or 31
     ])
-    .override_prg_bank_register(P1, 0b0001_0000)
-    .override_prg_bank_register(P2, 0b0001_0000)
-    .override_prg_bank_register(P3, 0b0001_0000)
-    .override_prg_bank_register(P0, 0b0001_1111) // The last bank
+    .override_prg_bank_register(Q, 0b0001_0000)
+    .override_prg_bank_register(R, 0b0001_0000)
+    .override_prg_bank_register(S, 0b0001_0000)
+    .override_prg_bank_register(P, 0b0001_1111) // The last bank
     .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
-        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C1)),
-        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C2)),
-        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C3)),
-        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C4)),
-        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C5)),
-        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C6)),
-        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C7)),
+        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
+        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(D)),
+        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(E)),
+        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(F)),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(G)),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(H)),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(I)),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(J)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::HORIZONTAL,
@@ -63,9 +63,9 @@ impl Mapper for Mapper056 {
             0xE000..=0xEFFF => {
                 match value & 0b111 {
                     0 | 5 | 7 => info!("Unknown bank select occurred: {}", value & 0b111),
-                    1 => self.selected_prg_bank = Some(P1), // 0x8000
-                    2 => self.selected_prg_bank = Some(P2), // 0xA000
-                    3 => self.selected_prg_bank = Some(P3), // 0xC000
+                    1 => self.selected_prg_bank = Some(Q), // 0x8000
+                    2 => self.selected_prg_bank = Some(R), // 0xA000
+                    3 => self.selected_prg_bank = Some(S), // 0xC000
                     4 | 6 => self.selected_prg_bank = None,
                     _ => unreachable!(),
                 }
@@ -78,8 +78,8 @@ impl Mapper for Mapper056 {
         }
 
         let addr = *addr as usize;
-        let prg_id = [P1, P2, P3, P0][addr & 0b11];
-        let chr_id = [C0, C1, C2, C3, C4, C5, C6, C7][addr & 0b111];
+        let prg_id = [Q, R, S, P][addr & 0b11];
+        let chr_id = [C, D, E, F, G, H, I, J][addr & 0b111];
 
         // Overlapping registers in the 0xFXXX range.
         if matches!(addr & 0xFC03, 0xF000..=0xF003) && self.selected_prg_bank.is_some() {

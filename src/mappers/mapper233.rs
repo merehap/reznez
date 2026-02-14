@@ -4,12 +4,12 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P)),
     ])
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
-        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P)),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P)),
     ])
     .chr_rom_max_size(8 * KIBIBYTE)
     .chr_layout(&[
@@ -39,7 +39,7 @@ impl Mapper for Mapper233 {
                 let (mirroring, layout, prg_bank) = splitbits_named!(min=u8, value, "mmlp pppp");
                 bus.set_name_table_mirroring(mirroring);
                 bus.set_prg_layout(layout);
-                bus.set_prg_register(P0, prg_bank);
+                bus.set_prg_register(P, prg_bank);
             }
         }
     }

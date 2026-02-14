@@ -2,21 +2,21 @@ use crate::mapper::*;
 
 pub const PRG_LAYOUT: &[PrgWindow] = &[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P)),
 ];
 
 pub const NORMAL_CHR_LAYOUT: &[ChrWindow] = &[
-    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
-    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C1)),
-    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C2)),
-    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C3)),
+    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
+    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(D)),
+    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(E)),
+    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(F)),
 ];
 // C4, C5, and C6 are the same as C0, except for their low bits.
 pub const SIMPLE_CHR_LAYOUT: &[ChrWindow] = &[
-    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
-    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C4)),
-    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C5)),
-    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C6)),
+    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
+    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(G)),
+    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(H)),
+    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(I)),
 ];
 
 pub const NAME_TABLE_MIRRORINGS: &[NameTableMirroring] = &[
@@ -47,10 +47,10 @@ impl Mapper for Sachen8259 {
             0x4100 => {
                 let value = value & 0b111;
                 self.register_value = match value {
-                    0 => RegisterValue::ChrSelect(C0),
-                    1 => RegisterValue::ChrSelect(C1),
-                    2 => RegisterValue::ChrSelect(C2),
-                    3 => RegisterValue::ChrSelect(C3),
+                    0 => RegisterValue::ChrSelect(C),
+                    1 => RegisterValue::ChrSelect(D),
+                    2 => RegisterValue::ChrSelect(E),
+                    3 => RegisterValue::ChrSelect(F),
                     4 => RegisterValue::ChrOuterBank,
                     5 => RegisterValue::PrgBank,
                     6 => RegisterValue::Nop,
@@ -61,7 +61,7 @@ impl Mapper for Sachen8259 {
             0x4101 => {
                 match self.register_value {
                     RegisterValue::Nop => {}
-                    RegisterValue::PrgBank => bus.set_prg_register(P0, value & 0b111),
+                    RegisterValue::PrgBank => bus.set_prg_register(P, value & 0b111),
                     RegisterValue::ChrOuterBank => bus.set_chr_rom_outer_bank_number(value & 0b111),
                     RegisterValue::ChrSelect(reg_id) => {
                         self.chr_inner_banks[reg_id.to_raw_chr_id() as usize] = value & 0b111;
@@ -102,21 +102,21 @@ impl Sachen8259 {
             chr_bank_shift,
             chr_inner_banks: [0; 4],
             chr_bank_low_bits,
-            register_value: RegisterValue::ChrSelect(C0),
+            register_value: RegisterValue::ChrSelect(C),
         }
     }
 
     // TODO: Put this code directly into the caller.
     fn update_chr_banks(&self, bus: &mut Bus) {
         let meta_data = [
-            (C0, 0, 0),
-            (C1, 1, 1),
-            (C2, 2, 2),
-            (C3, 3, 3),
+            (C, 0, 0),
+            (D, 1, 1),
+            (E, 2, 2),
+            (F, 3, 3),
 
-            (C4, 0, 1),
-            (C5, 0, 2),
-            (C6, 0, 3),
+            (G, 0, 1),
+            (H, 0, 2),
+            (I, 0, 3),
         ];
 
         for (reg_id, inner_bank_number, low_bits_index) in meta_data {

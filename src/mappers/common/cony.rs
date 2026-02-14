@@ -22,7 +22,7 @@ pub struct Cony {
 impl Cony {
     pub fn new() -> Self {
         Self {
-            irq_counter: IRQ_COUNTER, 
+            irq_counter: IRQ_COUNTER,
             next_irq_enabled_value: false,
             scratch_ram: [0; 4],
         }
@@ -47,7 +47,7 @@ impl Cony {
             let fields = splitbits!(value, "wwoopppp");
             // The left shift here is not documented on the wiki, but it is necessary.
             // TODO: Probably need to store the same thing with the bottom bit dropped in P5 for 32KiB mode.
-            bus.set_prg_register(P4, fields.p << 1);
+            bus.set_prg_register(T, fields.p << 1);
         } else if *addr & 0x8300 == 0x8100 {
             // The "r" flag is shown, but not used, here. Submappers 0 and 2 use it.
             let fields = splitbits!(value, "esrll.mm");
@@ -63,7 +63,7 @@ impl Cony {
             self.irq_counter.set_enabled(self.next_irq_enabled_value);
         } else if matches!(*addr & 0x8313, 0x8300..=0x8302) {
             // P3 is not handled here since it is set differently in different submappers.
-            let prg_id = [P0, P1, P2][usize::from(*addr & 0x8313) - 0x8300];
+            let prg_id = [P, Q, R][usize::from(*addr & 0x8313) - 0x8300];
             bus.set_prg_register(prg_id, value);
         }
     }

@@ -4,7 +4,7 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P)),
         PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
     ])
     .chr_rom_max_size(8 * KIBIBYTE)
@@ -22,7 +22,7 @@ impl Mapper for Mapper094 {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
-            0x8000..=0xFFFF => bus.set_prg_register(P0, splitbits_named!(value, "...ppp..")),
+            0x8000..=0xFFFF => bus.set_prg_register(P, splitbits_named!(value, "...ppp..")),
         }
     }
 

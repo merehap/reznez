@@ -8,14 +8,14 @@ pub const LAYOUT: Layout = Layout::builder()
     .prg_layout(mmc3::PRG_WINDOWS_C000_SWITCHABLE)
     // NROM-128
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.read_write_status(R0, W0)),
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
-        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.read_write_status(RS0, WS0)),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(R)),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(R)),
     ])
     // NROM-256
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.read_write_status(R0, W0)),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.read_write_status(RS0, WS0)),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(R)),
     ])
     .chr_rom_max_size(512 * KIBIBYTE)
     .chr_layout(mmc3:: CHR_BIG_WINDOWS_FIRST)
@@ -59,7 +59,7 @@ impl Mapper for Mapper187 {
                 PrgLayoutMode::Nrom => fields.m as u8 + 2, // 2 is NROM128, 3 is NROM256
             };
             bus.set_prg_layout(prg_layout_index);
-            bus.set_prg_register(P2, fields.p); // Bottom bit is ignored for NROM128, bottom two for NROM256
+            bus.set_prg_register(R, fields.p); // Bottom bit is ignored for NROM128, bottom two for NROM256
 
             return;
         }
@@ -73,9 +73,9 @@ impl Mapper for Mapper187 {
         }
 
         let (left_siders, right_siders) = if bus.chr_memory.layout_index() == 0 {
-            (vec![C0, C1], vec![C2, C3, C4, C5])
+            (vec![C, D], vec![E, F, G, H])
         } else {
-            (vec![C2, C3, C4, C5], vec![C0, C1])
+            (vec![E, F, G, H], vec![C, D])
         };
 
         for reg_id in left_siders {

@@ -111,7 +111,9 @@ impl PrgMemoryMap {
 
 #[derive(Clone, Debug)]
 pub enum PrgMappingSlot {
+    // 8 KiB pages
     Normal(PrgMapping),
+    // 64 128 byte sub-pages
     Multi(Box<[PrgMapping; PRG_SUB_SLOT_COUNT]>),
 }
 

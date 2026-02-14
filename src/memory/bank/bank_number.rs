@@ -140,7 +140,7 @@ impl ChrBankRegisters {
         Self {
             registers: [BankNumber(0); 16],
             // Meta registers are only used for CHR currently.
-            chr_meta_registers: [ChrBankRegisterId::C0, ChrBankRegisterId::C0],
+            chr_meta_registers: [ChrBankRegisterId::C, ChrBankRegisterId::C],
             read_statuses: [ReadStatus::Enabled; 15],
             write_statuses: [WriteStatus::Enabled; 15],
             chr_sources: [default_chr_source; 12],
@@ -251,41 +251,41 @@ impl BankLocation {
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug, FromPrimitive)]
 pub enum PrgBankRegisterId {
-    P0,
-    P1,
-    P2,
-    P3,
-    P4,
-    P5,
-    P6,
-    P7,
-    P8,
-    P9,
+    P,
+    Q,
+    R,
+    S,
+    T,
+    U,
+    V,
+    W,
+    X,
+    Y,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug, FromPrimitive)]
 pub enum ChrBankRegisterId {
-    C0,
-    C1,
-    C2,
-    C3,
-    C4,
-    C5,
-    C6,
-    C7,
-    C8,
-    C9,
-    C10,
-    C11,
+    C,
+    D,
+    E,
+    F,
+    G,
+    H,
+    I,
+    J,
+    K,
+    L,
+    M,
+    N,
 
-    N0,
-    N1,
-    N2,
-    N3,
+    NT0,
+    NT1,
+    NT2,
+    NT3,
 }
 
 impl ChrBankRegisterId {
-    pub const ALL_NAME_TABLE_IDS: [Self; 4] = [Self::N0, Self::N1, Self::N2, Self::N3];
+    pub const ALL_NAME_TABLE_IDS: [Self; 4] = [Self::NT0, Self::NT1, Self::NT2, Self::NT3];
 
     pub fn to_raw_chr_id(self) -> u8 {
         self as u8
@@ -294,8 +294,8 @@ impl ChrBankRegisterId {
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum MetaRegisterId {
-    M0,
-    M1,
+    MR0,
+    MR1,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]

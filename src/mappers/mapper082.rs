@@ -3,33 +3,33 @@ use crate::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x67FF, 2 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.fixed_number(0).read_write_status(R0, W0)),
-        PrgWindow::new(0x6800, 0x6FFF, 2 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.fixed_number(2).read_write_status(R1, W1)),
-        PrgWindow::new(0x7000, 0x73FF, 1 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.fixed_number(4).read_write_status(R2, W2)),
+        PrgWindow::new(0x6000, 0x67FF, 2 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.fixed_number(0).read_write_status(RS0, WS0)),
+        PrgWindow::new(0x6800, 0x6FFF, 2 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.fixed_number(2).read_write_status(RS1, WS1)),
+        PrgWindow::new(0x7000, 0x73FF, 1 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.fixed_number(4).read_write_status(RS2, WS2)),
         PrgWindow::new(0x7400, 0x7FFF, 3 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(R)),
         PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     // Large windows first.
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
-        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C1)),
-        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C2)),
-        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C3)),
-        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C4)),
-        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C5)),
+        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
+        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(D)),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(E)),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(F)),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(G)),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(H)),
     ])
     // Small windows first.
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C2)),
-        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C3)),
-        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C4)),
-        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C5)),
-        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
-        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C1)),
+        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(E)),
+        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(F)),
+        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(G)),
+        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(H)),
+        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
+        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(D)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::HORIZONTAL,
@@ -47,12 +47,12 @@ impl Mapper for Mapper082 {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7EEF => { /* Do nothing. */ }
-            0x7EF0 => bus.set_chr_register(C0, value & 0b1111_1110),
-            0x7EF1 => bus.set_chr_register(C1, value & 0b1111_1110),
-            0x7EF2 => bus.set_chr_register(C2, value),
-            0x7EF3 => bus.set_chr_register(C3, value),
-            0x7EF4 => bus.set_chr_register(C4, value),
-            0x7EF5 => bus.set_chr_register(C5, value),
+            0x7EF0 => bus.set_chr_register(C, value & 0b1111_1110),
+            0x7EF1 => bus.set_chr_register(D, value & 0b1111_1110),
+            0x7EF2 => bus.set_chr_register(E, value),
+            0x7EF3 => bus.set_chr_register(F, value),
+            0x7EF4 => bus.set_chr_register(G, value),
+            0x7EF5 => bus.set_chr_register(H, value),
             0x7EF6 => {
                 let fields = splitbits!(min=u8, value, "......lm");
                 bus.set_chr_layout(fields.l);
@@ -60,22 +60,22 @@ impl Mapper for Mapper082 {
             }
             0x7EF7 => {
                 let enabled = value == 0xCA;
-                bus.set_read_status(R0, if enabled { ReadStatus::Enabled } else { ReadStatus::ReadOnlyZeros });
-                bus.set_writes_enabled(W0, enabled);
+                bus.set_read_status(RS0, if enabled { ReadStatus::Enabled } else { ReadStatus::ReadOnlyZeros });
+                bus.set_writes_enabled(WS0, enabled);
             }
             0x7EF8 => {
                 let enabled = value == 0x69;
-                bus.set_read_status(R1, if enabled { ReadStatus::Enabled } else { ReadStatus::ReadOnlyZeros });
-                bus.set_writes_enabled(W1, enabled);
+                bus.set_read_status(RS1, if enabled { ReadStatus::Enabled } else { ReadStatus::ReadOnlyZeros });
+                bus.set_writes_enabled(WS1, enabled);
             }
             0x7EF9 => {
                 let enabled = value == 0x84;
-                bus.set_read_status(R2, if enabled { ReadStatus::Enabled } else { ReadStatus::ReadOnlyZeros });
-                bus.set_writes_enabled(W2, enabled);
+                bus.set_read_status(RS2, if enabled { ReadStatus::Enabled } else { ReadStatus::ReadOnlyZeros });
+                bus.set_writes_enabled(WS2, enabled);
             }
-            0x7EFA => bus.set_prg_register(P0, splitbits_named!(value, "..pppp..")),
-            0x7EFB => bus.set_prg_register(P1, splitbits_named!(value, "..pppp..")),
-            0x7EFC => bus.set_prg_register(P2, splitbits_named!(value, "..pppp..")),
+            0x7EFA => bus.set_prg_register(P, splitbits_named!(value, "..pppp..")),
+            0x7EFB => bus.set_prg_register(Q, splitbits_named!(value, "..pppp..")),
+            0x7EFC => bus.set_prg_register(R, splitbits_named!(value, "..pppp..")),
             0x7EFD => { /* IRQ not yet implemented. */ }
             0x7EFE => { /* IRQ not yet implemented. */ }
             0x7EFF => { /* IRQ not yet implemented. */ }

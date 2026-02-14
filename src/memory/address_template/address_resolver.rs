@@ -23,7 +23,7 @@ const INNER_BANK_SEGMENT: u8 = 1;
  *                |        |                 Base address (width is inner_bank_size())
  *                |        |                        |
  *                v        v                        v
- * Components   O₀₁O₀₀ I₀₂I₀₁I₀₀ A₁₃A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
+ * Components   O₀₁O₀₀ P₀₂P₀₁P₀₀ A₁₃A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
  * Full Address A₁₈A₁₇ A₁₆A₁₅A₁₄ A₁₃A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
  *              |      |         |  |         Page size  (always 8 KiB)   |
  *              |      |         |  +-------------------------------------|
@@ -46,7 +46,7 @@ const INNER_BANK_SEGMENT: u8 = 1;
  *                |        |                 |       Base address (width is 128 B)
  *                |        |                 |                    |
  *                v        v                 v                    v
- * Components   O₀₁O₀₀ I₀₂I₀₁I₀₀ A₁₃ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇ A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
+ * Components   O₀₁O₀₀ P₀₂P₀₁P₀₀ A₁₃ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇ A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
  * Full Address A₁₈A₁₇ A₁₆A₁₅A₁₄ A₁₃ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇ A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
  *              |      |         |   |                  | Sub-page (128 B)  |
  *              |      |         |   |                  +-------------------|
@@ -81,17 +81,17 @@ impl AddressResolver {
 
     /**
      * PRG Address                           A₁₇A₁₆A₁₅A₁₄ A₁₃ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
-     * Components Before (8 KiB inner banks) O₀₁O₀₀I₀₂I₀₁ I₀₀ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
-     * Components After (16 KiB inner banks) O₀₁O₀₀I₀₂I₀₁ A₁₃ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
+     * Components Before (8 KiB inner banks) O₀₁O₀₀P₀₂P₀₁ P₀₀ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
+     * Components After (16 KiB inner banks) O₀₁O₀₀P₀₂P₀₁ A₁₃ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
      */
     pub const fn prg(window: &PrgWindow, bank_sizes: &BankSizes, work_ram_start_inner_bank_number: u16) -> Self {
         let fixed_inner_bank_number = window.bank().fixed_bank_number().map(BankNumber::to_raw);
 
         let inner_bank_width = bank_sizes.inner_bank_width();
-        let address_bus_segment = Segment::named('a', inner_bank_width);
+        let address_bus_segment = Segment::named('A', inner_bank_width);
         let inner_bank_segment =
             if let Some(fixed_inner_bank_number) = fixed_inner_bank_number {
-                // o₀₁o₀₀1₁₆1₁₅1₁₄1₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
+                // O₀₁O₀₀1₁₆1₁₅1₁₄1₁₃A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
                 Segment::constant(
                     fixed_inner_bank_number,
                     inner_bank_width,
@@ -99,11 +99,11 @@ impl AddressResolver {
                     0,
                 )
             } else {
-                // o₀₁o₀₀i₀₃i₀₂i₀₁i₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
-                Segment::named('i', bank_sizes.inner_bank_number_width())
+                // O₀₁O₀₀P₀₃P₀₂P₀₁P₀₀A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
+                Segment::named('P', bank_sizes.inner_bank_number_width())
             };
 
-        let outer_bank_segment = Segment::named('o', bank_sizes.outer_bank_number_width());
+        let outer_bank_segment = Segment::named('O', bank_sizes.outer_bank_number_width());
 
         let mut segments = ConstVec::new();
         segments.push(address_bus_segment);
@@ -179,10 +179,6 @@ impl AddressResolver {
     }
 
     pub fn resolve_index(&self, addr: CpuAddress) -> u32 {
-        self.bit_template.resolve(&[*addr, self.raw_inner_bank_number, self.raw_outer_bank_number])
-    }
-
-    pub fn resolve_subpage_index(&self, addr: CpuAddress) -> u32 {
         self.bit_template.resolve(&[*addr, self.raw_inner_bank_number, self.raw_outer_bank_number])
     }
 

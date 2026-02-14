@@ -8,12 +8,12 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
-        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P)),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P)),
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,
@@ -33,8 +33,8 @@ impl Mapper for Mapper229 {
             0x8000..=0xFFFF => {
                 let bank = addr.low_byte();
                 bus.set_name_table_mirroring((bank >> 5) & 1);
-                bus.set_prg_register(P0, bank);
-                bus.set_chr_register(C0, bank);
+                bus.set_prg_register(P, bank);
+                bus.set_chr_register(C, bank);
 
                 let use_switchable_prg_layout = bank > 0;
                 bus.set_prg_layout(use_switchable_prg_layout as u8);

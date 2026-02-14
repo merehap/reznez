@@ -4,11 +4,11 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P)),
     ])
     .chr_rom_max_size(32 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
+        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C)),
         ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::RAM.fixed_index(2)),
         ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::RAM.fixed_index(3)),
         ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::RAM.fixed_index(4)),
@@ -35,8 +35,8 @@ impl Mapper for Mapper077 {
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
                 let banks = splitbits!(value, "ccccpppp");
-                bus.set_chr_register(C0, banks.c);
-                bus.set_prg_register(P0, banks.p);
+                bus.set_chr_register(C, banks.c);
+                bus.set_prg_register(P, banks.p);
             }
         }
     }

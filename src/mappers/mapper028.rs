@@ -9,7 +9,7 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(32 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::ONE_SCREEN_LEFT_BANK,
@@ -19,7 +19,7 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .build();
 
-// Action 53 
+// Action 53
 pub struct Mapper028 {
     selected_register: Register,
     action53_layout: Action53Layout,
@@ -58,7 +58,7 @@ impl Mapper for Mapper028 {
                 match self.selected_register {
                     Register::ChrBank => {
                         let (mirroring, chr_bank) = splitbits_named!(min=u8, value, "...m..cc");
-                        bus.set_chr_register(C0, chr_bank);
+                        bus.set_chr_register(C, chr_bank);
                         if bus.name_table_mirroring().is_regular_one_screen() {
                             bus.set_name_table_mirroring(mirroring);
                         }

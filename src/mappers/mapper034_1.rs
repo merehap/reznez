@@ -5,13 +5,13 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(8192 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P)),
     ])
     // Oversize definition. The actual cartridge only uses 64KiB.
     .chr_rom_max_size(1024 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
-        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C1)),
+        ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
+        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(D)),
     ])
     .fixed_name_table_mirroring()
     .build();
@@ -25,9 +25,9 @@ impl Mapper for Mapper034_1 {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFC => { /* Do nothing. */ }
-            0x7FFD => bus.set_prg_register(P0, value),
-            0x7FFE => bus.set_chr_register(C0, value),
-            0x7FFF => bus.set_chr_register(C1, value),
+            0x7FFD => bus.set_prg_register(P, value),
+            0x7FFE => bus.set_chr_register(C, value),
+            0x7FFF => bus.set_chr_register(D, value),
             0x8000..=0xFFFF => { /* Do nothing. */ }
         }
     }

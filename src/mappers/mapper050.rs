@@ -7,7 +7,7 @@ const LAYOUT: Layout = Layout::builder()
         PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(0xF)),
         PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(0x8)),
         PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(0x9)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
         PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(0xB)),
     ])
     .chr_rom_max_size(8 * KIBIBYTE)
@@ -45,7 +45,7 @@ impl Mapper for Mapper050 {
                 let prg_bank2 = (value & 0x08) | ((value & 0x01) << 2) | ((value & 0x06) >> 1);
                 assert_eq!(prg_bank, prg_bank2);
 
-                bus.set_prg_register(P0, prg_bank);
+                bus.set_prg_register(P, prg_bank);
             }
             0x4120 => {
                 if value & 1 == 1 {

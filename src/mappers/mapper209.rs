@@ -16,146 +16,146 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT),
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
         PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgBank::ROM.fixed_number(-2)),
         PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
     ])
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(R)),
         PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
     ])
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P4)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P5)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P6)),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(T)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(U)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(V)),
         PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
     ])
 
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P3)),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(S)),
     ])
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT),
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
-        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P3)),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(S)),
     ])
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
-        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P3)),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(R)),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(S)),
     ])
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P4)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P5)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P6)),
-        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P7)),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(T)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(U)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(V)),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(W)),
     ])
 
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P9)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Y)),
         PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-4)),
         PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-3)),
         PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-2)),
         PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
     ])
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(P8)),
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(X)),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
         PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgBank::ROM.fixed_number(-2)),
         PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
     ])
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P3)),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(S)),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(R)),
         PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
     ])
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P3)),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P4)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P5)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P6)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(S)),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(T)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(U)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(V)),
         PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
     ])
 
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(P9)),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P3)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(Y)),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(S)),
     ])
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(P8)),
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
-        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P3)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(X)),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(S)),
     ])
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P3)),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
-        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P3)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(S)),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(R)),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(S)),
     ])
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P3)),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P4)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P5)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P6)),
-        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P7)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(S)),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(T)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(U)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(V)),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(W)),
     ])
 
     .chr_rom_max_size(2048 * KIBIBYTE)
     .chr_rom_outer_bank_size(256 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
-        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT0).switchable(N0).write_status(W0)),
-        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT1).switchable(N1).write_status(W0)),
-        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT2).switchable(N2).write_status(W0)),
-        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT3).switchable(N3).write_status(W0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
+        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS0).switchable(NT0).write_status(WS0)),
+        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS1).switchable(NT1).write_status(WS0)),
+        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS2).switchable(NT2).write_status(WS0)),
+        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS3).switchable(NT3).write_status(WS0)),
     ])
     .chr_layout(&[
         // Meta register M0 used to support MMC4 bank-switching mode. Initial value: C0. Other value: C8.
-        ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::ROM_OR_RAM.meta_switchable(M0)),
+        ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::ROM_OR_RAM.meta_switchable(MR0)),
         // Meta register M1 used to support MMC4 bank-switching mode. Initial value: C4. Other value: C9.
-        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::ROM_OR_RAM.meta_switchable(M1)),
-        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT0).switchable(N0).write_status(W0)),
-        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT1).switchable(N1).write_status(W0)),
-        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT2).switchable(N2).write_status(W0)),
-        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT3).switchable(N3).write_status(W0)),
+        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::ROM_OR_RAM.meta_switchable(MR1)),
+        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS0).switchable(NT0).write_status(WS0)),
+        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS1).switchable(NT1).write_status(WS0)),
+        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS2).switchable(NT2).write_status(WS0)),
+        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS3).switchable(NT3).write_status(WS0)),
     ])
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
-        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C2)),
-        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C4)),
-        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C6)),
-        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT0).switchable(N0).write_status(W0)),
-        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT1).switchable(N1).write_status(W0)),
-        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT2).switchable(N2).write_status(W0)),
-        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT3).switchable(N3).write_status(W0)),
+        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
+        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(E)),
+        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(G)),
+        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(I)),
+        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS0).switchable(NT0).write_status(WS0)),
+        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS1).switchable(NT1).write_status(WS0)),
+        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS2).switchable(NT2).write_status(WS0)),
+        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS3).switchable(NT3).write_status(WS0)),
     ])
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0).write_status(W0)),
-        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C1).write_status(W0)),
-        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C2).write_status(W0)),
-        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C3).write_status(W0)),
-        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C4).write_status(W0)),
-        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C5).write_status(W0)),
-        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C6).write_status(W0)),
-        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C7).write_status(W0)),
-        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT0).switchable(N0).write_status(W0)),
-        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT1).switchable(N1).write_status(W0)),
-        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT2).switchable(N2).write_status(W0)),
-        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT3).switchable(N3).write_status(W0)),
+        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C).write_status(WS0)),
+        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(D).write_status(WS0)),
+        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(E).write_status(WS0)),
+        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(F).write_status(WS0)),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(G).write_status(WS0)),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(H).write_status(WS0)),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(I).write_status(WS0)),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(J).write_status(WS0)),
+        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS0).switchable(NT0).write_status(WS0)),
+        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS1).switchable(NT1).write_status(WS0)),
+        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS2).switchable(NT2).write_status(WS0)),
+        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS3).switchable(NT3).write_status(WS0)),
     ])
-    .override_chr_meta_register(M0, C0)
-    .override_chr_meta_register(M1, C4)
+    .override_chr_meta_register(MR0, C)
+    .override_chr_meta_register(MR1, G)
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,
         NameTableMirroring::HORIZONTAL,
@@ -224,40 +224,40 @@ impl Mapper for Mapper209 {
             (0x5802, _, _) => todo!("Increase accumulator"),
             (0x5803, _, _) => todo!("Reset accumulator"),
             (0x8000, _, _) => {
-                bus.set_prg_register(P0, value & 0b0111_1111);
-                bus.set_prg_register(P4, reverse_lower_seven_bits(value));
+                bus.set_prg_register(P, value & 0b0111_1111);
+                bus.set_prg_register(T, reverse_lower_seven_bits(value));
             }
             (0x8001, _, _) => {
-                bus.set_prg_register(P1, value & 0b0111_1111);
-                bus.set_prg_register(P5, reverse_lower_seven_bits(value));
+                bus.set_prg_register(Q, value & 0b0111_1111);
+                bus.set_prg_register(U, reverse_lower_seven_bits(value));
             }
             (0x8002, _, _) => {
-                bus.set_prg_register(P2, value & 0b0111_1111);
-                bus.set_prg_register(P6, reverse_lower_seven_bits(value));
+                bus.set_prg_register(R, value & 0b0111_1111);
+                bus.set_prg_register(V, reverse_lower_seven_bits(value));
             }
             (0x8003, _, _) => {
-                bus.set_prg_register(P3, value & 0b0111_1111);
-                bus.set_prg_register(P7, reverse_lower_seven_bits(value));
-                bus.set_prg_register(P8, (value << 1) | 0b1);
-                bus.set_prg_register(P9, (value << 2) | 0b11);
+                bus.set_prg_register(S, value & 0b0111_1111);
+                bus.set_prg_register(W, reverse_lower_seven_bits(value));
+                bus.set_prg_register(X, (value << 1) | 0b1);
+                bus.set_prg_register(Y, (value << 2) | 0b11);
                 //bus.set_prg_register(P9, reverse_lower_seven_bits(value));
             }
-            (_, 0x9000, _) => bus.set_chr_register_low_byte(C0, value),
-            (_, 0x9001, _) => bus.set_chr_register_low_byte(C1, value),
-            (_, 0x9002, _) => bus.set_chr_register_low_byte(C2, value),
-            (_, 0x9003, _) => bus.set_chr_register_low_byte(C3, value),
-            (_, 0x9004, _) => bus.set_chr_register_low_byte(C4, value),
-            (_, 0x9005, _) => bus.set_chr_register_low_byte(C5, value),
-            (_, 0x9006, _) => bus.set_chr_register_low_byte(C6, value),
-            (_, 0x9007, _) => bus.set_chr_register_low_byte(C7, value),
-            (_, 0xA000, _) => bus.set_chr_register_high_byte(C0, value),
-            (_, 0xA001, _) => bus.set_chr_register_high_byte(C1, value),
-            (_, 0xA002, _) => bus.set_chr_register_high_byte(C2, value),
-            (_, 0xA003, _) => bus.set_chr_register_high_byte(C3, value),
-            (_, 0xA004, _) => bus.set_chr_register_high_byte(C4, value),
-            (_, 0xA005, _) => bus.set_chr_register_high_byte(C5, value),
-            (_, 0xA006, _) => bus.set_chr_register_high_byte(C6, value),
-            (_, 0xA007, _) => bus.set_chr_register_high_byte(C7, value),
+            (_, 0x9000, _) => bus.set_chr_register_low_byte(C, value),
+            (_, 0x9001, _) => bus.set_chr_register_low_byte(D, value),
+            (_, 0x9002, _) => bus.set_chr_register_low_byte(E, value),
+            (_, 0x9003, _) => bus.set_chr_register_low_byte(F, value),
+            (_, 0x9004, _) => bus.set_chr_register_low_byte(G, value),
+            (_, 0x9005, _) => bus.set_chr_register_low_byte(H, value),
+            (_, 0x9006, _) => bus.set_chr_register_low_byte(I, value),
+            (_, 0x9007, _) => bus.set_chr_register_low_byte(J, value),
+            (_, 0xA000, _) => bus.set_chr_register_high_byte(C, value),
+            (_, 0xA001, _) => bus.set_chr_register_high_byte(D, value),
+            (_, 0xA002, _) => bus.set_chr_register_high_byte(E, value),
+            (_, 0xA003, _) => bus.set_chr_register_high_byte(F, value),
+            (_, 0xA004, _) => bus.set_chr_register_high_byte(G, value),
+            (_, 0xA005, _) => bus.set_chr_register_high_byte(H, value),
+            (_, 0xA006, _) => bus.set_chr_register_high_byte(I, value),
+            (_, 0xA007, _) => bus.set_chr_register_high_byte(J, value),
             (_, 0xB000..=0xB003, _) => {
                 let quadrant = NameTableQuadrant::ALL[usize::from(*addr & 0b11)];
                 let ciram_side = [CiramSide::Left, CiramSide::Right][usize::from(value & 1)];
@@ -273,8 +273,8 @@ impl Mapper for Mapper209 {
                             bus.set_name_table_quadrant(quadrant, ciram_side);
                         }
                         RomNameTableMode::SelectionsEnabled | RomNameTableMode::GloballyEnabled => {
-                            let bank_reg_id = [N0, N1, N2, N3][usize::from(*addr & 0b11)];
-                            let name_table_source_reg_id = [NT0, NT1, NT2, NT3][usize::from(*addr & 0b11)];
+                            let bank_reg_id = [NT0, NT1, NT2, NT3][usize::from(*addr & 0b11)];
+                            let name_table_source_reg_id = [NTS0, NTS1, NTS2, NTS3][usize::from(*addr & 0b11)];
                             bus.set_chr_register_low_byte(bank_reg_id, value);
                             bus.set_chr_source(name_table_source_reg_id, ChrSource::RomOrRam);
                         }
@@ -288,8 +288,8 @@ impl Mapper for Mapper209 {
                         RomNameTableMode::Disabled => { /* Do nothing. */ }
                         RomNameTableMode::SelectionsEnabled if ciram_selection == self.ciram_selection_target => { /* Do nothing. */}
                         RomNameTableMode::SelectionsEnabled | RomNameTableMode::GloballyEnabled => {
-                            let reg_id = [N0, N1, N2, N3][usize::from(*addr & 0b11)];
-                            let name_table_source_reg_id = [NT0, NT1, NT2, NT3][usize::from(*addr & 0b11)];
+                            let reg_id = [NT0, NT1, NT2, NT3][usize::from(*addr & 0b11)];
+                            let name_table_source_reg_id = [NTS0, NTS1, NTS2, NTS3][usize::from(*addr & 0b11)];
                             bus.set_chr_register_high_byte(reg_id, value);
                             bus.set_chr_source(name_table_source_reg_id, ChrSource::RomOrRam);
                         }
@@ -355,10 +355,10 @@ impl Mapper for Mapper209 {
                 };
                 // TODO: Restore name tables for the SelectionsEnabled case, too?
                 if self.rom_name_table_mode == RomNameTableMode::GloballyEnabled {
-                    bus.set_chr_source(NT0, ChrSource::RomOrRam);
-                    bus.set_chr_source(NT1, ChrSource::RomOrRam);
-                    bus.set_chr_source(NT2, ChrSource::RomOrRam);
-                    bus.set_chr_source(NT3, ChrSource::RomOrRam);
+                    bus.set_chr_source(NTS0, ChrSource::RomOrRam);
+                    bus.set_chr_source(NTS1, ChrSource::RomOrRam);
+                    bus.set_chr_source(NTS2, ChrSource::RomOrRam);
+                    bus.set_chr_source(NTS3, ChrSource::RomOrRam);
                 }
             }
             (0xD001, _, _) => {
@@ -374,7 +374,7 @@ impl Mapper for Mapper209 {
             (0xD002, _, _) => {
                 let chr_writes_enabled;
                 (self.ciram_selection_target, chr_writes_enabled) = splitbits_named!(value, "nw......");
-                bus.set_writes_enabled(W0, chr_writes_enabled);
+                bus.set_writes_enabled(WS0, chr_writes_enabled);
             }
             (0xD003, _, _) => {
                 let fields = splitbits!(value, "m.lccppc");
@@ -382,8 +382,8 @@ impl Mapper for Mapper209 {
                 self.mmc4_chr_bank_switching_mode_enabled = fields.m;
                 // TODO: If enabled, should the old values be restored? Or should it wait until the next PPU read?
                 if !self.mmc4_chr_bank_switching_mode_enabled {
-                    bus.set_chr_meta_register(M0, C0);
-                    bus.set_chr_meta_register(M1, C4);
+                    bus.set_chr_meta_register(MR0, C);
+                    bus.set_chr_meta_register(MR1, G);
                 }
 
                 assert!(!fields.l, "Large CHR outer banks are not supported yet.");
@@ -418,10 +418,10 @@ impl Mapper for Mapper209 {
         }
 
         let (meta_id, bank_register_id) = match address.to_u16() {
-            0x0FD8..=0x0FDF => (M0, C0),
-            0x0FE8..=0x0FEF => (M0, C8),
-            0x1FD8..=0x1FDF => (M1, C4),
-            0x1FE8..=0x1FEF => (M1, C9),
+            0x0FD8..=0x0FDF => (MR0, C),
+            0x0FE8..=0x0FEF => (MR0, K),
+            0x1FD8..=0x1FDF => (MR1, G),
+            0x1FE8..=0x1FEF => (MR1, L),
             // Skip to standard CHR memory operation.
             _ => return,
         };

@@ -4,11 +4,11 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P)),
     ])
     .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::new(
@@ -49,10 +49,10 @@ impl Mapper for Mapper243 {
 
                 match self.reg_number {
                     0 | 1 | 3 => { /* These regs store values, but do nothing else. */ }
-                    2 => bus.set_chr_bank_register_bits(C0, u16::from(value)     , 0b0000_0001),
-                    4 => bus.set_chr_bank_register_bits(C0, u16::from(value << 1), 0b0000_0010),
-                    6 => bus.set_chr_bank_register_bits(C0, u16::from(value << 2), 0b0000_1100),
-                    5 => bus.set_prg_register(P0, value & 0b11),
+                    2 => bus.set_chr_bank_register_bits(C, u16::from(value)     , 0b0000_0001),
+                    4 => bus.set_chr_bank_register_bits(C, u16::from(value << 1), 0b0000_0010),
+                    6 => bus.set_chr_bank_register_bits(C, u16::from(value << 2), 0b0000_1100),
+                    5 => bus.set_prg_register(P, value & 0b11),
                     7 => bus.set_name_table_mirroring(value >> 1),
                     _ => unreachable!(),
                 }
@@ -63,5 +63,5 @@ impl Mapper for Mapper243 {
 
     fn layout(&self) -> Layout {
         LAYOUT
-    } 
+    }
 }

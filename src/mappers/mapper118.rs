@@ -31,12 +31,12 @@ impl Mapper for Mapper118 {
             let selected_register = self.mmc3.selected_register_id();
             use NameTableQuadrant::*;
             let quadrants: &[_] = match (selected_layout, selected_register) {
-                (0, mmc3::RegId::Chr(C0)) => &[TopLeft, TopRight],
-                (0, mmc3::RegId::Chr(C1)) => &[BottomLeft, BottomRight],
-                (1, mmc3::RegId::Chr(C2)) => &[TopLeft],
-                (1, mmc3::RegId::Chr(C3)) => &[TopRight],
-                (1, mmc3::RegId::Chr(C4)) => &[BottomLeft],
-                (1, mmc3::RegId::Chr(C5)) => &[BottomRight],
+                (0, mmc3::RegId::Chr(C)) => &[TopLeft, TopRight],
+                (0, mmc3::RegId::Chr(D)) => &[BottomLeft, BottomRight],
+                (1, mmc3::RegId::Chr(E)) => &[TopLeft],
+                (1, mmc3::RegId::Chr(F)) => &[TopRight],
+                (1, mmc3::RegId::Chr(G)) => &[BottomLeft],
+                (1, mmc3::RegId::Chr(H)) => &[BottomRight],
                 _ => &[],
             };
 

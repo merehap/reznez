@@ -7,31 +7,31 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_outer_bank_size(256 * KIBIBYTE)
     .prg_layout_index(3)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.switchable(P0).read_write_status(R0, W0)),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.switchable(P).read_write_status(RS0, WS0)),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
     ])
     // Same as above.
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.switchable(P0).read_write_status(R0, W0)),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.switchable(P).read_write_status(RS0, WS0)),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
     ])
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.switchable(P0).read_write_status(R0, W0)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.switchable(P).read_write_status(RS0, WS0)),
         PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.fixed_number(0)),
-        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
     ])
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.switchable(P0).read_write_status(R0, W0)),
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.switchable(P).read_write_status(RS0, WS0)),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
         PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
     ])
     .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
     ])
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
-        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C1)),
+        ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
+        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(D)),
     ])
     // TODO: Reconcile these values with nes20db.xml
     .cartridge_selection_name_table_mirrorings([
@@ -77,18 +77,18 @@ impl Mapper for Mapper001_0 {
                     bus.set_name_table_mirroring(fields.m);
                 }
                 0xA000..=0xBFFF => {
-                    self.set_chr_bank_and_board_specifics(bus, C0, finished_value);
+                    self.set_chr_bank_and_board_specifics(bus, C, finished_value);
                 }
                 0xC000..=0xDFFF => {
                     if bus.chr_memory().layout_index() == 1 {
-                        self.set_chr_bank_and_board_specifics(bus, C1, finished_value);
+                        self.set_chr_bank_and_board_specifics(bus, D, finished_value);
                     }
                 }
                 0xE000..=0xFFFF => {
                     let (ram_disabled, prg_bank) = splitbits_named!(finished_value, "...dpppp");
-                    bus.set_reads_enabled(R0, !ram_disabled);
-                    bus.set_writes_enabled(W0, !ram_disabled);
-                    bus.set_prg_register(P1, prg_bank);
+                    bus.set_reads_enabled(RS0, !ram_disabled);
+                    bus.set_writes_enabled(WS0, !ram_disabled);
+                    bus.set_prg_register(Q, prg_bank);
                 }
             }
         }
@@ -109,8 +109,8 @@ impl Mapper001_0 {
         match self.board {
             Board::SNROM => {
                 let (ram_disabled, chr_bank) = splitbits_named!(value, "...d...c");
-                bus.set_reads_enabled(R0, !ram_disabled);
-                bus.set_writes_enabled(W0, !ram_disabled);
+                bus.set_reads_enabled(RS0, !ram_disabled);
+                bus.set_writes_enabled(WS0, !ram_disabled);
                 bus.set_chr_register(chr_id, chr_bank as u16);
             }
             Board::SUROM => {
@@ -121,18 +121,18 @@ impl Mapper001_0 {
             Board::SOROM => {
                 let banks = splitbits!(min=u8, value, "...or..c");
                 bus.set_prg_rom_outer_bank_number(banks.o);
-                bus.set_prg_register(P0, banks.r);
+                bus.set_prg_register(P, banks.r);
                 bus.set_chr_register(chr_id, banks.c);
             }
             Board::SXROM => {
                 let banks = splitbits!(min=u8, value, "...orr.c");
                 bus.set_prg_rom_outer_bank_number(banks.o);
-                bus.set_prg_register(P0, banks.r);
+                bus.set_prg_register(P, banks.r);
                 bus.set_chr_register(chr_id, banks.c);
             }
             Board::SZROM => {
                 let banks = splitbits!(min=u8, value, "...rcccc");
-                bus.set_prg_register(P0, banks.r);
+                bus.set_prg_register(P, banks.r);
                 bus.set_chr_register(chr_id, banks.c);
             }
             _ => {

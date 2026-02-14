@@ -9,16 +9,16 @@ pub const LAYOUT: Layout = Layout::builder()
     // The PRG layouts are the same as MMC3, except they can't have RAM.
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
         PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-2)),
         PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
     ])
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ABSENT),
         PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-2)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
         PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
@@ -38,7 +38,7 @@ impl Mapper for Mapper037 {
     fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         // MMC3 is still setting W0 WriteStatus to Enabled/Disabled,
         // even though this mapper substitutes in a layout that doesn't use W0.
-        if matches!(*addr, 0x6000..=0x7FFF) && bus.prg_memory.bank_registers().write_status(W0) == WriteStatus::Enabled {
+        if matches!(*addr, 0x6000..=0x7FFF) && bus.prg_memory.bank_registers().write_status(WS0) == WriteStatus::Enabled {
             bus.chr_memory.set_chr_rom_outer_bank_number((value >> 2) & 1);
 
             let (new_prg_outer_bank_size, new_prg_outer_bank_number) = match value & 0b111 {

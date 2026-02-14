@@ -4,11 +4,11 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(1024 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P)),
     ])
     .chr_rom_max_size(1048 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,
@@ -74,16 +74,16 @@ impl Mapper234 {
     fn update_bank_registers(&self, bus: &mut Bus) {
         match self.mode {
             Mode::Cnrom => {
-                bus.set_prg_register(P0, self.outer_bank);
+                bus.set_prg_register(P, self.outer_bank);
                 let chr_bank = (self.outer_bank << 2) | (self.chr_inner_bank & 0b11);
-                bus.set_chr_register(C0, chr_bank);
+                bus.set_chr_register(C, chr_bank);
             }
             Mode::Nina03 => {
                 let outer_bank = self.outer_bank >> 1;
                 let prg_bank = (outer_bank << 1) | self.prg_inner_bank;
-                bus.set_prg_register(P0, prg_bank);
+                bus.set_prg_register(P, prg_bank);
                 let chr_bank = (outer_bank << 3) | self.chr_inner_bank;
-                bus.set_chr_register(C0, chr_bank);
+                bus.set_chr_register(C, chr_bank);
             }
         }
     }

@@ -9,33 +9,33 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x7000, 0x71FF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(0).read_write_status(R0, W0)),
-        PrgWindow::new(0x7200, 0x73FF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(1).read_write_status(R1, W1)),
-        PrgWindow::new(0x7400, 0x75FF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(0).read_write_status(R0, W0)),
-        PrgWindow::new(0x7600, 0x77FF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(1).read_write_status(R1, W1)),
-        PrgWindow::new(0x7800, 0x79FF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(0).read_write_status(R0, W0)),
-        PrgWindow::new(0x7A00, 0x7BFF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(1).read_write_status(R1, W1)),
-        PrgWindow::new(0x7C00, 0x7DFF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(0).read_write_status(R0, W0)),
-        PrgWindow::new(0x7E00, 0x7FFF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(1).read_write_status(R1, W1)),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
+        PrgWindow::new(0x7000, 0x71FF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(0).read_write_status(RS0, WS0)),
+        PrgWindow::new(0x7200, 0x73FF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(1).read_write_status(RS1, WS1)),
+        PrgWindow::new(0x7400, 0x75FF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(0).read_write_status(RS0, WS0)),
+        PrgWindow::new(0x7600, 0x77FF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(1).read_write_status(RS1, WS1)),
+        PrgWindow::new(0x7800, 0x79FF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(0).read_write_status(RS0, WS0)),
+        PrgWindow::new(0x7A00, 0x7BFF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(1).read_write_status(RS1, WS1)),
+        PrgWindow::new(0x7C00, 0x7DFF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(0).read_write_status(RS0, WS0)),
+        PrgWindow::new(0x7E00, 0x7FFF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(1).read_write_status(RS1, WS1)),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
         PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-2)),
         PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
     ])
     // Switchable 0xC000
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x7000, 0x71FF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(0).read_write_status(R0, W0)),
-        PrgWindow::new(0x7200, 0x73FF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(1).read_write_status(R1, W1)),
-        PrgWindow::new(0x7400, 0x75FF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(0).read_write_status(R0, W0)),
-        PrgWindow::new(0x7600, 0x77FF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(1).read_write_status(R1, W1)),
-        PrgWindow::new(0x7800, 0x79FF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(0).read_write_status(R0, W0)),
-        PrgWindow::new(0x7A00, 0x7BFF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(1).read_write_status(R1, W1)),
-        PrgWindow::new(0x7C00, 0x7DFF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(0).read_write_status(R0, W0)),
-        PrgWindow::new(0x7E00, 0x7FFF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(1).read_write_status(R1, W1)),
+        PrgWindow::new(0x7000, 0x71FF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(0).read_write_status(RS0, WS0)),
+        PrgWindow::new(0x7200, 0x73FF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(1).read_write_status(RS1, WS1)),
+        PrgWindow::new(0x7400, 0x75FF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(0).read_write_status(RS0, WS0)),
+        PrgWindow::new(0x7600, 0x77FF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(1).read_write_status(RS1, WS1)),
+        PrgWindow::new(0x7800, 0x79FF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(0).read_write_status(RS0, WS0)),
+        PrgWindow::new(0x7A00, 0x7BFF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(1).read_write_status(RS1, WS1)),
+        PrgWindow::new(0x7C00, 0x7DFF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(0).read_write_status(RS0, WS0)),
+        PrgWindow::new(0x7E00, 0x7FFF, KIBIBYTE / 2, PrgBank::RAM_OR_ABSENT.fixed_number(1).read_write_status(RS1, WS1)),
         PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-2)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
         PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
@@ -67,10 +67,10 @@ impl Mapper for Mapper004_1 {
                 bus.set_prg_layout(fields.p as u8);
                 self.prg_ram_enabled = fields.r;
                 if !self.prg_ram_enabled {
-                    bus.set_reads_enabled(R0, false);
-                    bus.set_reads_enabled(R1, false);
-                    bus.set_writes_enabled(W0, false);
-                    bus.set_writes_enabled(W1, false);
+                    bus.set_reads_enabled(RS0, false);
+                    bus.set_reads_enabled(RS1, false);
+                    bus.set_writes_enabled(WS0, false);
+                    bus.set_writes_enabled(WS1, false);
                 }
 
                 self.selected_register_id = mmc3::BANK_NUMBER_REGISTER_IDS[fields.b as usize];
@@ -94,20 +94,20 @@ impl Mapper for Mapper004_1 {
                 }
 
                 let (enable_7200, writeable_7200, enable_7000, writeable_7000) = splitbits_named!(value, "ewfx ....");
-                bus.set_writes_enabled(W0, enable_7000 && writeable_7000);
-                bus.set_writes_enabled(W1, enable_7200 && writeable_7200);
+                bus.set_writes_enabled(WS0, enable_7000 && writeable_7000);
+                bus.set_writes_enabled(WS1, enable_7200 && writeable_7200);
 
-                bus.set_reads_enabled(R0, enable_7000);
-                bus.set_reads_enabled(R1, enable_7200);
+                bus.set_reads_enabled(RS0, enable_7000);
+                bus.set_reads_enabled(RS1, enable_7200);
 
                 if !enable_7000 && enable_7200  {
                     // Overwrite/ignore the value that R0 was set to above.
-                    bus.set_read_zeroes(R0);
+                    bus.set_read_zeroes(RS0);
                 }
 
                 if !enable_7200 && enable_7000 {
                     // Overwrite/ignore the value that R1 was set to above.
-                    bus.set_read_zeroes(R1);
+                    bus.set_read_zeroes(RS1);
                 }
             }
             (0xC000..=0xDFFF, true ) => self.irq_state.set_counter_reload_value(value),
@@ -133,7 +133,7 @@ impl Mapper for Mapper004_1 {
 impl Mapper004_1 {
     pub fn new() -> Self {
         Self {
-            selected_register_id: RegId::Chr(C0),
+            selected_register_id: RegId::Chr(C),
             irq_state: Mmc3IrqState::REV_A_IRQ_STATE,
             prg_ram_enabled: false,
         }

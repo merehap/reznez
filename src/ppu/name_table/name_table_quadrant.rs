@@ -64,10 +64,10 @@ impl NameTableQuadrant {
     pub fn register_ids(self) -> (ChrSourceRegisterId, ChrBankRegisterId) {
         use NameTableQuadrant::*;
         match self {
-            TopLeft     => (ChrSourceRegisterId::NT0, ChrBankRegisterId::N0),
-            TopRight    => (ChrSourceRegisterId::NT1, ChrBankRegisterId::N1),
-            BottomLeft  => (ChrSourceRegisterId::NT2, ChrBankRegisterId::N2),
-            BottomRight => (ChrSourceRegisterId::NT3, ChrBankRegisterId::N3),
+            TopLeft     => (ChrSourceRegisterId::NTS0, ChrBankRegisterId::NT0),
+            TopRight    => (ChrSourceRegisterId::NTS1, ChrBankRegisterId::NT1),
+            BottomLeft  => (ChrSourceRegisterId::NTS2, ChrBankRegisterId::NT2),
+            BottomRight => (ChrSourceRegisterId::NTS3, ChrBankRegisterId::NT3),
         }
     }
 

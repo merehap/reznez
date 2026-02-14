@@ -4,16 +4,16 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(4096 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P)),
     ])
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
-        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P)),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P)),
     ])
     .chr_rom_max_size(8 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.fixed_index(0).write_status(W0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.fixed_index(0).write_status(WS0)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,
@@ -32,8 +32,8 @@ impl Mapper for Mapper063_0 {
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
                 let (disable_chr_writes, prg_bank, layout, mirroring) = splitbits_named!(*addr, ".... .dpp pppp pplm");
-                bus.set_writes_enabled(W0, !disable_chr_writes);
-                bus.set_prg_register(P0, prg_bank);
+                bus.set_writes_enabled(WS0, !disable_chr_writes);
+                bus.set_prg_register(P, prg_bank);
                 bus.set_prg_layout(layout as u8);
                 bus.set_name_table_mirroring(mirroring as u8);
             }

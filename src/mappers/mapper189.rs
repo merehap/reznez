@@ -8,7 +8,7 @@ pub const LAYOUT: Layout = Layout::builder()
     // Single layout with a 32KiB window instead of normal MMC3's two layouts with 8KiB windows.
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P)),
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(mmc3::CHR_BIG_WINDOWS_FIRST)
@@ -26,7 +26,7 @@ impl Mapper for Mapper189 {
         match (*addr, self.mmc3.selected_register_id()) {
             (0x4120..=0x7FFF, _) => {
                 let bank_number = (value >> 4) | (value & 0b1111);
-                bus.set_prg_register(P0, bank_number);
+                bus.set_prg_register(P, bank_number);
             }
             (0x8000..=0xBFFF, mmc3::RegId::Prg(_)) if *addr % 2 == 1 => {
                 // Do nothing here: PRG registers are not set by the standard MMC3 process.

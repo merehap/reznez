@@ -4,17 +4,17 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P)),
     ])
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
-        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P)),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P)),
     ])
     .chr_rom_max_size(128 * KIBIBYTE)
     // NTDEC 0324 has switchable ROM, GS-2017 has fixed RAM.
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,
@@ -34,8 +34,8 @@ impl Mapper for Mapper061 {
                 let fields = splitbits!(min=u8, *addr, ".... cccc m.ql pppp");
                 let prg_index = combinebits!(fields.p, fields.q, "000p pppq");
 
-                bus.set_prg_register(P0, prg_index);
-                bus.set_chr_register(C0, fields.c);
+                bus.set_prg_register(P, prg_index);
+                bus.set_chr_register(C, fields.c);
                 bus.set_name_table_mirroring(fields.m);
                 bus.set_prg_layout(fields.l);
             }

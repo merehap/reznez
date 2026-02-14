@@ -4,11 +4,11 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(1024 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P)),
     ])
     .chr_rom_max_size(1024 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
     ])
     .fixed_name_table_mirroring()
     .build();
@@ -34,9 +34,9 @@ impl Mapper for Mapper046 {
             0x8000..=0xFFFF => {
                 // TODO: replacebits
                 let prg_bank_number = self.prg_high_bits | (value & 0b0000_0001);
-                bus.set_prg_register(P0, prg_bank_number);
+                bus.set_prg_register(P, prg_bank_number);
                 let chr_bank_number = self.chr_high_bits | ((value << 1) >> 5);
-                bus.set_chr_register(C0, chr_bank_number);
+                bus.set_chr_register(C, chr_bank_number);
             }
         }
     }

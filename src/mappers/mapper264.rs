@@ -9,36 +9,36 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_outer_bank_size(128 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P4)),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(T)),
         PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgBank::ROM.fixed_number(-2)),
         PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
     ])
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P4)),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(T)),
     ])
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0x9FFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
-        PrgWindow::new(0xA000, 0xBFFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
-        PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
-        PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(P3)),
+        PrgWindow::new(0x8000, 0x9FFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
+        PrgWindow::new(0xA000, 0xBFFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
+        PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(R)),
+        PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(S)),
     ])
     // Same as above.
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0x9FFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
-        PrgWindow::new(0xA000, 0xBFFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
-        PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
-        PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(P3)),
+        PrgWindow::new(0x8000, 0x9FFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
+        PrgWindow::new(0xA000, 0xBFFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
+        PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(R)),
+        PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(S)),
     ])
-    .override_prg_bank_register(P3, -1)
+    .override_prg_bank_register(S, -1)
     .chr_rom_max_size(512 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
-        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C1)),
-        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C2)),
-        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C3)),
+        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
+        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(D)),
+        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(E)),
+        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(F)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,
@@ -77,7 +77,7 @@ impl Mapper for Mapper264 {
                 let fields = splitbits!(min=u8, value, "....oppp");
                 bus.set_prg_rom_outer_bank_number(fields.o);
                 // TODO: Verify correct behavior for both 16KiB and 32KiB layouts.
-                bus.set_prg_register(P4, fields.p);
+                bus.set_prg_register(T, fields.p);
             }
             0x8400 => {
                 let fields = splitbits!(value, "es.ll.mm");
@@ -94,14 +94,14 @@ impl Mapper for Mapper264 {
                 self.irq_counter.set_count_high_byte(value);
                 self.irq_counter.set_enabled(self.next_irq_enabled_value);
             }
-            0x8C00 => bus.set_prg_register(P0, value & 0b1111),
-            0x8C01 => bus.set_prg_register(P1, value & 0b1111),
-            0x8C02 => bus.set_prg_register(P2, value & 0b1111),
-            0x8C03 => bus.set_prg_register(P3, value & 0b1111),
-            0x8C10 => bus.set_chr_register(C0, value),
-            0x8C11 => bus.set_chr_register(C1, value),
-            0x8C16 => bus.set_chr_register(C2, value),
-            0x8C17 => bus.set_chr_register(C3, value),
+            0x8C00 => bus.set_prg_register(P, value & 0b1111),
+            0x8C01 => bus.set_prg_register(Q, value & 0b1111),
+            0x8C02 => bus.set_prg_register(R, value & 0b1111),
+            0x8C03 => bus.set_prg_register(S, value & 0b1111),
+            0x8C10 => bus.set_chr_register(C, value),
+            0x8C11 => bus.set_chr_register(D, value),
+            0x8C16 => bus.set_chr_register(E, value),
+            0x8C17 => bus.set_chr_register(F, value),
             _ => { /* Do nothing. */ }
         }
     }

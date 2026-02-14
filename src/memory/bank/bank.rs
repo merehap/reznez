@@ -307,42 +307,42 @@ impl PrgBankNumberProvider {
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Debug)]
 pub enum ReadStatusRegisterId {
-    R0,
-    R1,
-    R2,
-    R3,
-    R4,
-    R5,
-    R6,
-    R7,
-    R8,
-    R9,
-    R10,
-    R11,
-    R12,
-    R13,
-    R14,
-    R15,
+    RS0,
+    RS1,
+    RS2,
+    RS3,
+    RS4,
+    RS5,
+    RS6,
+    RS7,
+    RS8,
+    RS9,
+    RS10,
+    RS11,
+    RS12,
+    RS13,
+    RS14,
+    RS15,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Debug)]
 pub enum WriteStatusRegisterId {
-    W0,
-    W1,
-    W2,
-    W3,
-    W4,
-    W5,
-    W6,
-    W7,
-    W8,
-    W9,
-    W10,
-    W11,
-    W12,
-    W13,
-    W14,
-    W15,
+    WS0,
+    WS1,
+    WS2,
+    WS3,
+    WS4,
+    WS5,
+    WS6,
+    WS7,
+    WS8,
+    WS9,
+    WS10,
+    WS11,
+    WS12,
+    WS13,
+    WS14,
+    WS15,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -373,21 +373,21 @@ pub enum ChrSourceRegisterId {
     CS7,
 
     // Name Table Top Left
-    NT0,
+    NTS0,
     // Name Table Top Right
-    NT1,
+    NTS1,
     // Name Table Bottom Left
-    NT2,
+    NTS2,
     // Name Table Bottom Right
-    NT3,
+    NTS3,
 }
 
 impl ChrSourceRegisterId {
     pub const ALL_NAME_TABLE_SOURCE_IDS: [Self; 4] = [
-        ChrSourceRegisterId::NT0,
-        ChrSourceRegisterId::NT1,
-        ChrSourceRegisterId::NT2,
-        ChrSourceRegisterId::NT3,
+        ChrSourceRegisterId::NTS0,
+        ChrSourceRegisterId::NTS1,
+        ChrSourceRegisterId::NTS2,
+        ChrSourceRegisterId::NTS3,
     ];
 }
 

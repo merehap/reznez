@@ -4,11 +4,11 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P)),
     ])
     .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
     ])
     .fixed_name_table_mirroring()
     .build();
@@ -25,8 +25,8 @@ impl Mapper for Mapper140 {
                 // TODO: Remove this?
                 assert_eq!(value & 0b1100_0000, 0);
                 let banks = splitbits!(value, "..ppcccc");
-                bus.set_prg_register(P0, banks.p);
-                bus.set_chr_register(C0, banks.c);
+                bus.set_prg_register(P, banks.p);
+                bus.set_chr_register(C, banks.c);
             }
             0x8000..=0xFFFF => { /* Do nothing. */ }
         }

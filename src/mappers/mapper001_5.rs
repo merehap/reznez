@@ -4,16 +4,16 @@ use crate::mappers::mmc1::shift_register::{ShiftRegister, ShiftStatus};
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(32 * KIBIBYTE)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.read_write_status(R0, W0)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.read_write_status(RS0, WS0)),
         PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.fixed_number(0)),
     ])
     .chr_rom_max_size(64 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM.switchable(C)),
     ])
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
-        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
+        ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::ROM.switchable(C)),
+        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::ROM.switchable(D)),
     ])
     // TODO: Reconcile these values with nes20db.xml
     .cartridge_selection_name_table_mirrorings([
@@ -56,12 +56,12 @@ impl Mapper for Mapper001_5 {
                     bus.set_chr_layout(fields.c);
                     bus.set_name_table_mirroring(fields.m);
                 }
-                0xA000..=0xBFFF => bus.set_chr_register(C0, finished_value),
-                0xC000..=0xDFFF => bus.set_chr_register(C1, finished_value),
+                0xA000..=0xBFFF => bus.set_chr_register(C, finished_value),
+                0xC000..=0xDFFF => bus.set_chr_register(D, finished_value),
                 0xE000..=0xFFFF => {
                     let ram_disabled = splitbits_named!(finished_value, "...d....");
-                    bus.set_reads_enabled(R0, !ram_disabled);
-                    bus.set_writes_enabled(W0, !ram_disabled);
+                    bus.set_reads_enabled(RS0, !ram_disabled);
+                    bus.set_writes_enabled(WS0, !ram_disabled);
                 }
             }
         }

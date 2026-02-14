@@ -6,7 +6,7 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P)),
     ])
     .chr_rom_max_size(64 * KIBIBYTE)
     .chr_rom_outer_bank_size(32 * KIBIBYTE)
@@ -65,8 +65,8 @@ impl Mapper for Mapper150 {
                 match self.selected_reg_type {
                     RegisterType::Dummy0 | RegisterType::Dummy1 | RegisterType::Dummy2 | RegisterType::Dummy3 => {}
                     RegisterType::ChrOuterBank => bus.set_chr_rom_outer_bank_number(value & 1),
-                    RegisterType::PrgBank => bus.set_prg_register(P0, value & 0b11),
-                    RegisterType::ChrInnerBank => bus.set_chr_register(C0, value & 0b11),
+                    RegisterType::PrgBank => bus.set_prg_register(P, value & 0b11),
+                    RegisterType::ChrInnerBank => bus.set_chr_register(C, value & 0b11),
                     RegisterType::NameTableMirroring => bus.set_name_table_mirroring((value >> 1) & 0b11),
                 }
             }

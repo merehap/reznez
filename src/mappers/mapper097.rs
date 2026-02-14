@@ -5,7 +5,7 @@ const LAYOUT: Layout = Layout::builder()
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
         PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
-        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P)),
     ])
     .chr_rom_max_size(8 * KIBIBYTE)
     .chr_layout(&[
@@ -28,7 +28,7 @@ impl Mapper for Mapper097 {
             0x8000..=0xBFFF => {
                 let banks = splitbits!(min=u8, value, "m..ppppp");
                 bus.set_name_table_mirroring(banks.m);
-                bus.set_prg_register(P0, banks.p);
+                bus.set_prg_register(P, banks.p);
             }
             0xC000..=0xFFFF => { /* Do nothing. */ }
         }

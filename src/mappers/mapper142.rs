@@ -7,10 +7,10 @@ use crate::mappers::common::kaiser202;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P3)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(R)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(S)),
         PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
     ])
     .chr_rom_max_size(8 * KIBIBYTE)
@@ -51,10 +51,10 @@ impl Mapper for Mapper142 {
             0xE000..=0xEFFF => {
                 match value & 0b111 {
                     0 | 5 | 7 => info!("Unknown bank select occurred: {}", value & 0b111),
-                    1 => self.selected_prg_bank = Some(P1), // 0x8000
-                    2 => self.selected_prg_bank = Some(P2), // 0xA000
-                    3 => self.selected_prg_bank = Some(P3), // 0xC000
-                    4 => self.selected_prg_bank = Some(P0), // 0x6000
+                    1 => self.selected_prg_bank = Some(Q), // 0x8000
+                    2 => self.selected_prg_bank = Some(R), // 0xA000
+                    3 => self.selected_prg_bank = Some(S), // 0xC000
+                    4 => self.selected_prg_bank = Some(P), // 0x6000
                     6 => self.selected_prg_bank = None,
                     _ => unreachable!(),
                 }

@@ -8,7 +8,7 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(32 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
     ])
     .fixed_name_table_mirroring()
     .build();
@@ -24,7 +24,7 @@ impl Mapper for Mapper087 {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => { /* Do nothing. */ }
-            0x6000..=0x7FFF => bus.set_chr_register(C0, bank_number),
+            0x6000..=0x7FFF => bus.set_chr_register(C, bank_number),
             0x8000..=0xFFFF => { /* Do nothing. */ }
         }
     }

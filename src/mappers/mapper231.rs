@@ -4,8 +4,8 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
-        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P)),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
     ])
     .chr_rom_max_size(8 * KIBIBYTE)
     .chr_layout(&[
@@ -28,8 +28,8 @@ impl Mapper for Mapper231 {
             0x8000..=0xFFFF => {
                 let fields = splitbits!(min=u8, *addr, ".... .... m.lp ppp.");
                 bus.set_name_table_mirroring(fields.m);
-                bus.set_prg_register(P0, fields.p << 1);
-                bus.set_prg_register(P1, (fields.p << 1) | fields.l);
+                bus.set_prg_register(P, fields.p << 1);
+                bus.set_prg_register(Q, (fields.p << 1) | fields.l);
             }
         }
     }

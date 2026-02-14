@@ -7,18 +7,18 @@ const LAYOUT: Layout = Layout::builder()
         PrgWindow::new(0x6800, 0x6FFF, 2 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.fixed_number(0)),
         PrgWindow::new(0x7000, 0x77FF, 2 * KIBIBYTE, PrgBank::ABSENT),
         PrgWindow::new(0x7800, 0x7FFF, 2 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
-        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P3)),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(R)),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(S)),
     ])
-    .override_prg_bank_register(P3, -1)
+    .override_prg_bank_register(S, -1)
     .chr_rom_max_size(512 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
-        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
-        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C2)),
-        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C3)),
+        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C)),
+        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(D)),
+        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(E)),
+        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(F)),
     ])
     .fixed_name_table_mirroring()
     .build();
@@ -33,14 +33,14 @@ impl Mapper for Mapper246 {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => { /* No registers here. */ }
-            0x6000 => bus.set_prg_register(P0, value & 0b0011_1111),
-            0x6001 => bus.set_prg_register(P1, value & 0b0011_1111),
-            0x6002 => bus.set_prg_register(P2, value & 0b0011_1111),
-            0x6003 => bus.set_prg_register(P3, value & 0b0011_1111),
-            0x6004 => bus.set_chr_register(C0, value),
-            0x6005 => bus.set_chr_register(C1, value),
-            0x6006 => bus.set_chr_register(C2, value),
-            0x6007 => bus.set_chr_register(C3, value),
+            0x6000 => bus.set_prg_register(P, value & 0b0011_1111),
+            0x6001 => bus.set_prg_register(Q, value & 0b0011_1111),
+            0x6002 => bus.set_prg_register(R, value & 0b0011_1111),
+            0x6003 => bus.set_prg_register(S, value & 0b0011_1111),
+            0x6004 => bus.set_chr_register(C, value),
+            0x6005 => bus.set_chr_register(D, value),
+            0x6006 => bus.set_chr_register(E, value),
+            0x6007 => bus.set_chr_register(F, value),
             0x6008..=0xFFFF => { /* No registers here. */ }
         }
     }
