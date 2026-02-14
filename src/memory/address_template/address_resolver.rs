@@ -3,7 +3,7 @@ use std::fmt;
 use crate::mapper::{CpuAddress, PrgBankRegisterId};
 use crate::memory::address_template::bank_sizes::BankSizes;
 use crate::memory::address_template::bit_template::BitTemplate;
-use crate::memory::address_template::segment::Segment;
+use crate::memory::address_template::segment::{Label, Segment};
 use crate::memory::bank::bank_number::{BankNumber, PrgBankRegisters};
 use crate::memory::window::PrgWindow;
 use crate::util::const_vec::ConstVec;
@@ -23,8 +23,8 @@ const INNER_BANK_SEGMENT: u8 = 1;
  *                |        |                 Base address (width is inner_bank_size())
  *                |        |                        |
  *                v        v                        v
- * Components   O₀₁O₀₀ P₀₂P₀₁P₀₀ A₁₃A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
- * Full Address A₁₈A₁₇ A₁₆A₁₅A₁₄ A₁₃A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
+ * Components   o₀₁o₀₀ p₀₂p₀₁p₀₀ a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
+ * Full Address a₁₈a₁₇ a₁₆a₁₅a₁₄ a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
  *              |      |         |  |         Page size  (always 8 KiB)   |
  *              |      |         |  +-------------------------------------|
  *              |      |         |            Inner bank size  (16 KiB)   |
@@ -46,8 +46,8 @@ const INNER_BANK_SEGMENT: u8 = 1;
  *                |        |                 |       Base address (width is 128 B)
  *                |        |                 |                    |
  *                v        v                 v                    v
- * Components   O₀₁O₀₀ P₀₂P₀₁P₀₀ A₁₃ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇ A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
- * Full Address A₁₈A₁₇ A₁₆A₁₅A₁₄ A₁₃ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇ A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
+ * Components   o₀₁o₀₀ p₀₂p₀₁p₀₀ a₁₃ a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇ a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
+ * Full Address a₁₈a₁₇ a₁₆a₁₅a₁₄ a₁₃ a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇ a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
  *              |      |         |   |                  | Sub-page (128 B)  |
  *              |      |         |   |                  +-------------------|
  *              |      |         |   |        Page size  (always 8 KiB)     |
@@ -80,18 +80,18 @@ impl AddressResolver {
     pub const PRG_PAGE_SIZE: u16 = 2u16.pow(Self::PRG_PAGE_NUMBER_WIDTH as u32);
 
     /**
-     * PRG Address                           A₁₇A₁₆A₁₅A₁₄ A₁₃ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
-     * Components Before (8 KiB inner banks) O₀₁O₀₀P₀₂P₀₁ P₀₀ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
-     * Components After (16 KiB inner banks) O₀₁O₀₀P₀₂P₀₁ A₁₃ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
+     * PRG Address                           a₁₇a₁₆a₁₅a₁₄ a₁₃ a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
+     * Components Before (8 KiB inner banks) o₀₁o₀₀p₀₂p₀₁ p₀₀ a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
+     * Components After (16 KiB inner banks) o₀₁o₀₀p₀₂p₀₁ a₁₃ a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
      */
     pub const fn prg(window: &PrgWindow, bank_sizes: &BankSizes, work_ram_start_inner_bank_number: u16) -> Self {
         let fixed_inner_bank_number = window.bank().fixed_bank_number().map(BankNumber::to_raw);
 
         let inner_bank_width = bank_sizes.inner_bank_width();
-        let address_bus_segment = Segment::named('A', inner_bank_width);
+        let address_bus_segment = Segment::named('a', inner_bank_width);
         let inner_bank_segment =
             if let Some(fixed_inner_bank_number) = fixed_inner_bank_number {
-                // O₀₁O₀₀1₁₆1₁₅1₁₄1₁₃A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
+                // o₀₁o₀₀1₁₆1₁₅1₁₄1₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
                 Segment::constant(
                     fixed_inner_bank_number,
                     inner_bank_width,
@@ -99,11 +99,11 @@ impl AddressResolver {
                     0,
                 )
             } else {
-                // O₀₁O₀₀P₀₃P₀₂P₀₁P₀₀A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
-                Segment::named('P', bank_sizes.inner_bank_number_width())
+                // o₀₁o₀₀p₀₃p₀₂p₀₁p₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
+                Segment::named('p', bank_sizes.inner_bank_number_width())
             };
 
-        let outer_bank_segment = Segment::named('O', bank_sizes.outer_bank_number_width());
+        let outer_bank_segment = Segment::named('o', bank_sizes.outer_bank_number_width());
 
         let mut segments = ConstVec::new();
         segments.push(address_bus_segment);
@@ -148,13 +148,17 @@ impl AddressResolver {
         };
         let inner_bank_width = base_address_width + inner_bank_ignored_low_count;
 
+        let reg_id = match bit_template.label_of(INNER_BANK_SEGMENT).expect("TODO: support missing inner bank segment.") {
+            Label::Constant {..} => None,
+            Label::Name(c) => Some(PrgBankRegisterId::from_char(c).expect("Bad inner bank label letter.")),
+        };
+
         Ok(Self {
             bit_template,
             inner_bank_width,
             raw_outer_bank_number: 0,
             raw_inner_bank_number: 0,
-            // TODO: Parse this from the template.
-            reg_id: None,
+            reg_id,
             work_ram_start_inner_bank_number,
         })
     }

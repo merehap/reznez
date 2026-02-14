@@ -263,6 +263,25 @@ pub enum PrgBankRegisterId {
     Y,
 }
 
+impl PrgBankRegisterId {
+    pub const fn from_char(c: char) -> Option<Self> {
+        use PrgBankRegisterId::*;
+        Some(match c {
+            'p' => P,
+            'q' => Q,
+            'r' => R,
+            's' => S,
+            't' => T,
+            'u' => U,
+            'v' => V,
+            'w' => W,
+            'x' => X,
+            'y' => Y,
+            _ => return None,
+        })
+    }
+}
+
 #[derive(PartialEq, Eq, Clone, Copy, Debug, FromPrimitive)]
 pub enum ChrBankRegisterId {
     C,
