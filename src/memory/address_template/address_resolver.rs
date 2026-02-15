@@ -109,13 +109,22 @@ impl AddressResolver {
         segments.push(address_bus_segment);
         segments.push(inner_bank_segment);
         segments.push(outer_bank_segment);
-        let mut bit_template = BitTemplate::right_to_left(segments);
 
         // Don't expand the bank size larger than the total memory size.
-        let new_base_address_bit_count = std::cmp::min(window.size().bit_count(), bit_template.width());
-        if new_base_address_bit_count > bit_template.magnitude_of(BASE_ADDRESS_SEGMENT).unwrap() {
-            bit_template.increase_segment_magnitude(BASE_ADDRESS_SEGMENT, new_base_address_bit_count);
+        let new_base_address_bit_count = std::cmp::min(window.size().bit_count(), bank_sizes.full_width());
+        if new_base_address_bit_count > segments.get_mut(BASE_ADDRESS_SEGMENT).magnitude() {
+            let mut ignored_low_count = segments.get_mut(BASE_ADDRESS_SEGMENT).increase_magnitude_to(new_base_address_bit_count);
+            ignored_low_count = match segments.maybe_get_mut(INNER_BANK_SEGMENT) {
+                None => ignored_low_count,
+                Some(segment) => segment.increase_ignored_low_count(ignored_low_count),
+            };
+            assert!(
+                ignored_low_count == 0,
+                "Overshift occurred. Outer bank bits shouldn't be lost to large inner bank sizes."
+            );
         }
+
+        let bit_template = BitTemplate::right_to_left(segments);
 
         let address_template = Self {
             bit_template,
@@ -165,7 +174,7 @@ impl AddressResolver {
 
     pub fn reduced(&self, bank_sizes: &BankSizes) -> Self {
         let mut result = self.clone();
-        result.bit_template.shorten(bank_sizes.full_width());
+        result.bit_template = result.bit_template.shortened(bank_sizes.full_width());
         result.inner_bank_width = bank_sizes.inner_bank_width();
         result
     }

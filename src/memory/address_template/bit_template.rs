@@ -37,13 +37,15 @@ impl BitTemplate {
         Ok(BitTemplate::right_to_left(segments))
     }
 
-    pub fn shorten(&mut self, new_width: u8) {
-        let mut shorten_amount = self.width().strict_sub(new_width);
-        for i in (0..self.segments.len()).rev() {
-            shorten_amount = self.segments.get_mut(i).decrease_width_by(shorten_amount);
+    pub fn shortened(&self, new_width: u8) -> Self {
+        let mut result = *self;
+        let mut shorten_amount = result.width().strict_sub(new_width);
+        for i in (0..result.segments.len()).rev() {
+            shorten_amount = result.segments.get_mut(i).decrease_width_by(shorten_amount);
         }
 
         assert_eq!(shorten_amount, 0);
+        result
     }
 
     pub const fn width(&self) -> u8 {
@@ -63,11 +65,6 @@ impl BitTemplate {
     pub const fn width_of(&self, segment_index: u8) -> Option<u8> {
         let segment = self.segments.maybe_get(segment_index)?;
         Some(segment.width())
-    }
-
-    pub const fn magnitude_of(&self, segment_index: u8) -> Option<u8> {
-        let segment = self.segments.maybe_get(segment_index)?;
-        Some(segment.magnitude())
     }
 
     pub const fn ignored_low_count_of(&self, segment_index: u8) -> Option<u8> {
@@ -104,29 +101,6 @@ impl BitTemplate {
             .rev()
             .map(Segment::formatted)
             .join("")
-    }
-
-    pub const fn increase_segment_magnitude(
-        &mut self,
-        segment_index: u8,
-        new_magnitude: u8,
-    ) {
-        assert!(segment_index < self.segments.len());
-
-        let mut ignored_low_count = self.segments.get_mut(segment_index).increase_magnitude_to(new_magnitude);
-
-        let mut index = segment_index + 1;
-        while index < self.segments.len() {
-            ignored_low_count = match self.segments.maybe_get_mut(index) {
-                None => ignored_low_count,
-                Some(segment) => segment.increase_ignored_low_count(ignored_low_count),
-            };
-            assert!(
-                ignored_low_count == 0,
-                "Overshift occurred. Outer bank bits shouldn't be lost to large inner bank sizes."
-            );
-            index += 1;
-        }
     }
 }
 
