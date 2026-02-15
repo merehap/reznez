@@ -147,20 +147,15 @@ impl AddressResolver {
             return Err("AddressTemplate must not be longer than 32 bits.");
         }
 
-        let Some(base_address_width) = bit_template.width_of(BASE_ADDRESS_SEGMENT) else {
-            panic!();
-        };
-        let inner_bank_ignored_low_count = match bit_template.ignored_low_count_of(INNER_BANK_SEGMENT) {
-            None => 0,
-            Some(count) => count,
-        };
+        let base_address_width = bit_template.width_of('a');
+        let inner_bank_ignored_low_count = bit_template.ignored_low_count_of('i');
         let inner_bank_width = base_address_width + inner_bank_ignored_low_count;
 
         let mut reg_id = None;
         let mut i = 0;
         while i < bit_template.segment_count() {
-            match bit_template.label_of(i) {
-                None | Some(Label::Constant {..}) | Some(Label::Name('o' | 'i')) => continue,
+            match bit_template.label_at(i) {
+                None | Some(Label::Constant {..}) | Some(Label::Name('o' | 'a')) => continue,
                 Some(Label::Name(c)) => {
                     assert!(reg_id.is_none(), "Multiple inner bank segments not allowed in a single template.");
                     reg_id = Some(PrgBankRegisterId::from_char(c).expect("Bad inner bank label letter."));

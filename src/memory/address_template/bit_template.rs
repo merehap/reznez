@@ -83,17 +83,23 @@ impl BitTemplate {
         width
     }
 
-    pub const fn width_of(&self, segment_index: u8) -> Option<u8> {
-        let segment = self.segments.maybe_get(segment_index)?;
-        Some(segment.width())
+    pub const fn width_of(&self, label: char) -> u8 {
+        if let Some(segment) = self.segment_with_label(label) {
+            segment.width()
+        } else {
+            0
+        }
     }
 
-    pub const fn ignored_low_count_of(&self, segment_index: u8) -> Option<u8> {
-        let segment = self.segments.maybe_get(segment_index)?;
-        Some(segment.ignored_low_count())
+    pub const fn ignored_low_count_of(&self, label: char) -> u8 {
+        if let Some(segment) = self.segment_with_label(label) {
+            segment.ignored_low_count()
+        } else {
+            0
+        }
     }
 
-    pub const fn label_of(&self, segment_index: u8) -> Option<Label> {
+    pub const fn label_at(&self, segment_index: u8) -> Option<Label> {
         let segment = self.segments.maybe_get(segment_index)?;
         Some(segment.label)
     }
@@ -122,6 +128,19 @@ impl BitTemplate {
             .rev()
             .map(Segment::formatted)
             .join("")
+    }
+
+    const fn segment_with_label(&self, label: char) -> Option<&Segment> {
+        let mut i = 0;
+        while i < self.segment_count() {
+            if let Label::Name(segment_label) = self.segments.get_ref(i).label && segment_label == label {
+                return Some(self.segments.get_ref(i));
+            }
+
+            i += 1;
+        }
+
+        None
     }
 }
 
