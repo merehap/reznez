@@ -65,6 +65,10 @@ impl BitTemplate {
         result
     }
 
+    pub const fn segment_count(&self) -> u8 {
+        self.segments.len()
+    }
+
     pub const fn width(&self) -> u8 {
         let mut width = 0;
         let mut index = 0;

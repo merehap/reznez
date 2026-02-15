@@ -156,10 +156,19 @@ impl AddressResolver {
         };
         let inner_bank_width = base_address_width + inner_bank_ignored_low_count;
 
-        let reg_id = match bit_template.label_of(INNER_BANK_SEGMENT).expect("TODO: support missing inner bank segment.") {
-            Label::Constant {..} => None,
-            Label::Name(c) => Some(PrgBankRegisterId::from_char(c).expect("Bad inner bank label letter.")),
-        };
+        let mut reg_id = None;
+        let mut i = 0;
+        while i < bit_template.segment_count() {
+            match bit_template.label_of(i) {
+                None | Some(Label::Constant {..}) | Some(Label::Name('o' | 'i')) => continue,
+                Some(Label::Name(c)) => {
+                    assert!(reg_id.is_none(), "Multiple inner bank segments not allowed in a single template.");
+                    reg_id = Some(PrgBankRegisterId::from_char(c).expect("Bad inner bank label letter."));
+                }
+            }
+
+            i += 1;
+        }
 
         Ok(Self {
             bit_template,
