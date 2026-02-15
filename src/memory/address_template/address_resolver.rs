@@ -124,8 +124,7 @@ impl AddressResolver {
             );
         }
 
-        let bit_template = BitTemplate::right_to_left(segments);
-
+        let bit_template = BitTemplate::right_to_left(segments, Some(bank_sizes.full_width()));
         let address_template = Self {
             bit_template,
             inner_bank_width,

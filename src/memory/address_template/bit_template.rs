@@ -10,7 +10,24 @@ pub struct BitTemplate {
 }
 
 impl BitTemplate {
-    pub const fn right_to_left(segments: ConstVec<Segment, 3>) -> Self {
+    pub const fn right_to_left(mut segments: ConstVec<Segment, 3>, forced_width: Option<u8>) -> Self {
+        if let Some(forced_width) = forced_width {
+            let mut width_accum = 0;
+            let mut i = 0;
+            while i < segments.len() {
+                width_accum += segments.get(i).width();
+                if width_accum > forced_width {
+                    let overshoot = segments.get_mut(i).decrease_width_by(width_accum - forced_width);
+                    assert!(overshoot == 0);
+                    // If we decreased the length of the current segment, then the higher segments don't even exist.
+                    segments.decrease_len_to(i + 1);
+                    break;
+                }
+
+                i += 1;
+            }
+        }
+
         Self { segments }
     }
 
@@ -34,7 +51,7 @@ impl BitTemplate {
             segments.push_front(segment);
         }
 
-        Ok(BitTemplate::right_to_left(segments))
+        Ok(BitTemplate::right_to_left(segments, None))
     }
 
     pub fn shortened(&self, new_width: u8) -> Self {

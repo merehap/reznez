@@ -84,6 +84,14 @@ impl <T: Clone + Copy, const CAPACITY: usize> ConstVec<T, CAPACITY> {
         self.backing[0].write(new_value);
     }
 
+    pub const fn decrease_len_to(&mut self, new_len: u8) {
+        assert!(new_len <= self.len);
+        self.len = new_len;
+    }
+    pub const fn pop(&mut self) {
+        self.len = self.len.strict_sub(1);
+    }
+
     pub fn as_iter(self) -> impl DoubleEndedIterator<Item = T> {
         self.backing.into_iter()
             .take(self.len as usize)
