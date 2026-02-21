@@ -227,8 +227,8 @@ impl PrgBank {
         }
     }
 
-    pub const fn fixed_bank_number(self) -> Option<BankNumber> {
-        self.bank_number_provider.fixed_bank_number()
+    pub const fn prg_bank_number_provider(self) -> PrgBankNumberProvider {
+        self.bank_number_provider
     }
 
     pub const fn bank_register_id(self) -> Option<PrgBankRegisterId> {
@@ -282,7 +282,7 @@ impl PrgBank {
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-enum PrgBankNumberProvider {
+pub enum PrgBankNumberProvider {
     Fixed(BankNumber),
     Switchable(PrgBankRegisterId),
 }
@@ -294,13 +294,6 @@ impl PrgBankNumberProvider {
         match self {
             Self::Fixed(bank_number) => bank_number,
             Self::Switchable(register_id) => regs.get(register_id).index().unwrap(),
-        }
-    }
-
-    const fn fixed_bank_number(self) -> Option<BankNumber> {
-        match self {
-            Self::Fixed(bank_number) => Some(bank_number),
-            Self::Switchable(_) => None,
         }
     }
 }
