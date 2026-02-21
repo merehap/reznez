@@ -798,7 +798,7 @@ mod tests {
         // MMC1 uses layout 3 at startup, which points to the last bank.
         // 0xFFFC is in the last page of the last bank (page 15).
         // In the test cartridge, each memory location stores its own page number.
-        assert_eq!(peek_result.resolve(0), 15);
+        assert_eq!(peek_result.resolve(0), 15, "Wrong PRG page selected on startup.");
     }
 
     fn test_mapper_address_template(params: TestParams) {

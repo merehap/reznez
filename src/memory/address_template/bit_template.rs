@@ -1,16 +1,18 @@
 use itertools::Itertools;
 
-use crate::memory::address_template::segment::{Label, Segment};
+use crate::memory::address_template::segment::{Label, LabelOrConstant, Segment};
 use crate::util::const_vec::ConstVec;
+
+const MAX_SEGMENT_COUNT: usize = 5;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct BitTemplate {
     // Segments are stored right-to-left, the reverse of how they are rendered.
-    segments: ConstVec<Segment, 3>,
+    segments: ConstVec<Segment, MAX_SEGMENT_COUNT>,
 }
 
 impl BitTemplate {
-    pub const fn right_to_left(mut segments: ConstVec<Segment, 3>, forced_width: Option<u8>) -> Self {
+    pub const fn right_to_left(mut segments: ConstVec<Segment, MAX_SEGMENT_COUNT>, forced_width: Option<u8>) -> Self {
         if let Some(forced_width) = forced_width {
             let mut width_accum = 0;
             let mut i = 0;
@@ -43,8 +45,7 @@ impl BitTemplate {
             return Err("BitTemplate must have at least one segment (minimally a label and two subscript chars).");
         }
 
-        let mut segments: ConstVec<Segment, 3> = ConstVec::new();
-
+        let mut segments: ConstVec<Segment, MAX_SEGMENT_COUNT> = ConstVec::new();
         while !bytes.is_empty() {
             let segment;
             (segment, bytes) = Segment::parse(bytes)?;
@@ -100,16 +101,19 @@ impl BitTemplate {
     }
 
     pub const fn label_at(&self, segment_index: u8) -> Option<Label> {
-        let segment = self.segments.maybe_get(segment_index)?;
-        Some(segment.label)
+        self.segments.maybe_get(segment_index)?.label()
+    }
+
+    pub fn constant_at(&self, segment_index: u8) -> Option<u16> {
+        Some(self.segments.maybe_get(segment_index)?.constant())
     }
 
     pub fn resolve(&self, raw_values: &[u16]) -> u32 {
         let mut result = 0;
-        let mut index = 0;
+        let mut offset = 0;
         for (segment, &raw_value) in self.segments.as_iter().zip(raw_values) {
-            result += segment.resolve_shifted(raw_value, index);
-            index += segment.width();
+            result += segment.resolve_shifted(raw_value, offset);
+            offset += segment.width();
         }
 
         result
@@ -123,17 +127,29 @@ impl BitTemplate {
     }
 
     pub fn formatted(&self) -> String {
-        self.segments
-            .as_iter()
+        let mut atoms: Vec<(char, u8)> = Vec::new();
+        for segment in self.segments.as_iter() {
+            for (si, subscript) in segment.subscripts().iter().enumerate() {
+                let i: u8 = atoms.len().try_into().unwrap();
+                let atom = match segment.label_at(si as u8) {
+                    LabelOrConstant::Label(label) => (label.to_char(), *subscript),
+                    LabelOrConstant::Zero => ('0', i),
+                    LabelOrConstant::One => ('1', i),
+                };
+                atoms.push(atom);
+            }
+        }
+
+        atoms.into_iter()
             .rev()
-            .map(Segment::formatted)
+            .map(|(label, subscript)| [ label.to_string(), subscript_byte_to_string(subscript)].concat())
             .join("")
     }
 
     const fn segment_with_label(&self, label: char) -> Option<&Segment> {
         let mut i = 0;
         while i < self.segment_count() {
-            if let Label::Name(segment_label) = self.segments.get_ref(i).label && segment_label == label {
+            if let Some(segment_label) = self.segments.get_ref(i).label() && segment_label.to_char() == label {
                 return Some(self.segments.get_ref(i));
             }
 
@@ -144,6 +160,28 @@ impl BitTemplate {
     }
 }
 
+fn subscript_byte_to_string(value: u8) -> String {
+    let subscript_of = |c| match c {
+        '0' => '₀',
+        '1' => '₁',
+        '2' => '₂',
+        '3' => '₃',
+        '4' => '₄',
+        '5' => '₅',
+        '6' => '₆',
+        '7' => '₇',
+        '8' => '₈',
+        '9' => '₉',
+        _ => unreachable!(),
+    };
+
+    format!("{value:02}")
+        .to_string()
+        .chars()
+        .map(subscript_of)
+        .collect()
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -151,36 +189,28 @@ mod test {
 
     #[test]
     fn template_from_formatted() {
-        let text = "o₀₀i₀₀a₀₀";
+        let text = "o₀₀p₀₀a₀₀";
         let bit_template = BitTemplate::from_formatted(text).unwrap();
         let segments: Vec<Segment> = bit_template.segments.as_iter().collect();
-        assert_eq!(segments[0].label, Label::Name('a'));
-        assert_eq!(segments[1].label, Label::Name('i'));
-        assert_eq!(segments[2].label, Label::Name('o'));
+        assert_eq!(segments[0].label(), Label::new('a').ok());
+        assert_eq!(segments[1].label(), Label::new('p').ok());
+        assert_eq!(segments[2].label(), Label::new('o').ok());
         assert_eq!(bit_template.formatted(), text);
     }
 
     #[test]
     fn ignored_low_bits_from_formatted() {
-        let text = "i₀₃i₀₂i₀₁a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀";
+        let text = "p₀₃p₀₂p₀₁a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀";
         let bit_template = BitTemplate::from_formatted(text).unwrap();
         let segments: Vec<Segment> = bit_template.segments.as_iter().collect();
-        assert_eq!(
-            segments[0],
-            Segment {
-                label: Label::Name('a'),
-                magnitude: 15,
-                ignored_low_count: 0
-            }
-        );
-        assert_eq!(
-            segments[1],
-            Segment {
-                label: Label::Name('i'),
-                magnitude: 4,
-                ignored_low_count: 1
-            }
-        );
+        assert_eq!(segments[0].label(), Label::new('a').ok());
+        assert_eq!(segments[0].magnitude(), 15);
+        assert_eq!(segments[0].ignored_low_count(), 0);
+
+        assert_eq!(segments[1].label(), Label::new('p').ok());
+        assert_eq!(segments[1].magnitude(), 4);
+        assert_eq!(segments[1].ignored_low_count(), 1);
+
         assert_eq!(bit_template.formatted(), text);
     }
 }

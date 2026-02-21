@@ -88,22 +88,17 @@ impl AddressResolver {
         let fixed_inner_bank_number = window.bank().fixed_bank_number().map(BankNumber::to_raw);
 
         let inner_bank_width = bank_sizes.inner_bank_width();
-        let address_bus_segment = Segment::named('a', inner_bank_width);
+        let address_bus_segment = Segment::labeled('a', inner_bank_width);
         let inner_bank_segment =
             if let Some(fixed_inner_bank_number) = fixed_inner_bank_number {
                 // o₀₁o₀₀1₁₆1₁₅1₁₄1₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
-                Segment::constant(
-                    fixed_inner_bank_number,
-                    inner_bank_width,
-                    bank_sizes.inner_bank_number_width(),
-                    0,
-                )
+                Segment::unlabeled(fixed_inner_bank_number, bank_sizes.inner_bank_number_width())
             } else {
                 // o₀₁o₀₀p₀₃p₀₂p₀₁p₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
-                Segment::named('p', bank_sizes.inner_bank_number_width())
+                Segment::labeled('p', bank_sizes.inner_bank_number_width())
             };
 
-        let outer_bank_segment = Segment::named('o', bank_sizes.outer_bank_number_width());
+        let outer_bank_segment = Segment::labeled('o', bank_sizes.outer_bank_number_width());
 
         let mut segments = ConstVec::new();
         segments.push(address_bus_segment);
@@ -154,12 +149,12 @@ impl AddressResolver {
         let mut reg_id = None;
         let mut i = 0;
         while i < bit_template.segment_count() {
-            match bit_template.label_at(i) {
-                None | Some(Label::Constant {..}) | Some(Label::Name('o' | 'a')) => continue,
-                Some(Label::Name(c)) => {
+            match bit_template.label_at(i).map(Label::to_char) {
+                Some(c@'p'..='y') => {
                     assert!(reg_id.is_none(), "Multiple inner bank segments not allowed in a single template.");
                     reg_id = Some(PrgBankRegisterId::from_char(c).expect("Bad inner bank label letter."));
                 }
+                None | Some(_) => {}
             }
 
             i += 1;
@@ -173,6 +168,12 @@ impl AddressResolver {
             reg_id,
             work_ram_start_inner_bank_number,
         })
+    }
+
+    pub fn segment_constants(&self) -> Vec<u16> {
+        (0..self.bit_template.segment_count())
+            .map(|i| self.bit_template.constant_at(i).unwrap())
+            .collect()
     }
 
     pub fn reduced(&self, bank_sizes: &BankSizes) -> Self {
@@ -200,6 +201,10 @@ impl AddressResolver {
 
     pub fn formatted(&self) -> String {
         self.bit_template.formatted()
+    }
+
+    pub const fn segment_count(&self) -> u8 {
+        self.bit_template.segment_count()
     }
 
     pub fn set_raw_outer_bank_number(&mut self, number: u16) {
