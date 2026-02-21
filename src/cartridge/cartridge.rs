@@ -202,14 +202,23 @@ pub mod test_data {
     use super::*;
 
     pub fn dummy_cartridge(header: CartridgeMetadata) -> Cartridge {
+        // Make all values of PRG and CHR ROM equal to the page it is located on, enabling some types of tests.
+        let mut prg_rom = RawMemory::new(header.prg_rom_size().unwrap());
+        for i in 0..prg_rom.size() {
+            prg_rom[i] = (i / (8 * KIBIBYTE)) as u8;
+        }
+
+        let mut chr_rom = RawMemory::new(header.chr_rom_size().unwrap());
+        for i in 0..chr_rom.size() {
+            chr_rom[i] = (i / KIBIBYTE) as u8;
+        }
+
         Cartridge {
             path: CartridgePath("DummyPath".into()),
-
             title: "DummyTitle".into(),
-            prg_rom: RawMemory::new(header.prg_rom_size().unwrap()),
-            chr_rom: RawMemory::new(header.chr_rom_size().unwrap()),
+            prg_rom,
+            chr_rom,
             trainer: None,
-
             header,
         }
     }

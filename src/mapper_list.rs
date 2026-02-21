@@ -560,6 +560,7 @@ mod tests {
 
     use crate::cartridge::cartridge::test_data::*;
     use crate::memory::cpu::prg_memory_map::PrgMappingSlot;
+    use crate::memory::cpu::cpu_address::CpuAddress;
 
     /**
      * NROM, 32KiB PRG ROM
@@ -640,7 +641,6 @@ mod tests {
             ],
          });
     }
-
 
     // Irem's G-101, 256KiB PRG ROM
     #[test]
@@ -783,6 +783,22 @@ mod tests {
                 ],
             ],
         });
+    }
+
+    // Resolve an MMC1 address
+    #[test]
+    fn mmc1_resolved() {
+        let (metadata, cartridge) = prg_only_info((1, Some(0)), Sizes { rom_size: 128 * KIBIBYTE, work_ram_size: 0, save_ram_size: 0 });
+        let LookupResult::Supported(mapper) = try_lookup_mapper(&metadata) else {
+            panic!("Unsupported mapper.");
+        };
+
+        let (prg_memory, _, _) = mapper.layout().make_mapper_params(&metadata, &cartridge, false).unwrap();
+        let peek_result = prg_memory.peek(CpuAddress::new(0xFFFC));
+        // MMC1 uses layout 3 at startup, which points to the last bank.
+        // 0xFFFC is in the last page of the last bank (page 15).
+        // In the test cartridge, each memory location stores its own page number.
+        assert_eq!(peek_result.resolve(0), 15);
     }
 
     fn test_mapper_address_template(params: TestParams) {
