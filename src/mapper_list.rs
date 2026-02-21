@@ -746,6 +746,45 @@ mod tests {
          });
     }
 
+    // MMC1 undersized, 128KiB PRG ROM
+    #[test]
+    fn mmc1_undersized() {
+        test_mapper_address_template(TestParams {
+            mapper: (1, Some(0)),
+            prg_sizes: Sizes { rom_size: 128 * KIBIBYTE, work_ram_size: 0, save_ram_size: 0 },
+            expected: &[
+                [
+                    Some("p₀₂p₀₁p₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("p₀₂p₀₁a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("p₀₂p₀₁a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("p₀₂p₀₁a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("p₀₂p₀₁a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                ],
+                [
+                    Some("p₀₂p₀₁p₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("p₀₂p₀₁a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("p₀₂p₀₁a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("p₀₂p₀₁a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("p₀₂p₀₁a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                ],
+                [
+                    Some("p₀₂p₀₁p₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("0₁₆0₁₅0₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("0₁₆0₁₅0₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("p₀₂p₀₁p₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("p₀₂p₀₁p₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                ],
+                [
+                    Some("p₀₂p₀₁p₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("p₀₂p₀₁p₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("p₀₂p₀₁p₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("1₁₆1₁₅1₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("1₁₆1₁₅1₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                ],
+            ],
+        });
+    }
+
     fn test_mapper_address_template(params: TestParams) {
         let (metadata, cartridge) = prg_only_info(params.mapper, params.prg_sizes);
         let LookupResult::Supported(mapper) = try_lookup_mapper(&metadata) else {
@@ -753,6 +792,7 @@ mod tests {
         };
 
         let (prg_memory, _, _) = mapper.layout().make_mapper_params(&metadata, &cartridge, false).unwrap();
+        assert_eq!(prg_memory.memory_maps().len(), params.expected.len(), "The memory map count must be equal to the number of expected data count.");
         for (memory_map, mem_map_expected) in prg_memory.memory_maps().iter().zip(params.expected) {
             for (slot, slot_expected) in memory_map.page_mappings().iter().zip(mem_map_expected) {
                 match slot {
