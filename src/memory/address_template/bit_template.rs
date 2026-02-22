@@ -3,7 +3,7 @@ use itertools::Itertools;
 use crate::memory::address_template::segment::{Label, LabelOrConstant, Segment};
 use crate::util::const_vec::ConstVec;
 
-const MAX_SEGMENT_COUNT: usize = 5;
+const MAX_SEGMENT_COUNT: usize = 3;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct BitTemplate {
@@ -13,6 +13,7 @@ pub struct BitTemplate {
 
 impl BitTemplate {
     pub const fn right_to_left(mut segments: ConstVec<Segment, MAX_SEGMENT_COUNT>, forced_width: Option<u8>) -> Self {
+        // Chop high template bits off if width exceeds forced width.
         if let Some(forced_width) = forced_width {
             let mut width_accum = 0;
             let mut i = 0;
@@ -212,5 +213,46 @@ mod test {
         assert_eq!(segments[1].ignored_low_count(), 1);
 
         assert_eq!(bit_template.formatted(), text);
+    }
+
+    #[test]
+    fn contiguous_constants_are_part_of_segment() {
+        let text = "o₀₀p₀₃1₀₂p₀₁a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀";
+        let bit_template = BitTemplate::from_formatted(text).unwrap();
+        assert_eq!(bit_template.segments.len(), 3);
+    }
+
+    #[test]
+    fn discontiguous_constants_are_separate_segments() {
+        let text = "1₀₂p₀₃p₀₂p₀₁a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀";
+        let bit_template = BitTemplate::from_formatted(text).unwrap();
+        assert_eq!(bit_template.segments.len(), 3);
+    }
+
+    #[test]
+    fn constant() {
+        let text = "o₀₀1₀₃1₀₂0₀₁1₀₀a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀";
+        let bit_template = BitTemplate::from_formatted(text).unwrap();
+        let value = bit_template.segments.get(1).resolve(0);
+        assert_eq!(value, 0b1101);
+    }
+
+    #[test]
+    fn shifted_constant() {
+        let text = "o₀₀1₁₃1₁₂0₁₁1₁₀a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀";
+        let bit_template = BitTemplate::from_formatted(text).unwrap();
+        assert_eq!(bit_template.segments.len(), 3);
+        let value = bit_template.segments.get(1).resolve(0);
+        assert_eq!(value, 0b1101_0000000000);
+    }
+
+    // TODO: Allow masked constants, then enable this test.
+    #[ignore]
+    #[test]
+    fn embedded_constant() {
+        let text = "o₀₀p₀₃1₀₂p₀₁a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀";
+        let bit_template = BitTemplate::from_formatted(text).unwrap();
+        let value = bit_template.segments.get(1).resolve(0);
+        assert_eq!(value, 0b0100);
     }
 }

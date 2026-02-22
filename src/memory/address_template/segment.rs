@@ -33,59 +33,57 @@ impl Segment {
         }
 
         // TODO: Move this case into the loop. Just have to extract the magnitude before the loop.
-        let (mut label_parse, mut subscript) = Self::atom_from_bytes(&bytes[0..Self::SEGMENT_ATOM_LENGTH])?;
+        let (label_parse, mut subscript) = Self::atom_from_bytes(&bytes[0..Self::SEGMENT_ATOM_LENGTH])?;
+        if subscript >= 16 {
+            return Err("The maximum allowed value for a subscript is 15.");
+        }
+
         let magnitude = subscript + 1;
         bytes = &bytes[Self::SEGMENT_ATOM_LENGTH..];
 
+        let (mut label, mut raw_constant) = match label_parse {
+            LabelParse::Label(label) => (Some(label), 0),
+            LabelParse::Constant { raw_constant } => (None, raw_constant << subscript),
+        };
+
         let mut expected_subscript = subscript;
         while !bytes.is_empty() && subscript > 0 {
+            expected_subscript -= 1;
+
             let (new_label_parse, new_subscript) = Self::atom_from_bytes(&bytes[0..Self::SEGMENT_ATOM_LENGTH])?;
-            match (new_label_parse, label_parse) {
-                // If both the new label and old label are Constants, then append the new bit onto the old constant.
-                (
-                    LabelParse::Constant { raw_constant: old_value, .. },
-                    LabelParse::Constant { raw_constant: new_value, lowest_subscript },
-                ) => {
-                    label_parse = LabelParse::Constant {
-                        raw_constant: (old_value << 1) | new_value,
-                        lowest_subscript,
-                    };
-                    bytes = &bytes[Self::SEGMENT_ATOM_LENGTH..];
-                    subscript = new_subscript;
+            let new_label = new_label_parse.to_label();
+            if new_subscript != expected_subscript {
+                if label.is_some() && Label::same_label(new_label, label) {
+                    return Err("Contiguous segment elements must have decrementing subscripts.");
                 }
-                // If the name stayed the same, then the current Label is "extended" by doing nothing.
-                (LabelParse::Label(Label(new_name)), LabelParse::Label(Label(old_name))) if new_name == old_name => {
-                    bytes = &bytes[Self::SEGMENT_ATOM_LENGTH..];
-                    subscript = new_subscript;
-                }
-                // If the name changed, or it's a new variant, then a new Label must be made (the old one can't be extended further).
-                (LabelParse::Label(_), LabelParse::Label(_) | LabelParse::Constant { .. }) | (LabelParse::Constant { .. }, LabelParse::Label(_)) => {
-                    break;
-                }
+
+                // The subscript isn't one less than the previous subscript, so we've found the end of the segment.
+                break;
             }
 
-            expected_subscript -= 1;
-            if subscript != expected_subscript {
-                return Err("Subscripts must be decrementing within a segment.");
+            if !Label::same_label(new_label, label) {
+                // If we switched labels, then the new segment is about to start, so wrap up the current segment.
+                break;
+            }
+
+            // We're still on the same label, so we can update all the state.
+            subscript = new_subscript;
+            bytes = &bytes[Self::SEGMENT_ATOM_LENGTH..];
+            if label.is_none() {
+                label = new_label;
+            }
+
+            if let LabelParse::Constant { raw_constant: new_raw_constant } = new_label_parse {
+                raw_constant |= new_raw_constant << subscript;
             }
         }
 
-        let mut segment = Self {
-            label: None,
-            raw_constant: 0,
+        let segment = Self {
+            label,
+            raw_constant,
             magnitude,
             ignored_low_count: subscript,
         };
-        match label_parse {
-            LabelParse::Label(label) => {
-                segment.label = Some(label);
-            }
-            // TODO: Validate that the lowest_subscript actually matches its place in the template.
-            LabelParse::Constant { raw_constant, lowest_subscript: _ } => {
-                segment.raw_constant = raw_constant;
-            }
-        };
-
         Ok((segment, bytes))
     }
 
@@ -194,20 +192,28 @@ pub enum LabelOrConstant {
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 enum LabelParse {
     Label(Label),
-    Constant { raw_constant: u16, lowest_subscript: u8 },
+    Constant { raw_constant: u16 },
 }
 
 impl LabelParse {
     const fn from_char(c: char) -> Self {
         match c {
-            '0' => Self::Constant { raw_constant: 0, lowest_subscript: 0 },
-            '1' => Self::Constant { raw_constant: 1, lowest_subscript: 0 },
+            '0' => Self::Constant { raw_constant: 0 },
+            '1' => Self::Constant { raw_constant: 1 },
             c => {
                 match Label::new(c) {
                     Ok(label) => Self::Label(label),
                     Err(err) => const_panic::concat_panic!("Bad label char: ", c, ". ", err),
                 }
             }
+        }
+    }
+
+    const fn to_label(self) -> Option<Label> {
+        if let Self::Label(l) = self {
+            Some(l)
+        } else {
+            None
         }
     }
 }
@@ -226,6 +232,15 @@ impl Label {
 
     pub const fn to_char(self) -> char {
         self.0
+    }
+
+    pub const fn same_label(first: Option<Self>, second: Option<Self>) -> bool {
+        if let (Some(first), Some(second)) = (first, second) {
+            first.to_char() == second.to_char()
+        } else {
+            // The label hasn't changed.
+            true
+        }
     }
 }
 
