@@ -246,8 +246,6 @@ mod test {
         assert_eq!(value, 0b1101_0000000000);
     }
 
-    // TODO: Allow masked constants, then enable this test.
-    #[ignore]
     #[test]
     fn embedded_constant() {
         let text = "o₀₀p₀₃1₀₂p₀₁a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀";

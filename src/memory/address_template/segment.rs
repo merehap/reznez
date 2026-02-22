@@ -2,6 +2,7 @@
 pub struct Segment {
     label: Option<Label>,
     raw_constant: u16,
+    constant_mask: u16,
     magnitude: u8,
     ignored_low_count: u8,
 }
@@ -13,6 +14,7 @@ impl Segment {
         Self {
             label: Some(Label(name)),
             raw_constant: 0,
+            constant_mask: 0b0000_0000_0000_0000,
             magnitude,
             ignored_low_count: 0,
         }
@@ -22,6 +24,7 @@ impl Segment {
         Self {
             label: None,
             raw_constant,
+            constant_mask: 0b1111_1111_1111_1111,
             magnitude,
             ignored_low_count: 0,
         }
@@ -41,9 +44,9 @@ impl Segment {
         let magnitude = subscript + 1;
         bytes = &bytes[Self::SEGMENT_ATOM_LENGTH..];
 
-        let (mut label, mut raw_constant) = match label_parse {
-            LabelParse::Label(label) => (Some(label), 0),
-            LabelParse::Constant { raw_constant } => (None, raw_constant << subscript),
+        let (mut label, mut raw_constant, mut constant_mask) = match label_parse {
+            LabelParse::Label(label) => (Some(label), 0, 0),
+            LabelParse::Constant { raw_constant } => (None, raw_constant << subscript, 1 << subscript),
         };
 
         let mut expected_subscript = subscript;
@@ -75,15 +78,18 @@ impl Segment {
 
             if let LabelParse::Constant { raw_constant: new_raw_constant } = new_label_parse {
                 raw_constant |= new_raw_constant << subscript;
+                constant_mask |= 1 << subscript;
             }
         }
 
-        let segment = Self {
-            label,
-            raw_constant,
-            magnitude,
-            ignored_low_count: subscript,
-        };
+        let ignored_low_count = subscript;
+        let full_mask: u32 = ((1u32 << magnitude) - 1) & !((1 << ignored_low_count) - 1);
+        assert!(full_mask <= u16::MAX as u32);
+        if constant_mask != full_mask as u16 {
+            assert!(label.is_some(), "How is there an incomplete constant mask, but no label to fill in the blanks?");
+        }
+
+        let segment = Self { label, raw_constant, constant_mask, magnitude, ignored_low_count };
         Ok((segment, bytes))
     }
 
@@ -129,16 +135,15 @@ impl Segment {
     }
 
     // TODO: Cache mask.
-    pub fn resolve(&self, raw_value: u16) -> u16 {
+    pub fn resolve(&self, raw_label_value: u16) -> u16 {
         let max_value = (1 << self.magnitude) - 1;
         let ignored_low = (1 << self.ignored_low_count) - 1;
         let mask = max_value & !ignored_low;
 
-        let raw_value = if self.label().is_some() {
-            raw_value
-        } else {
-            self.raw_constant
-        };
+        let mut raw_value = self.raw_constant & self.constant_mask;
+        if self.label().is_some() {
+            raw_value |= raw_label_value & !self.constant_mask;
+        }
 
         raw_value & mask
     }
