@@ -197,15 +197,15 @@ impl PrgMemory {
         self.memory_map_index = index;
     }
 
-    pub fn set_prg_rom_outer_bank_number(&mut self, number: u8) {
+    pub fn rom_outer_bank_number(&self) -> u8 {
+        self.rom_outer_bank_number
+    }
+
+    pub fn set_rom_outer_bank_number(&mut self, number: u8) {
         self.rom_outer_bank_number = number;
         for memory_map in &mut self.memory_maps {
             memory_map.set_rom_outer_bank_number(&self.regs, number.into());
         }
-    }
-
-    pub fn set_prg_rom_outer_bank_size(&mut self, _new_size: u32) {
-        todo!()
     }
 
     fn update_page_ids(&mut self) {

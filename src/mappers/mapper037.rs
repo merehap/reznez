@@ -4,46 +4,17 @@ use crate::mappers::mmc3::mmc3;
 
 pub const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(256 * KIBIBYTE)
-    // Can be set to 128KiB through writing to the outer bank select register (0x6000).
-    //.prg_rom_outer_bank_size(64 * KIBIBYTE)
     // The PRG layouts are the same as MMC3, except they can't have RAM, and the outer bank size can vary.
-    // 0,1,2 	$00000-$0FFFF (64kB) 	$00000-$1FFFF
-    // 3 	    $10000-$1FFFF (64kB) 	$00000-$1FFFF
-    // 7 	    $30000-$3FFFF (64kB) 	$20000-$3FFFF
+    // $00000-$0FFFF (64kiB outer bank)
+    // $10000-$1FFFF (64kiB outer bank)
+    // $30000-$3FFFF (64kiB outer bank)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ABSENT),
         PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁o₀₀p₀₂p₀₁p₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
         PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁o₀₀q₀₂q₀₁q₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁o₀₀1₁₅1₁₄0₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁o₀₀1₁₅1₁₄1₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁o₀₀1₀₂1₀₁0₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁o₀₀1₀₂1₀₁1₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
     ])
-    // 4,5,6 	$20000-$3FFFF (128kB) 	$20000-$3FFFF
-    .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("1₀₁o₀₀p₀₂p₀₁p₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("1₀₁o₀₀q₀₂q₀₁q₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("1₀₁o₀₀1₀₂1₀₁0₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("1₀₁o₀₀1₀₂1₀₁1₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-    ])
-    /*
-    .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-2)),
-        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
-    ])
-    .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-2)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
-        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
-    ])
-    */
-    // 0,1,2 	$00000-$0FFFF (64kB) 	$00000-$1FFFF
-    // 3 	    $10000-$1FFFF (64kB) 	$00000-$1FFFF
-    // 7 	    $30000-$3FFFF (64kB) 	$20000-$3FFFF
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ABSENT),
         PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁o₀₀1₀₂1₀₁0₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
@@ -51,13 +22,20 @@ pub const LAYOUT: Layout = Layout::builder()
         PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁o₀₀q₀₂q₀₁q₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
         PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁o₀₀1₀₂1₀₁1₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
     ])
-    // 4,5,6 	$20000-$3FFFF (128kB) 	$20000-$3FFFF
+    // $20000-$3FFFF (128kiB outer bank)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("1₀₁o₀₀1₀₂1₀₁0₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("1₀₁o₀₀p₀₂p₀₁p₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("1₀₁o₀₀q₀₂q₀₁q₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("1₀₁o₀₀1₀₂1₀₁1₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁p₀₃p₀₂p₀₁p₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁q₀₃q₀₂q₀₁q₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁1₀₃1₀₂1₀₁0₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁1₀₃1₀₂1₀₁1₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+    ])
+    .prg_layout(&[
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ABSENT),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁1₀₃1₀₂1₀₁0₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁p₀₃p₀₂p₀₁p₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁q₀₃q₀₂q₀₁q₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁1₀₃1₀₂1₀₁1₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_rom_outer_bank_size(128 * KIBIBYTE)
@@ -79,18 +57,21 @@ impl Mapper for Mapper037 {
         if matches!(*addr, 0x6000..=0x7FFF) && bus.prg_memory.bank_registers().write_status(WS0) == WriteStatus::Enabled {
             bus.chr_memory.set_chr_rom_outer_bank_number((value >> 2) & 1);
 
-            let (new_prg_outer_bank_size, new_prg_outer_bank_number) = match value & 0b111 {
-                0..=2 => ( 64 * KIBIBYTE, 0), // 0x00000 to 0x0FFFF
-                3     => ( 64 * KIBIBYTE, 1), // 0x10000 to 0x1FFFF
-                4..=6 => (128 * KIBIBYTE, 1), // 0x20000 to 0x3FFFF
-                7     => ( 64 * KIBIBYTE, 3), // 0x30000 to 0x3FFFF
-                _ => unimplemented!(),
-            };
-            bus.prg_memory.set_prg_rom_outer_bank_size(new_prg_outer_bank_size);
-            bus.prg_memory.set_prg_rom_outer_bank_number(new_prg_outer_bank_number);
+            let outer_bank_numbers = [0, 0, 0, 1, 2, 2, 2, 3];
+            let outer_bank_number = outer_bank_numbers[usize::from(value & 0b111)];
+            bus.set_prg_rom_outer_bank_number(outer_bank_number);
         }
 
         self.mmc3.write_register(bus, addr, value);
+
+        // MMC3 doesn't know about this mapper's layouts, so modify its layout index to work with this mapper.
+        if bus.prg_rom_outer_bank_number() == 2 {
+            // Use the 128kiB outer bank layouts.
+            bus.set_prg_layout(bus.prg_memory.layout_index() | 0b10);
+        } else {
+            // Use the 64kiB outer bank layouts.
+            bus.set_prg_layout(bus.prg_memory.layout_index() & 0b01);
+        }
     }
 
     fn layout(&self) -> Layout {

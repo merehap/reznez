@@ -56,7 +56,7 @@ impl Segment {
             let (new_label_parse, new_subscript) = Self::atom_from_bytes(&bytes[0..Self::SEGMENT_ATOM_LENGTH])?;
             let new_label = new_label_parse.to_label();
             if new_subscript != expected_subscript {
-                if label.is_some() && Label::same_label(new_label, label) {
+                if let (Some(new), Some(old)) = (new_label, label) && new.to_char() == old.to_char() {
                     return Err("Contiguous segment elements must have decrementing subscripts.");
                 }
 
@@ -64,7 +64,7 @@ impl Segment {
                 break;
             }
 
-            if !Label::same_label(new_label, label) {
+            if let (Some(new), Some(old)) = (new_label, label) && new.to_char() != old.to_char() {
                 // If we switched labels, then the new segment is about to start, so wrap up the current segment.
                 break;
             }
@@ -237,15 +237,6 @@ impl Label {
 
     pub const fn to_char(self) -> char {
         self.0
-    }
-
-    pub const fn same_label(first: Option<Self>, second: Option<Self>) -> bool {
-        if let (Some(first), Some(second)) = (first, second) {
-            first.to_char() == second.to_char()
-        } else {
-            // The label hasn't changed.
-            true
-        }
     }
 }
 

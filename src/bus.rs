@@ -179,8 +179,12 @@ impl Bus {
         self.chr_memory.set_layout(index);
     }
 
+    pub fn prg_rom_outer_bank_number(&self) -> u8 {
+        self.prg_memory.rom_outer_bank_number()
+    }
+
     pub fn set_prg_rom_outer_bank_number(&mut self, index: u8) {
-        self.prg_memory.set_prg_rom_outer_bank_number(index);
+        self.prg_memory.set_rom_outer_bank_number(index);
     }
 
     pub fn set_reads_enabled(&mut self, id: ReadStatusRegisterId, enabled: bool) {
