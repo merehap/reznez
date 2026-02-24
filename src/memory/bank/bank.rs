@@ -54,7 +54,6 @@ pub enum ChrSource {
     RomOrRam,
     Rom,
     WorkRam,
-    SaveRam,
     Ciram(CiramSide),
     MapperCustom { page_number: u8 },
 }
@@ -469,7 +468,7 @@ impl ChrBank {
 
     pub fn current_chr_source(self, regs: &ChrBankRegisters) -> Option<ChrSource> {
         match self.chr_source_provider {
-            ChrSourceProvider::Fixed(mem_type) => mem_type,
+            ChrSourceProvider::Fixed(chr_source) => chr_source,
             ChrSourceProvider::Switchable(reg_id) => Some(regs.chr_source(reg_id)),
         }
     }
@@ -485,8 +484,7 @@ impl ChrBank {
     pub fn is_ram(self) -> bool {
         matches!(
             self.chr_source_provider,
-            ChrSourceProvider::Fixed(Some(ChrSource::WorkRam | ChrSource::SaveRam))
-                | ChrSourceProvider::Switchable(_)
+            ChrSourceProvider::Fixed(Some(ChrSource::WorkRam)) | ChrSourceProvider::Switchable(_),
         )
     }
 

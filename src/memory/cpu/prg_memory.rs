@@ -4,7 +4,7 @@ use crate::memory::bank::bank::{
     PrgSource, PrgSourceRegisterId, ReadStatusRegisterId, WriteStatusRegisterId,
 };
 use crate::memory::bank::bank_number::{
-    MemType, PrgBankRegisters, ReadStatus, WriteStatus,
+    MemTypeStatus, PrgBankRegisters, ReadStatus, WriteStatus,
 };
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::{PrgLayout, PrgLayouts};
@@ -84,17 +84,17 @@ impl PrgMemory {
     }
 
     pub fn peek(&self, address: CpuAddress) -> ReadResult {
-        if let Some((mem_type, index)) = self.memory_maps[self.memory_map_index as usize].index_for_address(address) {
-            match (mem_type, mem_type.read_status()) {
+        if let Some((mem_type_status, index)) = self.memory_maps[self.memory_map_index as usize].index_for_address(address) {
+            match (mem_type_status, mem_type_status.read_status()) {
                 (_, ReadStatus::Disabled) => ReadResult::OPEN_BUS,
                 (_, ReadStatus::ReadOnlyZeros) => ReadResult::full(0),
-                (MemType::WorkRam(..), ReadStatus::Enabled) => {
+                (MemTypeStatus::WorkRam(..), ReadStatus::Enabled) => {
                     ReadResult::full(self.work_ram[index - self.save_ram.size()])
                 }
-                (MemType::SaveRam(..), ReadStatus::Enabled) => {
+                (MemTypeStatus::SaveRam(..), ReadStatus::Enabled) => {
                     ReadResult::full(self.save_ram[index])
                 }
-                (MemType::Rom(..), ReadStatus::Enabled) => {
+                (MemTypeStatus::Rom(..), ReadStatus::Enabled) => {
                     ReadResult::full(self.rom[index])
                 }
             }
@@ -109,7 +109,7 @@ impl PrgMemory {
 
     pub fn write(&mut self, address: CpuAddress, value: u8) {
         let prg_source_and_index = self.memory_maps[self.memory_map_index as usize].index_for_address(address);
-        use MemType::*;
+        use MemTypeStatus::*;
         match prg_source_and_index {
             Some((WorkRam(_, WriteStatus::Enabled), index)) => {
                 self.work_ram[index - self.save_ram.size()] = value;
@@ -231,9 +231,9 @@ impl PrgMemory {
                 PrgMappingSlot::Normal(mapping) => {
                     match mapping.inner_bank_number() {
                         None => "E".to_string(),
-                        Some((MemType::Rom(..), inner_bank_number)) => inner_bank_number.to_string(),
-                        Some((MemType::WorkRam(..), inner_bank_number)) => format!("W{}", inner_bank_number),
-                        Some((MemType::SaveRam(..), inner_bank_number)) => format!("S{}", inner_bank_number),
+                        Some((MemTypeStatus::Rom(..), inner_bank_number)) => inner_bank_number.to_string(),
+                        Some((MemTypeStatus::WorkRam(..), inner_bank_number)) => format!("W{}", inner_bank_number),
+                        Some((MemTypeStatus::SaveRam(..), inner_bank_number)) => format!("S{}", inner_bank_number),
                     }
                 }
                 PrgMappingSlot::Multi(_) => "M".to_string(),

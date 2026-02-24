@@ -130,7 +130,6 @@ impl ChrMemory {
             ChrMemoryIndex::Ciram(side, index) => {
                 ciram.side(side)[index as usize]
             }
-            ChrMemoryIndex::SaveRam(..) => todo!(),
             ChrMemoryIndex::MapperCustom { page_number, index } => {
                 mapper_custom_name_tables[page_number as usize].peek(index).resolve(0)
             }
@@ -166,19 +165,13 @@ impl ChrMemory {
                 self.ram[index] = value;
                 info!(target: "mapperramwrites", "Setting CHR [${address}]=${value:02} (Work RAM @ ${index:X})");
             }
-            ChrMemoryIndex::SaveRam(index, _, WriteStatus::Enabled) => {
-                info!(target: "mapperramwrites", "Setting CHR [${address}]=${value:02} (Save RAM @ ${index:X})");
-                todo!();
-            }
             ChrMemoryIndex::Ciram(side, index) => {
                 ciram.write(side, index, value);
             }
             ChrMemoryIndex::MapperCustom { page_number, index } => {
                 mapper_custom_name_tables[page_number as usize].write(index, value);
             }
-            ChrMemoryIndex::Rom(..)
-                | ChrMemoryIndex::Ram(_, _, WriteStatus::Disabled)
-                | ChrMemoryIndex::SaveRam(_, _, WriteStatus::Disabled) => {
+            ChrMemoryIndex::Rom(..) | ChrMemoryIndex::Ram(_, _, WriteStatus::Disabled) => {
                 // ROM and write-disabled memory can't be written to.
             }
         }
@@ -381,7 +374,6 @@ impl ChrMemory {
             let bank_string = match page_id {
                 ChrPageId::Rom { page_number, .. } => page_number.to_string(),
                 ChrPageId::Ram { page_number, .. } => format!("W{page_number}"),
-                ChrPageId::SaveRam {..} => "S".to_owned(),
                 ChrPageId::Ciram(side) => format!("C{side:?}"),
                 ChrPageId::MapperCustom { page_number } => format!("M{page_number}"),
             };

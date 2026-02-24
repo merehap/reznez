@@ -94,9 +94,6 @@ impl ChrMemoryMap {
             ChrPageId::Ram { page_number, bank_number, read_status, write_status } => {
                 (ChrMemoryIndex::Ram(u32::from(page_number) * KIBIBYTE + u32::from(offset), read_status, write_status), PeekSource::Ram(bank_number))
             }
-            ChrPageId::SaveRam { read_status, write_status } => {
-                (ChrMemoryIndex::SaveRam(offset, read_status, write_status), PeekSource::SaveRam)
-            }
             ChrPageId::Ciram(side) => {
                 (ChrMemoryIndex::Ciram(side, offset), PeekSource::Ciram(side))
             }
@@ -148,8 +145,6 @@ impl ChrMemoryMap {
                 ChrMemoryIndex::Rom(u32::from(page_number) * KIBIBYTE, read_status),
             ChrPageId::Ram { page_number, read_status, write_status, .. } =>
                 ChrMemoryIndex::Ram(u32::from(page_number) * KIBIBYTE, read_status, write_status),
-            ChrPageId::SaveRam { read_status, write_status, ..} =>
-                ChrMemoryIndex::SaveRam(0, read_status, write_status), // FIXME: HACK
             ChrPageId::Ciram(side) =>
                 ChrMemoryIndex::Ciram(side, 0),
             ChrPageId::MapperCustom { page_number } =>
@@ -162,7 +157,6 @@ impl ChrMemoryMap {
 pub enum ChrMemoryIndex {
     Rom(u32, ReadStatus),
     Ram(u32, ReadStatus, WriteStatus),
-    SaveRam(u16, ReadStatus, WriteStatus),
     Ciram(CiramSide, u16),
     // TODO: Should Read/WriteStatus be stored here?
     MapperCustom { page_number: u8, index: u16 },
@@ -171,7 +165,7 @@ pub enum ChrMemoryIndex {
 impl ChrMemoryIndex {
     pub fn read_status(self) -> ReadStatus {
         match self {
-            Self::Rom(_, read_status) | Self::Ram(_, read_status, _) | Self::SaveRam(_, read_status, _) => read_status,
+            Self::Rom(_, read_status) | Self::Ram(_, read_status, _) => read_status,
             Self::Ciram(_, _) => ReadStatus::Enabled, // There's no way to disable reads to CIRAM.
             Self::MapperCustom { .. } => ReadStatus::Enabled, // FIXME: This is inaccurate.
         }
@@ -240,7 +234,6 @@ impl ChrMapping {
                 }
             }
             ChrSource::Rom => Ok(NameTableSource::Rom { bank_number: self.bank.bank_number(regs).unwrap() }),
-            ChrSource::SaveRam => Err(format!("{chr_source:?} is not yet a supported CHR source")),
             ChrSource::Ciram(ciram_side) => Ok(NameTableSource::Ciram(ciram_side)),
             ChrSource::WorkRam => Ok(NameTableSource::Ram { bank_number: self.bank.bank_number(regs).unwrap() }),
             ChrSource::MapperCustom { page_number } => Ok(NameTableSource::MapperCustom { page_number }),
@@ -282,10 +275,6 @@ impl ChrMapping {
                 assert!(regs.cartridge_has_ram());
                 ChrPageId::Ram { page_number, bank_number, read_status, write_status }
             }
-            Some(ChrSource::SaveRam) => {
-                assert!(regs.cartridge_has_ram());
-                ChrPageId::SaveRam { read_status, write_status }
-            }
             Some(ChrSource::Ciram(ciram_side)) => ChrPageId::Ciram(ciram_side),
             Some(ChrSource::MapperCustom { page_number }) => ChrPageId::MapperCustom { page_number },
         }
@@ -296,7 +285,6 @@ impl ChrMapping {
 pub enum ChrPageId {
     Rom { page_number: PageNumber, bank_number: BankNumber, read_status: ReadStatus },
     Ram { page_number: PageNumber, bank_number: BankNumber, read_status: ReadStatus, write_status: WriteStatus },
-    SaveRam { read_status: ReadStatus, write_status: WriteStatus },
     Ciram(CiramSide),
     // TODO: Should Read/WriteStatus be stored here?
     MapperCustom { page_number: u8 },
