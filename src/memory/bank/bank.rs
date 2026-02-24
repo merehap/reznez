@@ -59,18 +59,12 @@ pub enum ChrSource {
 }
 
 impl ChrSource {
-    pub fn from_name_table_source(
-        name_table_source: NameTableSource,
-    ) -> (Self, Option<BankNumber>) {
+    pub fn from_name_table_source(name_table_source: NameTableSource) -> (Self, Option<BankNumber>) {
         match name_table_source {
             NameTableSource::Ciram(ciram_side) => (ChrSource::Ciram(ciram_side), None),
             NameTableSource::Rom { bank_number } => (ChrSource::Rom, Some(bank_number)),
-            NameTableSource::Ram { bank_number } => {
-                (ChrSource::WorkRam, Some(bank_number))
-            }
-            NameTableSource::MapperCustom { page_number } => {
-                (ChrSource::MapperCustom { page_number }, None)
-            }
+            NameTableSource::Ram { bank_number } => (ChrSource::WorkRam, Some(bank_number)),
+            NameTableSource::MapperCustom { page_number } => (ChrSource::MapperCustom { page_number }, None),
         }
     }
 }

@@ -84,7 +84,7 @@ impl PrgMemory {
     }
 
     pub fn peek(&self, address: CpuAddress) -> ReadResult {
-        if let Some((mem_type_status, index)) = self.memory_maps[self.memory_map_index as usize].index_for_address(address) {
+        if let Some((index, mem_type_status)) = self.memory_maps[self.memory_map_index as usize].index_for_address(address) {
             match (mem_type_status, mem_type_status.read_status()) {
                 (_, ReadStatus::Disabled) => ReadResult::OPEN_BUS,
                 (_, ReadStatus::ReadOnlyZeros) => ReadResult::full(0),
@@ -111,15 +111,15 @@ impl PrgMemory {
         let prg_source_and_index = self.memory_maps[self.memory_map_index as usize].index_for_address(address);
         use MemTypeStatus::*;
         match prg_source_and_index {
-            Some((WorkRam(_, WriteStatus::Enabled), index)) => {
+            Some((index, WorkRam(_, WriteStatus::Enabled))) => {
                 self.work_ram[index - self.save_ram.size()] = value;
                 info!(target: "mapperramwrites", "Setting PRG [${address}]=${value:02} (Work RAM @ ${index:X})");
             }
-            Some((SaveRam(_, WriteStatus::Enabled), index)) => {
+            Some((index, SaveRam(_, WriteStatus::Enabled))) => {
                 self.save_ram[index] = value;
                 info!(target: "mapperramwrites", "Setting PRG [${address}]=${value:02} (Save RAM @ ${index:X})");
             }
-            Some((Rom { .. } | WorkRam(_, WriteStatus::Disabled) | SaveRam(_, WriteStatus::Disabled), _)) | None => {
+            Some((_, Rom { .. } | WorkRam(_, WriteStatus::Disabled) | SaveRam(_, WriteStatus::Disabled))) | None => {
                 /* Writes to ROM, absent banks, and disabled banks do nothing. */
             }
         }

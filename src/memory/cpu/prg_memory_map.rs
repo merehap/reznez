@@ -46,7 +46,7 @@ impl PrgMemoryMap {
         memory_map
     }
 
-    pub fn index_for_address(&self, addr: CpuAddress) -> Option<(MemTypeStatus, u32)> {
+    pub fn index_for_address(&self, addr: CpuAddress) -> Option<(u32, MemTypeStatus)> {
         assert!(matches!(*addr, 0x6000..=0xFFFF));
 
         let raw_addr = *addr - 0x6000;
@@ -142,12 +142,12 @@ pub struct PrgMapping {
 }
 
 impl PrgMapping {
-    pub fn index_for_address(&self, addr: CpuAddress) -> Option<(MemTypeStatus, u32)> {
+    pub fn index_for_address(&self, addr: CpuAddress) -> Option<(u32, MemTypeStatus)> {
         if self.bank.is_absent() {
             return None;
         }
 
-        Some((self.selected_mem_type_status, self.address_resolver().resolve_index(addr)))
+        Some((self.address_resolver().resolve_index(addr), self.selected_mem_type_status))
     }
 
     pub fn inner_bank_number(&self) -> Option<(MemTypeStatus, u16)> {
