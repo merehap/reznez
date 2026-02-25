@@ -3,7 +3,7 @@ use crate::memory::bank::bank_number::ReadStatus;
 use crate::memory::address_template::address_resolver::AddressResolver;
 use crate::memory::address_template::bank_sizes::BankSizes;
 use crate::memory::bank::bank::PrgBank;
-use crate::memory::bank::bank_number::{MemTypeStatus, PageNumberSpace, PrgBankRegisters};
+use crate::memory::bank::bank_number::{PrgMemTypeStatus, MemSpace, PrgBankRegisters};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::util::unit::KIBIBYTE;
@@ -46,7 +46,7 @@ impl PrgMemoryMap {
         memory_map
     }
 
-    pub fn index_for_address(&self, addr: CpuAddress) -> Option<(u32, MemTypeStatus)> {
+    pub fn index_for_address(&self, addr: CpuAddress) -> Option<(u32, PrgMemTypeStatus)> {
         assert!(matches!(*addr, 0x6000..=0xFFFF));
 
         let raw_addr = *addr - 0x6000;
@@ -101,7 +101,7 @@ impl PrgMemoryMap {
             rom_address_resolver: window.rom_address_template(rom_bank_sizes),
             ram_address_resolver: window.ram_address_template(ram_bank_sizes, work_ram_start_inner_bank_number),
             // This will be immediately updated to the correct value.
-            selected_mem_type_status: MemTypeStatus::Rom(ReadStatus::Enabled),
+            selected_mem_type_status: PrgMemTypeStatus::Rom(ReadStatus::Enabled),
         };
 
         let sub_mapping_count = window.size().to_raw() / 128;
@@ -138,11 +138,11 @@ pub struct PrgMapping {
     bank: PrgBank,
     rom_address_resolver: AddressResolver,
     ram_address_resolver: AddressResolver,
-    selected_mem_type_status: MemTypeStatus,
+    selected_mem_type_status: PrgMemTypeStatus,
 }
 
 impl PrgMapping {
-    pub fn index_for_address(&self, addr: CpuAddress) -> Option<(u32, MemTypeStatus)> {
+    pub fn index_for_address(&self, addr: CpuAddress) -> Option<(u32, PrgMemTypeStatus)> {
         if self.bank.is_absent() {
             return None;
         }
@@ -150,7 +150,7 @@ impl PrgMapping {
         Some((self.address_resolver().resolve_index(addr), self.selected_mem_type_status))
     }
 
-    pub fn inner_bank_number(&self) -> Option<(MemTypeStatus, u16)> {
+    pub fn inner_bank_number(&self) -> Option<(PrgMemTypeStatus, u16)> {
         if self.bank.is_absent() {
             return None;
         }
@@ -168,8 +168,8 @@ impl PrgMapping {
 
     fn address_resolver(&self) -> &AddressResolver {
         match self.selected_mem_type_status {
-            MemTypeStatus::Rom(..) => &self.rom_address_resolver,
-            MemTypeStatus::WorkRam(..) | MemTypeStatus::SaveRam(..) => &self.ram_address_resolver,
+            PrgMemTypeStatus::Rom(..) => &self.rom_address_resolver,
+            PrgMemTypeStatus::WorkRam(..) | PrgMemTypeStatus::SaveRam(..) => &self.ram_address_resolver,
         }
     }
 
@@ -179,12 +179,12 @@ impl PrgMapping {
         };
 
         self.selected_mem_type_status = match page_number_space {
-            PageNumberSpace::Rom(read_status) => MemTypeStatus::Rom(read_status),
-            PageNumberSpace::Ram(read_status, write_status) => {
+            MemSpace::Rom(read_status) => PrgMemTypeStatus::Rom(read_status),
+            MemSpace::Ram(read_status, write_status) => {
                 if self.ram_address_resolver.is_currently_resolving_to_save_ram() {
-                    MemTypeStatus::SaveRam(read_status, write_status)
+                    PrgMemTypeStatus::SaveRam(read_status, write_status)
                 } else {
-                    MemTypeStatus::WorkRam(read_status, write_status)
+                    PrgMemTypeStatus::WorkRam(read_status, write_status)
                 }
             }
         };

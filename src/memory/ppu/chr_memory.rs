@@ -130,8 +130,8 @@ impl ChrMemory {
             ChrMemoryIndex::Ciram(side, index) => {
                 ciram.side(side)[index as usize]
             }
-            ChrMemoryIndex::MapperCustom { page_number, index } => {
-                mapper_custom_name_tables[page_number as usize].peek(index).resolve(0)
+            ChrMemoryIndex::MapperCustom { page_id, index } => {
+                mapper_custom_name_tables[page_id as usize].peek(index).resolve(0)
             }
         };
 
@@ -168,8 +168,8 @@ impl ChrMemory {
             ChrMemoryIndex::Ciram(side, index) => {
                 ciram.write(side, index, value);
             }
-            ChrMemoryIndex::MapperCustom { page_number, index } => {
-                mapper_custom_name_tables[page_number as usize].write(index, value);
+            ChrMemoryIndex::MapperCustom { page_id, index } => {
+                mapper_custom_name_tables[page_id as usize].write(index, value);
             }
             ChrMemoryIndex::Rom(..) | ChrMemoryIndex::Ram(_, _, WriteStatus::Disabled) => {
                 // ROM and write-disabled memory can't be written to.
@@ -375,7 +375,7 @@ impl ChrMemory {
                 ChrPageId::Rom { page_number, .. } => page_number.to_string(),
                 ChrPageId::Ram { page_number, .. } => format!("W{page_number}"),
                 ChrPageId::Ciram(side) => format!("C{side:?}"),
-                ChrPageId::MapperCustom { page_number } => format!("M{page_number}"),
+                ChrPageId::MapperCustom { page_id } => format!("M{page_id}"),
             };
 
             let window_size = 1;
@@ -425,7 +425,7 @@ pub enum PeekSource {
     SaveRam,
     Ciram(CiramSide),
     PaletteTable,
-    MapperCustom { page_number: u8 },
+    MapperCustom { page_id: u8 },
 }
 
 impl PeekSource {
@@ -434,7 +434,7 @@ impl PeekSource {
             NameTableSource::Ciram(side) => Self::Ciram(side),
             NameTableSource::Rom { bank_number } => Self::Rom(bank_number),
             NameTableSource::Ram { bank_number } => Self::Ram(bank_number),
-            NameTableSource::MapperCustom { page_number } => Self::MapperCustom { page_number },
+            NameTableSource::MapperCustom { page_id } => Self::MapperCustom { page_id },
         }
     }
 }

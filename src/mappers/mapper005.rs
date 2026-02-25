@@ -108,9 +108,9 @@ const CHR_WINDOW_MODES: [ChrWindowMode; 4] = [
     ChrWindowMode::Eight1K,
 ];
 
-const EXT_RAM_PAGE_INDEX: usize = 0;
-const FILL_MODE_TILE_PAGE_INDEX: usize = 1;
-const EXT_RAM_PEEK_SOURCE: PeekSource = PeekSource::MapperCustom { page_number: EXT_RAM_PAGE_INDEX as u8 };
+const EXT_RAM_PAGE_ID: usize = 0;
+const FILL_MODE_TILE_PAGE_ID: usize = 1;
+const EXT_RAM_PEEK_SOURCE: PeekSource = PeekSource::MapperCustom { page_id: EXT_RAM_PAGE_ID as u8 };
 
 // MMC5
 // TODO: Expansion Audio
@@ -342,8 +342,8 @@ impl Mapper005 {
             ExtendedRamMode::WriteOnly | ExtendedRamMode::ExtendedAttributes => (ReadStatus::ReadOnlyZeros, WriteStatus::Enabled),
             ExtendedRamMode::ReadWrite => (ReadStatus::Enabled, WriteStatus::Enabled),
         };
-        bus.mapper_custom_pages[EXT_RAM_PAGE_INDEX].set_read_status(read_status);
-        bus.mapper_custom_pages[EXT_RAM_PAGE_INDEX].set_write_status(write_status);
+        bus.mapper_custom_pages[EXT_RAM_PAGE_ID].set_read_status(read_status);
+        bus.mapper_custom_pages[EXT_RAM_PAGE_ID].set_write_status(write_status);
     }
 
     // Write 0x5105
@@ -352,8 +352,8 @@ impl Mapper005 {
             match raw {
                 0 => NameTableSource::Ciram(CiramSide::Left),
                 1 => NameTableSource::Ciram(CiramSide::Right),
-                2 => NameTableSource::MapperCustom { page_number: EXT_RAM_PAGE_INDEX as u8 },
-                3 => NameTableSource::MapperCustom { page_number: FILL_MODE_TILE_PAGE_INDEX as u8 },
+                2 => NameTableSource::MapperCustom { page_id: EXT_RAM_PAGE_ID as u8 },
+                3 => NameTableSource::MapperCustom { page_id: FILL_MODE_TILE_PAGE_ID as u8 },
                 _ => unreachable!(),
             }
         }
@@ -368,27 +368,27 @@ impl Mapper005 {
     // Write 0x5106
     fn set_fill_mode_name_table_byte(bus: &mut Bus, value: u8) {
         // The fill mode name table byte is not writeable except for right now.
-        bus.mapper_custom_pages[FILL_MODE_TILE_PAGE_INDEX].set_write_status(WriteStatus::Enabled);
+        bus.mapper_custom_pages[FILL_MODE_TILE_PAGE_ID].set_write_status(WriteStatus::Enabled);
         // Set the fill-mode name table bytes but not the attribute table bytes.
         for i in 0..ATTRIBUTE_START_INDEX as u16 {
-            bus.mapper_custom_pages[FILL_MODE_TILE_PAGE_INDEX].write(i, value);
+            bus.mapper_custom_pages[FILL_MODE_TILE_PAGE_ID].write(i, value);
         }
 
-        bus.mapper_custom_pages[FILL_MODE_TILE_PAGE_INDEX].set_write_status(WriteStatus::Disabled);
+        bus.mapper_custom_pages[FILL_MODE_TILE_PAGE_ID].set_write_status(WriteStatus::Disabled);
     }
 
     // Write 0x5107
     fn set_fill_mode_attribute_table_byte(bus: &mut Bus, value: u8) {
         // The fill mode attribute table byte is not writeable except for right now.
-        bus.mapper_custom_pages[FILL_MODE_TILE_PAGE_INDEX].set_write_status(WriteStatus::Enabled);
+        bus.mapper_custom_pages[FILL_MODE_TILE_PAGE_ID].set_write_status(WriteStatus::Enabled);
 
         let attribute = value & 0b11;
         let attribute_byte = (attribute << 6) | (attribute << 4) | (attribute << 2) | attribute;
         for i in ATTRIBUTE_START_INDEX as u16 .. 0x400 {
-            bus.mapper_custom_pages[FILL_MODE_TILE_PAGE_INDEX].write(i, attribute_byte);
+            bus.mapper_custom_pages[FILL_MODE_TILE_PAGE_ID].write(i, attribute_byte);
         }
 
-        bus.mapper_custom_pages[FILL_MODE_TILE_PAGE_INDEX].set_write_status(WriteStatus::Disabled);
+        bus.mapper_custom_pages[FILL_MODE_TILE_PAGE_ID].set_write_status(WriteStatus::Disabled);
     }
 
     // Write 0x5113 through 0x5117
@@ -450,11 +450,11 @@ impl Mapper005 {
     }
 
     fn peek_ext_rom(bus: &Bus, index: u16) -> u8 {
-        bus.mapper_custom_pages[EXT_RAM_PAGE_INDEX].peek(index).resolve(0)
+        bus.mapper_custom_pages[EXT_RAM_PAGE_ID].peek(index).resolve(0)
     }
 
     fn write_ext_rom(bus: &mut Bus, index: u16, value: u8) {
-        bus.mapper_custom_pages[EXT_RAM_PAGE_INDEX].write(index, value);
+        bus.mapper_custom_pages[EXT_RAM_PAGE_ID].write(index, value);
     }
 }
 

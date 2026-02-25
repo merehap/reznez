@@ -97,8 +97,8 @@ impl ChrMemoryMap {
             ChrPageId::Ciram(side) => {
                 (ChrMemoryIndex::Ciram(side, offset), PeekSource::Ciram(side))
             }
-            ChrPageId::MapperCustom { page_number } =>
-                (ChrMemoryIndex::MapperCustom { page_number, index: offset }, PeekSource::MapperCustom { page_number }),
+            ChrPageId::MapperCustom { page_id } =>
+                (ChrMemoryIndex::MapperCustom { page_id, index: offset }, PeekSource::MapperCustom { page_id }),
         };
 
         (chr_memory_index, peek_source)
@@ -147,8 +147,8 @@ impl ChrMemoryMap {
                 ChrMemoryIndex::Ram(u32::from(page_number) * KIBIBYTE, read_status, write_status),
             ChrPageId::Ciram(side) =>
                 ChrMemoryIndex::Ciram(side, 0),
-            ChrPageId::MapperCustom { page_number } =>
-                ChrMemoryIndex::MapperCustom { page_number, index: 0 },
+            ChrPageId::MapperCustom { page_id } =>
+                ChrMemoryIndex::MapperCustom { page_id, index: 0 },
         }
     }
 }
@@ -159,7 +159,7 @@ pub enum ChrMemoryIndex {
     Ram(u32, ReadStatus, WriteStatus),
     Ciram(CiramSide, u16),
     // TODO: Should Read/WriteStatus be stored here?
-    MapperCustom { page_number: u8, index: u16 },
+    MapperCustom { page_id: u8, index: u16 },
 }
 
 impl ChrMemoryIndex {
@@ -192,7 +192,7 @@ impl ChrMapping {
             NameTableSource::Rom { bank_number } => mapping.bank.fixed_index(bank_number.to_raw() as i16),
             NameTableSource::Ram { bank_number } => mapping.bank.fixed_index(bank_number.to_raw() as i16),
             NameTableSource::Ciram(ciram_side) => ChrBank::ciram(ciram_side),
-            NameTableSource::MapperCustom { page_number } => ChrBank::mapper_sourced(page_number),
+            NameTableSource::MapperCustom { page_id: page_number } => ChrBank::mapper_sourced(page_number),
         };
 
         mapping
@@ -214,7 +214,7 @@ impl ChrMapping {
             NameTableSource::Rom {..} => ChrSource::Rom,
             NameTableSource::Ram {..} => ChrSource::WorkRam,
             NameTableSource::Ciram(ciram_side) => ChrSource::Ciram(ciram_side),
-            NameTableSource::MapperCustom { page_number } => ChrSource::MapperCustom { page_number },
+            NameTableSource::MapperCustom { page_id } => ChrSource::MapperCustom { page_id },
         };
         regs.set_chr_source(source_id, chr_source);
 
@@ -236,7 +236,7 @@ impl ChrMapping {
             ChrSource::Rom => Ok(NameTableSource::Rom { bank_number: self.bank.bank_number(regs).unwrap() }),
             ChrSource::Ciram(ciram_side) => Ok(NameTableSource::Ciram(ciram_side)),
             ChrSource::WorkRam => Ok(NameTableSource::Ram { bank_number: self.bank.bank_number(regs).unwrap() }),
-            ChrSource::MapperCustom { page_number } => Ok(NameTableSource::MapperCustom { page_number }),
+            ChrSource::MapperCustom { page_id } => Ok(NameTableSource::MapperCustom { page_id }),
         }
     }
 
@@ -276,7 +276,7 @@ impl ChrMapping {
                 ChrPageId::Ram { page_number, bank_number, read_status, write_status }
             }
             Some(ChrSource::Ciram(ciram_side)) => ChrPageId::Ciram(ciram_side),
-            Some(ChrSource::MapperCustom { page_number }) => ChrPageId::MapperCustom { page_number },
+            Some(ChrSource::MapperCustom { page_id }) => ChrPageId::MapperCustom { page_id },
         }
     }
 }
@@ -287,7 +287,7 @@ pub enum ChrPageId {
     Ram { page_number: PageNumber, bank_number: BankNumber, read_status: ReadStatus, write_status: WriteStatus },
     Ciram(CiramSide),
     // TODO: Should Read/WriteStatus be stored here?
-    MapperCustom { page_number: u8 },
+    MapperCustom { page_id: u8 },
 }
 
 type PageNumber = u16;

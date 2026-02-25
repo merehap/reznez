@@ -234,8 +234,8 @@ impl Bus {
             // FIXME: This currently ignores whether RAM writes are enabled. It shouldn't be possible to do that.
             NameTableSource::Ram { bank_number } =>
                 self.chr_memory.work_ram_1kib_page_mut(0x400 * u32::from(bank_number.to_raw()))[index as usize] = value,
-            NameTableSource::MapperCustom { page_number, .. } => {
-                if let Some(page) = self.mapper_custom_pages[page_number as usize].to_raw_ref_mut() {
+            NameTableSource::MapperCustom { page_id, .. } => {
+                if let Some(page) = self.mapper_custom_pages[page_id as usize].to_raw_ref_mut() {
                     // This page must be writeable.
                     page[index as usize] = value;
                 }
@@ -251,7 +251,7 @@ impl Bus {
             NameTableSource::Rom { bank_number } => self.chr_memory.rom_1kib_page(0x400 * u32::from(bank_number.to_raw())),
             // FIXME: Hack
             NameTableSource::Ram { bank_number } => self.chr_memory.work_ram_1kib_page(0x400 * u32::from(bank_number.to_raw())),
-            NameTableSource::MapperCustom { page_number, .. } => self.mapper_custom_pages[page_number as usize].to_raw_ref(),
+            NameTableSource::MapperCustom { page_id: page_number, .. } => self.mapper_custom_pages[page_number as usize].to_raw_ref(),
         }
     }
 

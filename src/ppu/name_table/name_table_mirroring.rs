@@ -105,7 +105,7 @@ pub enum NameTableSource {
     Ciram(CiramSide),
     Rom { bank_number: BankNumber },
     Ram { bank_number: BankNumber },
-    MapperCustom { page_number: u8 },
+    MapperCustom { page_id: u8 },
 }
 
 impl fmt::Display for NameTableSource {
@@ -115,7 +115,7 @@ impl fmt::Display for NameTableSource {
             NameTableSource::Ciram(CiramSide::Right) => "CIRAM(B)",
             NameTableSource::Rom { bank_number } => &format!("ROM@{:04X}", bank_number.to_raw()),
             NameTableSource::Ram { bank_number } => &format!("WRAM@{:04X}", bank_number.to_raw()),
-            NameTableSource::MapperCustom { page_number } => &format!("MAPPER{page_number}"),
+            NameTableSource::MapperCustom { page_id: page_number } => &format!("MAPPER{page_number}"),
         };
 
         write!(f, "{text}")
@@ -125,5 +125,5 @@ impl fmt::Display for NameTableSource {
 impl CiramSide {
     pub const fn to_source(self) -> NameTableSource {
         NameTableSource::Ciram(self)
-    } 
+    }
 }

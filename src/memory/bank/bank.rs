@@ -6,7 +6,7 @@ use crate::memory::address_template::address_resolver::AddressResolver;
 use crate::memory::bank::bank::ChrSourceRegisterId::*;
 use crate::memory::bank::bank::PrgSourceRegisterId::*;
 use crate::memory::bank::bank_number::BankLocation;
-use crate::memory::bank::bank_number::PageNumberSpace;
+use crate::memory::bank::bank_number::MemSpace;
 use crate::memory::bank::bank_number::{
     BankNumber, MetaRegisterId, PrgBankRegisterId, PrgBankRegisters,
 };
@@ -55,7 +55,7 @@ pub enum ChrSource {
     Rom,
     WorkRam,
     Ciram(CiramSide),
-    MapperCustom { page_number: u8 },
+    MapperCustom { page_id: u8 },
 }
 
 impl ChrSource {
@@ -64,7 +64,7 @@ impl ChrSource {
             NameTableSource::Ciram(ciram_side) => (ChrSource::Ciram(ciram_side), None),
             NameTableSource::Rom { bank_number } => (ChrSource::Rom, Some(bank_number)),
             NameTableSource::Ram { bank_number } => (ChrSource::WorkRam, Some(bank_number)),
-            NameTableSource::MapperCustom { page_number } => (ChrSource::MapperCustom { page_number }, None),
+            NameTableSource::MapperCustom { page_id } => (ChrSource::MapperCustom { page_id }, None),
         }
     }
 }
@@ -244,7 +244,7 @@ impl PrgBank {
     }
 
     // FIXME: Use explicit rom_read_status() and ram_read_status() providers, then simplify this accordingly.
-    pub fn page_number_space(self, regs: &PrgBankRegisters) -> Option<PageNumberSpace> {
+    pub fn page_number_space(self, regs: &PrgBankRegisters) -> Option<MemSpace> {
         let prg_source = match self.prg_source_provider {
             PrgSourceProvider::Fixed(prg_source) => prg_source,
             PrgSourceProvider::Switchable(reg_id) => Some(regs.rom_ram_mode(reg_id)),
@@ -259,15 +259,15 @@ impl PrgBank {
 
         // There's currently no way to set make the ROM ReadStatus of a RomRam bank switchable.
         if self.is_rom_ram() && (prg_source == PrgSource::Rom || !regs.cartridge_has_ram()) {
-            return Some(PageNumberSpace::Rom(ReadStatus::Enabled));
+            return Some(MemSpace::Rom(ReadStatus::Enabled));
         }
 
         match prg_source {
             PrgSource::RamOrRom | PrgSource::RamOrAbsent if regs.cartridge_has_ram() => {
-                Some(PageNumberSpace::Ram(read_status, write_status))
+                Some(MemSpace::Ram(read_status, write_status))
             }
             PrgSource::Rom | PrgSource::RamOrRom => {
-                Some(PageNumberSpace::Rom(read_status))
+                Some(MemSpace::Rom(read_status))
             }
             PrgSource::RamOrAbsent => None,
         }
@@ -437,11 +437,11 @@ impl ChrBank {
         }
     }
 
-    pub const fn mapper_sourced(page_number: u8) -> Self {
+    pub const fn mapper_sourced(page_id: u8) -> Self {
         Self {
             bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
             chr_source_provider: ChrSourceProvider::Fixed(Some(
-                ChrSource::MapperCustom { page_number },
+                ChrSource::MapperCustom { page_id },
             )),
             read_status_register_id: None,
             write_status_register_id: None,

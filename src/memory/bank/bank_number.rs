@@ -347,13 +347,13 @@ pub enum WriteStatus {
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum MemTypeStatus {
+pub enum PrgMemTypeStatus {
     Rom(ReadStatus),
     WorkRam(ReadStatus, WriteStatus),
     SaveRam(ReadStatus, WriteStatus),
 }
 
-impl MemTypeStatus {
+impl PrgMemTypeStatus {
     pub fn is_rom(self) -> bool {
         matches!(self, Self::Rom(_))
     }
@@ -368,7 +368,7 @@ impl MemTypeStatus {
 }
 
 #[derive(PartialEq, Eq, Clone, Debug)]
-pub enum PageNumberSpace {
+pub enum MemSpace {
     Rom(ReadStatus),
     Ram(ReadStatus, WriteStatus),
 }

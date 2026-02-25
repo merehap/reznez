@@ -38,10 +38,10 @@ impl BankColorAssigner {
             // Lincoln Green
             PeekSource::PaletteTable => Rgb::new(0x26, 0x4D, 0x00),
             // Forest Green
-            PeekSource::MapperCustom { page_number: 0, .. } => Rgb::new(0x00, 0x4D, 0x26),
+            PeekSource::MapperCustom { page_id: 0, .. } => Rgb::new(0x00, 0x4D, 0x26),
             // Oxford Blue
-            PeekSource::MapperCustom { page_number: 1, .. } => Rgb::new(0x00, 0x26, 0x4D),
-            PeekSource::MapperCustom { page_number: _, .. } =>
+            PeekSource::MapperCustom { page_id: 1, .. } => Rgb::new(0x00, 0x26, 0x4D),
+            PeekSource::MapperCustom { page_id: _, .. } =>
                 todo!("No currently supported mappers have more than two pages of custom memory."),
         }
     }
