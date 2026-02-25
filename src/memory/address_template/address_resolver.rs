@@ -144,8 +144,7 @@ impl AddressResolver {
         }
 
         let base_address_width = bit_template.width_of('a');
-        let inner_bank_ignored_low_count = bit_template.ignored_low_count_of('i');
-        let inner_bank_width = base_address_width + inner_bank_ignored_low_count;
+        let mut inner_bank_ignored_low_count = 0;
 
         let mut reg_id = None;
         let mut i = 0;
@@ -154,6 +153,7 @@ impl AddressResolver {
                 Some(c@'p'..='y') => {
                     assert!(reg_id.is_none(), "Multiple inner bank segments not allowed in a single template.");
                     reg_id = Some(PrgBankRegisterId::from_char(c).expect("Bad inner bank label letter."));
+                    inner_bank_ignored_low_count = bit_template.ignored_low_count_of(c);
                 }
                 None | Some(_) => {}
             }
@@ -163,7 +163,7 @@ impl AddressResolver {
 
         Ok(Self {
             bit_template,
-            inner_bank_width,
+            inner_bank_width: base_address_width + inner_bank_ignored_low_count,
             raw_outer_bank_number: 0,
             raw_inner_bank_number: 0,
             reg_id,
