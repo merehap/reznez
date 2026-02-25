@@ -131,7 +131,7 @@ impl ChrMemory {
                 ciram.side(side)[index as usize]
             }
             ChrMemoryIndex::MapperCustom { page_id, index } => {
-                mapper_custom_name_tables[page_id as usize].peek(index).resolve(0)
+                mapper_custom_name_tables[page_id as usize].peek(index as u16).resolve(0)
             }
         };
 
@@ -166,10 +166,10 @@ impl ChrMemory {
                 info!(target: "mapperramwrites", "Setting CHR [${address}]=${value:02} (Work RAM @ ${index:X})");
             }
             ChrMemoryIndex::Ciram(side, index) => {
-                ciram.write(side, index, value);
+                ciram.write(side, index as u16, value);
             }
             ChrMemoryIndex::MapperCustom { page_id, index } => {
-                mapper_custom_name_tables[page_id as usize].write(index, value);
+                mapper_custom_name_tables[page_id as usize].write(index as u16, value);
             }
             ChrMemoryIndex::Rom(..) | ChrMemoryIndex::Ram(_, _, WriteStatus::Disabled) => {
                 // ROM and write-disabled memory can't be written to.

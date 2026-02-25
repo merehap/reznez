@@ -95,10 +95,10 @@ impl ChrMemoryMap {
                 (ChrMemoryIndex::Ram(u32::from(page_number) * KIBIBYTE + u32::from(offset), read_status, write_status), PeekSource::Ram(bank_number))
             }
             ChrPageId::Ciram(side) => {
-                (ChrMemoryIndex::Ciram(side, offset), PeekSource::Ciram(side))
+                (ChrMemoryIndex::Ciram(side, offset.into()), PeekSource::Ciram(side))
             }
             ChrPageId::MapperCustom { page_id } =>
-                (ChrMemoryIndex::MapperCustom { page_id, index: offset }, PeekSource::MapperCustom { page_id }),
+                (ChrMemoryIndex::MapperCustom { page_id, index: offset.into() }, PeekSource::MapperCustom { page_id }),
         };
 
         (chr_memory_index, peek_source)
@@ -157,9 +157,9 @@ impl ChrMemoryMap {
 pub enum ChrMemoryIndex {
     Rom(u32, ReadStatus),
     Ram(u32, ReadStatus, WriteStatus),
-    Ciram(CiramSide, u16),
+    Ciram(CiramSide, u32),
     // TODO: Should Read/WriteStatus be stored here?
-    MapperCustom { page_id: u8, index: u16 },
+    MapperCustom { page_id: u8, index: u32 },
 }
 
 impl ChrMemoryIndex {
@@ -283,11 +283,9 @@ impl ChrMapping {
 
 #[derive(Clone, Copy, Debug)]
 pub enum ChrPageId {
-    Rom { page_number: PageNumber, bank_number: BankNumber, read_status: ReadStatus },
-    Ram { page_number: PageNumber, bank_number: BankNumber, read_status: ReadStatus, write_status: WriteStatus },
+    Rom { page_number: u16, bank_number: BankNumber, read_status: ReadStatus },
+    Ram { page_number: u16, bank_number: BankNumber, read_status: ReadStatus, write_status: WriteStatus },
     Ciram(CiramSide),
     // TODO: Should Read/WriteStatus be stored here?
     MapperCustom { page_id: u8 },
 }
-
-type PageNumber = u16;
