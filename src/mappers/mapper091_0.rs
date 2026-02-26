@@ -46,8 +46,8 @@ impl Mapper for Mapper091_0 {
             0x6001 => bus.set_chr_register(D, value),
             0x6002 => bus.set_chr_register(E, value),
             0x6003 => bus.set_chr_register(F, value),
-            0x7000 => bus.set_prg_register(P, value & 0b00001111),
-            0x7001 => bus.set_prg_register(Q, value & 0b00001111),
+            0x7000 => bus.set_prg_register(P, value & 0b0000_1111),
+            0x7001 => bus.set_prg_register(Q, value & 0b0000_1111),
             0x7002 => {
                 self.irq_counter.disable();
                 bus.cpu_pinout.acknowledge_mapper_irq();

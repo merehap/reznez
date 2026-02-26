@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use std::fmt::Write;
+
 use crate::cpu::dmc_dma::DmcDmaState;
 use crate::cpu::instruction::{Instruction, OpCode, AccessMode};
 use crate::memory::cpu::cpu_address::CpuAddress;
@@ -40,37 +42,37 @@ impl Formatter for MinimalFormatter {
         match instruction.access_mode() {
             Imp => {}
             Imm => {
-                argument_string.push_str(&format!("#${low:02X}"));
+                write!(argument_string, "#${low:02X}").unwrap();
             }
             ZP => {
-                argument_string.push_str(&format!("${low:02X}"));
+                write!(argument_string, "${low:02X}").unwrap();
             }
             ZPX => {
                 let address = low.wrapping_add(cpu.x_index());
-                argument_string.push_str(&format!("${address:02X}"));
+                write!(argument_string, "${address:02X}").unwrap();
             }
             ZPY => {
                 let address = low.wrapping_add(cpu.y_index());
-                argument_string.push_str(&format!("${address:02X}"));
+                write!(argument_string, "${address:02X}").unwrap();
             }
             Abs => {
-                argument_string.push_str(&format!("${high:02X}{low:02X}"));
+                write!(argument_string, "${high:02X}{low:02X}").unwrap();
             }
             AbX => {
                 let start_address = CpuAddress::from_low_high(low, high);
                 let address = start_address.advance(cpu.x_index());
-                argument_string.push_str(&format!("${:04X}", *address));
+                write!(argument_string, "${:04X}", *address).unwrap();
             }
             AbY => {
                 let start_address = CpuAddress::from_low_high(low, high);
                 let address = start_address.advance(cpu.y_index());
-                argument_string.push_str(&format!("${:04X}", *address));
+                write!(argument_string, "${:04X}", *address).unwrap();
             }
             Rel => {
                 let address = start_address
                     .offset(low as i8)
                     .advance(instruction.access_mode().instruction_length());
-                argument_string.push_str(&format!("${:04X}", *address));
+                write!(argument_string, "${:04X}", *address).unwrap();
             }
             Ind => {
                 let first = CpuAddress::from_low_high(low, high);
@@ -79,7 +81,7 @@ impl Formatter for MinimalFormatter {
                     peek(first),
                     peek(second),
                 );
-                argument_string.push_str(&format!("${:04X}", *address));
+                write!(argument_string, "${:04X}", *address).unwrap();
             }
             IzX => {
                 let low = low.wrapping_add(cpu.x_index());
@@ -87,7 +89,7 @@ impl Formatter for MinimalFormatter {
                     peek(CpuAddress::zero_page(low)),
                     peek(CpuAddress::zero_page(low.wrapping_add(1))),
                 );
-                argument_string.push_str(&format!("${:04X}", *address));
+                write!(argument_string, "${:04X}", *address).unwrap();
             }
             IzY => {
                 let start_address = CpuAddress::from_low_high(
@@ -95,7 +97,7 @@ impl Formatter for MinimalFormatter {
                     peek(CpuAddress::zero_page(low.wrapping_add(1))),
                 );
                 let address = start_address.advance(cpu.y_index());
-                argument_string.push_str(&format!("${:04X}", *address));
+                write!(argument_string, "${:04X}", *address).unwrap();
             }
         }
 
@@ -126,46 +128,46 @@ impl Formatter for Nintendulator0980Formatter {
         match instruction.access_mode() {
             Imp => {}
             Imm => {
-                argument_string.push_str(&format!("#${low:02X}"));
+                write!(argument_string, "#${low:02X}").unwrap();
             }
             ZP => {
                 let address = CpuAddress::zero_page(low);
                 let value = peek(address);
-                argument_string.push_str(&format!("${low:02X} = {value:02X}"));
+                write!(argument_string, "${low:02X} = {value:02X}").unwrap();
             }
             ZPX => {
-                argument_string.push_str(&format!("${low:02X},X"));
+                write!(argument_string, "${low:02X},X").unwrap();
                 let _address = CpuAddress::zero_page(low.wrapping_add(cpu.x_index()));
             }
             ZPY => {
-                argument_string.push_str(&format!("${low:02X},Y"));
+                write!(argument_string, "${low:02X},Y").unwrap();
                 let _address = CpuAddress::zero_page(low.wrapping_add(cpu.y_index()));
             }
             Abs => {
                 let address = CpuAddress::from_low_high(low, high);
-                argument_string.push_str(&format!("${high:02X}{low:02X}"));
+                write!(argument_string, "${high:02X}{low:02X}").unwrap();
                 if instruction.op_code() != OpCode::JMP {
                     let value = peek(address);
-                    argument_string.push_str(&format!(" = {value:02X}"));
+                    write!(argument_string, " = {value:02X}").unwrap();
                 }
             }
             AbX => {
                 let start_address = CpuAddress::from_low_high(low, high);
                 let address = start_address.advance(cpu.x_index());
                 let value = peek(address);
-                argument_string.push_str(&format!("${high:02X}{low:02X},X = {value:02X}"));
+                write!(argument_string, "${high:02X}{low:02X},X = {value:02X}").unwrap();
             }
             AbY => {
                 let start_address = CpuAddress::from_low_high(low, high);
                 let address = start_address.advance(cpu.y_index());
                 let value = peek(address);
-                argument_string.push_str(&format!("${high:02X}{low:02X},Y = {value:02X}"));
+                write!(argument_string, "${high:02X}{low:02X},Y = {value:02X}").unwrap();
             }
             Rel => {
                 let address = start_address
                     .offset(low as i8)
                     .advance(instruction.access_mode().instruction_length());
-                argument_string.push_str(&format!("${:04X}", *address));
+                write!(argument_string, "${:04X}", *address).unwrap();
             }
             Ind => {
                 let first = CpuAddress::from_low_high(low, high);
@@ -176,7 +178,7 @@ impl Formatter for Nintendulator0980Formatter {
                 );
             }
             IzX => {
-                argument_string.push_str(&format!("(${low:02X}),X ="));
+                write!(argument_string, "(${low:02X}),X =").unwrap();
                 let low = low.wrapping_add(cpu.x_index());
                 let _address = CpuAddress::from_low_high(
                     peek(CpuAddress::zero_page(low)),
@@ -184,7 +186,7 @@ impl Formatter for Nintendulator0980Formatter {
                 );
             }
             IzY => {
-                argument_string.push_str(&format!("(${low:02X}),Y ="));
+                write!(argument_string, "(${low:02X}),Y =").unwrap();
                 let start_address = CpuAddress::from_low_high(
                     peek(CpuAddress::zero_page(low)),
                     peek(CpuAddress::zero_page(low.wrapping_add(1))),
@@ -247,48 +249,52 @@ impl Formatter for MesenFormatter {
                 }
             }
             Imm => {
-                argument_string.push_str(&format!("#${low:02X}"));
+                write!(argument_string, "#${low:02X}").unwrap();
             }
             ZP => {
                 let address = CpuAddress::zero_page(low);
                 let value = maybe_peek(address).resolve(low);
-                argument_string.push_str(&format!("${low:02X} = ${value:02X}"));
+                write!(argument_string, "${low:02X} = ${value:02X}").unwrap();
             }
             ZPX => {
-                argument_string.push_str(&format!("${low:02X},X"));
+                write!(argument_string, "${low:02X},X").unwrap();
                 let address = CpuAddress::zero_page(low.wrapping_add(cpu.x_index()));
-                argument_string.push_str(&format!(" [{}] = ${:02X}", address.to_mesen_string(), peek(address)));
+                write!(argument_string, " [{}] = ${:02X}", address.to_mesen_string(), peek(address)).unwrap();
             }
             ZPY => {
-                argument_string.push_str(&format!("${low:02X},Y"));
+                write!(argument_string, "${low:02X},Y").unwrap();
                 let address = CpuAddress::zero_page(low.wrapping_add(cpu.y_index()));
-                argument_string.push_str(&format!(" [{}] = ${:02X}", address.to_mesen_string(), peek(address)));
+                write!(argument_string, " [{}] = ${:02X}", address.to_mesen_string(), peek(address)).unwrap();
             }
             Abs => {
                 let address = CpuAddress::from_low_high(low, high);
                 argument_string.push_str(&address.to_mesen_string());
                 match instruction.op_code() {
                     OpCode::JMP | OpCode::JSR => {}
-                    _ => argument_string.push_str(&format!(" = ${:02X}", maybe_peek(address).resolve(high))),
+                    _ => write!(argument_string, " = ${:02X}", maybe_peek(address).resolve(high)).unwrap(),
                 }
             }
             AbX => {
                 let start_address = CpuAddress::from_low_high(low, high);
                 let address = start_address.advance(cpu.x_index());
                 let value = maybe_peek(address).resolve(high);
-                argument_string.push_str(&format!(
-                        "{},X [{}] = ${value:02X}",
-                        start_address.to_mesen_string(),
-                        address.to_mesen_string()));
+                write!(
+                    argument_string,
+                    "{},X [{}] = ${value:02X}",
+                    start_address.to_mesen_string(),
+                    address.to_mesen_string(),
+                ).unwrap();
             }
             AbY => {
                 let start_address = CpuAddress::from_low_high(low, high);
                 let address = start_address.advance(cpu.y_index());
                 let value = peek(address);
-                argument_string.push_str(&format!(
-                        "{},Y [{}] = ${value:02X}",
-                        start_address.to_mesen_string(),
-                        address.to_mesen_string()));
+                write!(
+                    argument_string,
+                    "{},Y [{}] = ${value:02X}",
+                    start_address.to_mesen_string(),
+                    address.to_mesen_string(),
+                ).unwrap();
             }
             Rel => {
                 let address = start_address
@@ -304,10 +310,10 @@ impl Formatter for MesenFormatter {
                     peek(second),
                 );
 
-                argument_string.push_str(&format!("({})", &first.to_mesen_string()));
+                write!(argument_string, "({})", first.to_mesen_string()).unwrap();
             }
             IzX => {
-                argument_string.push_str(&format!("(${low:02X}),X ="));
+                write!(argument_string, "(${low:02X}),X =").unwrap();
                 let low = low.wrapping_add(cpu.x_index());
                 let _address = CpuAddress::from_low_high(
                     peek(CpuAddress::zero_page(low)),
@@ -315,14 +321,14 @@ impl Formatter for MesenFormatter {
                 );
             }
             IzY => {
-                argument_string.push_str(&format!("(${low:02X}),Y "));
+                write!(argument_string, "(${low:02X}),Y ").unwrap();
                 let start_address = CpuAddress::from_low_high(
                     peek(CpuAddress::zero_page(low)),
                     peek(CpuAddress::zero_page(low.wrapping_add(1))),
                 );
                 // TODO: Should this wrap around just the current page?
                 let address = start_address.advance(cpu.y_index());
-                argument_string.push_str(&format!("[{}] = ${:02X}", address.to_mesen_string(), peek(address)));
+                write!(argument_string, "[{}] = ${:02X}", address.to_mesen_string(), peek(address)).unwrap();
             }
         }
 

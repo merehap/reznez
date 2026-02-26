@@ -1,3 +1,4 @@
+use std::fmt::Write;
 use std::sync::LazyLock;
 
 use arr_macro::arr;
@@ -50,7 +51,7 @@ impl FrameActions {
             [first, rest @ ..] => {
                 let mut result = format!("{first:?}");
                 for action in rest {
-                    result.push_str(&format!(", {action:?}"));
+                    let _ = write!(result, ", {action:?}");
                 }
 
                 result

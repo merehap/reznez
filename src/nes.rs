@@ -400,9 +400,10 @@ impl Nes {
         if log_enabled!(target: "cpuflowcontrol", Info) || log_enabled!(target: "mapperirqcounter", Info) {
             let latest = &mut self.latest_values;
             if latest.mapper_irq_asserted_detector.set_value_then_detect(self.bus.cpu_pinout.mapper_irq_asserted()) {
-                match latest.mapper_irq_asserted_detector.current_value() {
-                    true => info!("Mapper IRQ asserted. CPU cycle: {}", self.bus.cpu_cycle()),
-                    false => info!("Mapper IRQ acknowledged. CPU cycle: {}", self.bus.cpu_cycle()),
+                if latest.mapper_irq_asserted_detector.current_value() {
+                    info!("Mapper IRQ asserted. CPU cycle: {}", self.bus.cpu_cycle());
+                } else {
+                    info!("Mapper IRQ acknowledged. CPU cycle: {}", self.bus.cpu_cycle());
                 }
             }
         }

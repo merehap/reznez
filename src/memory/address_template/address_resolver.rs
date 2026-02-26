@@ -149,13 +149,10 @@ impl AddressResolver {
         let mut reg_id = None;
         let mut i = 0;
         while i < bit_template.segment_count() {
-            match bit_template.label_at(i).map(Label::to_char) {
-                Some(c@'p'..='y') => {
-                    assert!(reg_id.is_none(), "Multiple inner bank segments not allowed in a single template.");
-                    reg_id = Some(PrgBankRegisterId::from_char(c).expect("Bad inner bank label letter."));
-                    inner_bank_ignored_low_count = bit_template.ignored_low_count_of(c);
-                }
-                None | Some(_) => {}
+            if let Some(c@'p'..='y') = bit_template.label_at(i).map(Label::to_char) {
+                assert!(reg_id.is_none(), "Multiple inner bank segments not allowed in a single template.");
+                reg_id = Some(PrgBankRegisterId::from_char(c).expect("Bad inner bank label letter."));
+                inner_bank_ignored_low_count = bit_template.ignored_low_count_of(c);
             }
 
             i += 1;
@@ -178,7 +175,7 @@ impl AddressResolver {
     }
 
     pub fn reduced(&self, bank_sizes: &BankSizes) -> Self {
-        let mut result = self.clone();
+        let mut result = *self;
         result.bit_template = result.bit_template.shortened(bank_sizes.full_width());
         result.inner_bank_width = bank_sizes.inner_bank_width();
         result

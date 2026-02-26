@@ -51,8 +51,8 @@ impl Mapper for Mapper091_1 {
             0x6003 => bus.set_chr_register(F, value),
             0x6004 => bus.set_name_table_mirroring(HORIZONTAL),
             0x6005 => bus.set_name_table_mirroring(VERTICAL),
-            0x7000 => bus.set_prg_register(P, value & 0b00001111),
-            0x7001 => bus.set_prg_register(Q, value & 0b00001111),
+            0x7000 => bus.set_prg_register(P, value & 0b0000_1111),
+            0x7001 => bus.set_prg_register(Q, value & 0b0000_1111),
 
             0x6006 => {
                 self.irq_counter.set_reload_value_low_byte(value);

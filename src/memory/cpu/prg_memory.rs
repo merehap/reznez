@@ -232,8 +232,8 @@ impl PrgMemory {
                     match mapping.inner_bank_number() {
                         None => "E".to_string(),
                         Some((PrgMemTypeStatus::Rom(..), inner_bank_number)) => inner_bank_number.to_string(),
-                        Some((PrgMemTypeStatus::WorkRam(..), inner_bank_number)) => format!("W{}", inner_bank_number),
-                        Some((PrgMemTypeStatus::SaveRam(..), inner_bank_number)) => format!("S{}", inner_bank_number),
+                        Some((PrgMemTypeStatus::WorkRam(..), inner_bank_number)) => format!("W{inner_bank_number}"),
+                        Some((PrgMemTypeStatus::SaveRam(..), inner_bank_number)) => format!("S{inner_bank_number}"),
                     }
                 }
                 PrgMappingSlot::Multi(_) => "M".to_string(),

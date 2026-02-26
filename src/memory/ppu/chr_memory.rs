@@ -343,7 +343,7 @@ impl ChrMemory {
                         RawMemorySlice::from_raw(&self.ram.as_slice()[index..index + 1 * KIBIBYTE as usize])
                     }
                     ChrMemoryIndex::Ciram(side, ..) => RawMemorySlice::from_raw(ciram.side(side)),
-                    _ => todo!(),
+                    ChrMemoryIndex::MapperCustom {..} => todo!(),
                 }
         })
     }
@@ -363,7 +363,7 @@ impl ChrMemory {
                         RawMemorySlice::from_raw(&self.ram.as_slice()[index..index + 1 * KIBIBYTE as usize])
                     }
                     ChrMemoryIndex::Ciram(side, ..) => RawMemorySlice::from_raw(ciram.side(side)),
-                    _ => todo!(),
+                    ChrMemoryIndex::MapperCustom {..} => todo!(),
                 }
         })
     }
