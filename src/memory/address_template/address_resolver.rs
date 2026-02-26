@@ -221,3 +221,25 @@ impl fmt::Display for AddressResolver {
         write!(f, "{}", self.formatted())
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::mapper::KIBIBYTE;
+
+    use super::*;
+
+    #[test]
+    fn no_inner_bank() {
+        let text = "o₀₇o₀₆o₀₅o₀₄o₀₃o₀₂o₀₁o₀₀a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀";
+        let original_resolver = AddressResolver::from_formatted(text, 0).unwrap();
+        assert_eq!(original_resolver.total_width(), 23);
+        assert_eq!(original_resolver.resolve_inner_bank_number(), 0);
+        assert_eq!(original_resolver.formatted(), "o₀₇o₀₆o₀₅o₀₄o₀₃o₀₂o₀₁o₀₀a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀");
+
+        let bank_sizes = BankSizes::new(512 * KIBIBYTE, 32 * KIBIBYTE, 32 * KIBIBYTE);
+        let reduced_resolver = original_resolver.reduced(&bank_sizes);
+        assert_eq!(reduced_resolver.total_width(), 19);
+        assert_eq!(reduced_resolver.resolve_inner_bank_number(), 0);
+        assert_eq!(reduced_resolver.formatted(), "o₀₃o₀₂o₀₁o₀₀a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀");
+    }
+}
