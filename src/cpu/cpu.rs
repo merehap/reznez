@@ -169,40 +169,44 @@ impl Cpu {
             OamDmaAction::Write => OAM_WRITE_STEP,
         };
 
+        let mut current_address_bus_type = AddressBusType::Cpu;
         let value;
         match step {
             Step::Read(from, _) => {
-                bus.set_cpu_address_bus(AddressBusType::Cpu, bus.cpu.lookup_from_address(bus, from));
-                value = bus.cpu_read(mapper, AddressBusType::Cpu);
+                bus.set_cpu_address_bus(current_address_bus_type, bus.cpu.lookup_from_address(bus, from));
+                value = bus.cpu_read(mapper, current_address_bus_type);
             }
             Step::ReadField(field, from, _) => {
-                bus.set_cpu_address_bus(AddressBusType::Cpu, bus.cpu.lookup_from_address(bus, from));
-                value = bus.cpu_read(mapper, AddressBusType::Cpu);
+                bus.set_cpu_address_bus(current_address_bus_type, bus.cpu.lookup_from_address(bus, from));
+                value = bus.cpu_read(mapper, current_address_bus_type);
                 bus.cpu.set_field_value(field, value);
             }
             Step::Write(to, _) => {
-                bus.set_cpu_address_bus(AddressBusType::Cpu, bus.cpu.lookup_to_address(bus, to));
+                bus.set_cpu_address_bus(current_address_bus_type, bus.cpu.lookup_to_address(bus, to));
                 value = bus.cpu_pinout.data_bus;
-                bus.cpu_write(mapper, AddressBusType::Cpu);
+                bus.cpu_write(mapper, current_address_bus_type);
             }
             Step::WriteField(field, to, _) => {
-                bus.set_cpu_address_bus(AddressBusType::Cpu, bus.cpu.lookup_to_address(bus, to));
+                bus.set_cpu_address_bus(current_address_bus_type, bus.cpu.lookup_to_address(bus, to));
                 bus.cpu_pinout.data_bus = bus.cpu.field_value(&mut bus.cpu_pinout, field);
                 value = bus.cpu_pinout.data_bus;
-                bus.cpu_write(mapper, AddressBusType::Cpu);
+                bus.cpu_write(mapper, current_address_bus_type);
             }
             Step::OamRead(from, _) => {
-                bus.set_cpu_address_bus(AddressBusType::OamDma, bus.cpu.lookup_from_address(bus, from));
-                value = bus.cpu_read(mapper, AddressBusType::OamDma);
+                current_address_bus_type = AddressBusType::OamDma;
+                bus.set_cpu_address_bus(current_address_bus_type, bus.cpu.lookup_from_address(bus, from));
+                value = bus.cpu_read(mapper, current_address_bus_type);
             }
             Step::OamWrite(to, _) => {
-                bus.set_cpu_address_bus(AddressBusType::OamDma, bus.cpu.lookup_to_address(bus, to));
+                current_address_bus_type = AddressBusType::OamDma;
+                bus.set_cpu_address_bus(current_address_bus_type, bus.cpu.lookup_to_address(bus, to));
                 value = bus.cpu_pinout.data_bus;
-                bus.cpu_write(mapper, AddressBusType::OamDma);
+                bus.cpu_write(mapper, current_address_bus_type);
             }
             Step::DmcRead(from, _) => {
-                bus.set_cpu_address_bus(AddressBusType::DmcDma, bus.cpu.lookup_from_address(bus, from));
-                value = bus.cpu_read(mapper, AddressBusType::DmcDma);
+                current_address_bus_type = AddressBusType::DmcDma;
+                bus.set_cpu_address_bus(current_address_bus_type, bus.cpu.lookup_from_address(bus, from));
+                value = bus.cpu_read(mapper, current_address_bus_type);
             }
         }
 
@@ -224,7 +228,15 @@ impl Cpu {
         if log_enabled!(target: "cpustep", Info) {
             let step_name = if halted { "HALTED".to_string() } else { bus.cpu.mode_state.step_name() };
             let cpu_cycle = bus.cpu_cycle();
-            info!("\t {step_name} PC: {original_program_counter}, Cycle: {cpu_cycle}, {formatted_step}");
+            let current_address = bus.cpu_address_bus(current_address_bus_type);
+            let prg_index = if *current_address < 0x6000 {
+                String::new()
+            } else {
+                bus.prg_memory().current_memory_map()
+                    .index_for_address(current_address)
+                    .map_or("Open Bus".to_owned(), |(index, _)| format!(" ${index:06X}"))
+            };
+            info!("{prg_index:08} {step_name} PC: {original_program_counter}, Cycle: {cpu_cycle}, {formatted_step}");
         }
 
         if !halted {
