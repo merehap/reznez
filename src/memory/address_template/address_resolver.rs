@@ -74,6 +74,8 @@ pub struct AddressResolver {
     reg_id: Option<PrgBankRegisterId>,
     // TODO: This should only be present for RAM resolvers.
     work_ram_start_inner_bank_number: u16,
+
+    has_inner_bank: bool,
 }
 
 impl AddressResolver {
@@ -128,6 +130,7 @@ impl AddressResolver {
             raw_inner_bank_number: 0,
             reg_id: window.register_id(),
             work_ram_start_inner_bank_number,
+            has_inner_bank: true,
         };
         assert!(address_template.total_width() <= MAX_WIDTH);
 
@@ -158,6 +161,16 @@ impl AddressResolver {
             i += 1;
         }
 
+        // FIXME: Bad hack.
+        let mut has_inner_bank = true;
+        if let Some(label) = bit_template.label_at(1) && label.to_char() == 'o' {
+            has_inner_bank = false;
+        }
+
+        if bit_template.segment_count() < 2 {
+            has_inner_bank = false;
+        }
+
         Ok(Self {
             bit_template,
             inner_bank_width: base_address_width + inner_bank_ignored_low_count,
@@ -165,6 +178,7 @@ impl AddressResolver {
             raw_inner_bank_number: 0,
             reg_id,
             work_ram_start_inner_bank_number,
+            has_inner_bank,
         })
     }
 
@@ -190,7 +204,11 @@ impl AddressResolver {
     }
 
     pub fn resolve_inner_bank_number(&self) -> u16 {
-        self.bit_template.resolve_segment(INNER_BANK_SEGMENT, self.raw_inner_bank_number)
+        if self.has_inner_bank {
+            self.bit_template.resolve_segment(INNER_BANK_SEGMENT, self.raw_inner_bank_number)
+        } else {
+            0
+        }
     }
 
     pub fn resolve_index(&self, addr: CpuAddress) -> u32 {
@@ -237,7 +255,9 @@ mod test {
         assert_eq!(original_resolver.formatted(), "o₀₇o₀₆o₀₅o₀₄o₀₃o₀₂o₀₁o₀₀a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀");
 
         let bank_sizes = BankSizes::new(512 * KIBIBYTE, 32 * KIBIBYTE, 32 * KIBIBYTE);
-        let reduced_resolver = original_resolver.reduced(&bank_sizes);
+        let mut reduced_resolver = original_resolver.reduced(&bank_sizes);
+        reduced_resolver.raw_outer_bank_number = 0b1111_1111_1111_1111;
+        reduced_resolver.raw_inner_bank_number = 0b1111_1111_1111_1111;
         assert_eq!(reduced_resolver.total_width(), 19);
         assert_eq!(reduced_resolver.resolve_inner_bank_number(), 0);
         assert_eq!(reduced_resolver.formatted(), "o₀₃o₀₂o₀₁o₀₀a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀");

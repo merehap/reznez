@@ -110,6 +110,8 @@ impl BitTemplate {
     }
 
     pub fn resolve(&self, raw_values: &[u16]) -> u32 {
+        assert_eq!(raw_values.len(), self.segments.len() as usize);
+
         let mut result = 0;
         let mut offset = 0;
         for (segment, &raw_value) in self.segments.as_iter().zip(raw_values) {
