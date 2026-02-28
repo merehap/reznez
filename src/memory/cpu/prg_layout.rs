@@ -16,7 +16,7 @@ impl PrgLayouts {
     #[allow(clippy::large_types_passed_by_value)]
     pub const fn new(
         rom_size: u32,
-        outer_bank_count: u8,
+        outer_bank_count: u16,
         layouts: ConstVec<PrgLayout, 16>,
     ) -> Self {
         let mut inner_bank_size = layouts.get(0).smallest_rom_window_size() as u32;

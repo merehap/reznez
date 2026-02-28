@@ -174,7 +174,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         // Duplicate of 23, most likely.
         (27, None) => m::mapper023_1::mapper023_1().supported(),
         // Action 53
-        (28, None) => m::mapper028::Mapper028::new().supported(),
+        (28, None) => m::mapper028::Mapper028::default().supported(),
         // Homebrew. Sealie Computing - RET-CUFROM revD
         (29, None) => m::mapper029::Mapper029.supported(),
         (30, _) => TodoMapper,

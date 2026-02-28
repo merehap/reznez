@@ -1,4 +1,4 @@
-use std::num::NonZeroU8;
+use std::num::NonZeroU16;
 
 use crate::cartridge::cartridge::Cartridge;
 use crate::cartridge::resolved_metadata::ResolvedMetadata;
@@ -352,14 +352,14 @@ impl LayoutBuilder {
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum OuterBankLayout {
-    ExactCount(NonZeroU8),
+    ExactCount(NonZeroU16),
     Size(u32),
 }
 
 impl OuterBankLayout {
-    const SINGLE_BANK: Self = Self::ExactCount(NonZeroU8::new(1).unwrap());
+    const SINGLE_BANK: Self = Self::ExactCount(NonZeroU16::new(1).unwrap());
 
-    pub const fn outer_bank_count(self, memory_size: u32) -> NonZeroU8 {
+    pub const fn outer_bank_count(self, memory_size: u32) -> NonZeroU16 {
         match self {
             Self::ExactCount(count) => count,
             Self::Size(size) => {
@@ -367,9 +367,9 @@ impl OuterBankLayout {
                     1
                 } else {
                     assert!(memory_size.is_multiple_of(size));
-                    (memory_size / size) as u8
+                    (memory_size / size) as u16
                 };
-                NonZeroU8::new(count).unwrap()
+                NonZeroU16::new(count).unwrap()
             }
         }
     }

@@ -2,10 +2,97 @@ use crate::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(8 * KIBIBYTE * KIBIBYTE)
-    // Normal banking isn't used with Action 53, so this PrgLayout is ignored.
+    // TODO: Infer this from the templates, failing if they aren't all equal.
+    .prg_rom_outer_bank_size(32 * KIBIBYTE)
+    // "At power on, the last 16 KiB of the ROM is mapped into $C000-$FFFF. The rest of the state is unspecified."
+    .prg_layout_index(3)
+    // Mode 0x00-0x03
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.fixed_number(0)),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₇o₀₆o₀₅o₀₄o₀₃o₀₂o₀₁o₀₀a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+    ])
+    // Mode 0x04-0x07 (Same as above)
+    .prg_layout(&[
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₇o₀₆o₀₅o₀₄o₀₃o₀₂o₀₁o₀₀a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+    ])
+    // Mode 0x08-0x0B
+    .prg_layout(&[
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₇o₀₆o₀₅o₀₄o₀₃o₀₂o₀₁o₀₀0₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₇o₀₆o₀₅o₀₄o₀₃o₀₂o₀₁o₀₀p₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+    ])
+    // Mode 0x0C-0x0F
+    .prg_layout(&[
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₇o₀₆o₀₅o₀₄o₀₃o₀₂o₀₁o₀₀p₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₇o₀₆o₀₅o₀₄o₀₃o₀₂o₀₁o₀₀1₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+    ])
+    // Mode 0x10-0x13
+    .prg_layout(&[
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₇o₀₆o₀₅o₀₄o₀₃o₀₂o₀₁p₀₀a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+    ])
+    // Mode 0x14-0x17 (Same as above)
+    .prg_layout(&[
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₇o₀₆o₀₅o₀₄o₀₃o₀₂o₀₁p₀₀a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+    ])
+    // Mode 0x18-0x1B
+    .prg_layout(&[
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₇o₀₆o₀₅o₀₄o₀₃o₀₂o₀₁o₀₀0₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₇o₀₆o₀₅o₀₄o₀₃o₀₂o₀₁p₀₁p₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+    ])
+    // Mode 0x1C-0x1F
+    .prg_layout(&[
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₇o₀₆o₀₅o₀₄o₀₃o₀₂o₀₁p₀₁p₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₇o₀₆o₀₅o₀₄o₀₃o₀₂o₀₁o₀₀1₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+    ])
+    // Mode 0x20-0x23
+    .prg_layout(&[
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₇o₀₆o₀₅o₀₄o₀₃o₀₂p₀₁p₀₀a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+    ])
+    // Mode 0x24-0x27 (Same as above)
+    .prg_layout(&[
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₇o₀₆o₀₅o₀₄o₀₃o₀₂p₀₁p₀₀a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+    ])
+    // Mode 0x28-0x2B
+    .prg_layout(&[
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₇o₀₆o₀₅o₀₄o₀₃o₀₂o₀₁o₀₀0₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₇o₀₆o₀₅o₀₄o₀₃o₀₂p₀₂p₀₁p₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+    ])
+    // Mode 0x2C-0x2F
+    .prg_layout(&[
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₇o₀₆o₀₅o₀₄o₀₃o₀₂p₀₂p₀₁p₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₇o₀₆o₀₅o₀₄o₀₃o₀₂o₀₁o₀₀1₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+    ])
+    // Mode 0x30-0x33
+    .prg_layout(&[
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₇o₀₆o₀₅o₀₄o₀₃p₀₂p₀₁p₀₀a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+    ])
+    // Mode 0x34-0x37 (Same as above)
+    .prg_layout(&[
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₇o₀₆o₀₅o₀₄o₀₃p₀₂p₀₁p₀₀a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+    ])
+    // Mode 0x38-0x3B
+    .prg_layout(&[
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₇o₀₆o₀₅o₀₄o₀₃o₀₂o₀₁o₀₀0₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₇o₀₆o₀₅o₀₄o₀₃p₀₃p₀₂p₀₁p₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+    ])
+    // Mode 0x3C-0x3F
+    .prg_layout(&[
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₇o₀₆o₀₅o₀₄o₀₃p₀₃p₀₂p₀₁p₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₇o₀₆o₀₅o₀₄o₀₃o₀₂o₀₁o₀₀1₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
     ])
     .chr_rom_max_size(32 * KIBIBYTE)
     .chr_layout(&[
@@ -20,24 +107,16 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 // Action 53
+#[derive(Default)]
 pub struct Mapper028 {
     selected_register: Register,
-    action53_layout: Action53Layout,
-    prg_outer_bank_size: OuterBankSize,
-    outer_bank_bits: u8,
-    inner_bank_bits: u8,
 }
 
 impl Mapper for Mapper028 {
-    // TODO: Probably replace this with a more standardized way of handling variably-sized outer banks.
-    fn peek_prg(&self, bus: &Bus, addr: CpuAddress) -> ReadResult {
-        if *addr < 0x8000 {
-            return ReadResult::OPEN_BUS;
-        }
-
-        let bank_side = if *addr < 0xC000 { BankSide::Low } else { BankSide::High };
-        let bank_mask = Self::bank_mask(self.action53_layout, self.prg_outer_bank_size, bank_side);
-        ReadResult::full(bus.prg_memory.peek_raw_rom(self.create_memory_index(bank_mask, addr)))
+    fn init_mapper_params(&self, bus: &mut Bus) {
+        // "At power on, the last 16 KiB of the ROM is mapped into $C000-$FFFF. The rest of the state is unspecified."
+        bus.set_prg_rom_outer_bank_number(0b1111_1111);
+        bus.set_prg_register(P, 0b1111_1111_1111_1111u16);
     }
 
     fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
@@ -57,40 +136,26 @@ impl Mapper for Mapper028 {
             0x8000..=0xFFFF => {
                 match self.selected_register {
                     Register::ChrBank => {
-                        let (mirroring, chr_bank) = splitbits_named!(min=u8, value, "...m..cc");
+                        let (mirroring, chr_bank) = splitbits_named!(min=u8, value, "...m ..cc");
                         bus.set_chr_register(C, chr_bank);
                         if bus.name_table_mirroring().is_regular_one_screen() {
                             bus.set_name_table_mirroring(mirroring);
                         }
                     }
                     Register::InnerPrgBank => {
-                        let (mirroring, inner_bank_bits) = splitbits_named!(min=u8, value, "...mpppp");
-                        self.inner_bank_bits = inner_bank_bits;
+                        let (mirroring, inner_bank_bits) = splitbits_named!(min=u8, value, "...m pppp");
+                        bus.set_prg_register(P, inner_bank_bits);
                         if bus.name_table_mirroring().is_regular_one_screen() {
                             bus.set_name_table_mirroring(mirroring);
                         }
                     }
                     Register::Mode => {
-                        let (prg_outer_bank_size, action53_layout, mirroring) = splitbits_named!(value, "..oollmm");
-                        self.prg_outer_bank_size = match prg_outer_bank_size {
-                            0 => OuterBankSize::Kib32,
-                            1 => OuterBankSize::Kib64,
-                            2 => OuterBankSize::Kib128,
-                            3 => OuterBankSize::Kib256,
-                            _ => unreachable!(),
-                        };
-
-                        self.action53_layout = match action53_layout {
-                            0 | 1 => Action53Layout::FullySwitchable,
-                            2 => Action53Layout::FixedFirstHalf,
-                            3 => Action53Layout::FixedSecondHalf,
-                            _ => unreachable!(),
-                        };
-
-                        bus.set_name_table_mirroring(mirroring);
+                        let (layout, name_table_mirroring) = splitbits_named!(value, "..ll llnn");
+                        bus.set_prg_layout(layout);
+                        bus.set_name_table_mirroring(name_table_mirroring);
                     }
                     Register::OuterPrgBank => {
-                        self.outer_bank_bits = value;
+                        bus.set_prg_rom_outer_bank_number(value);
                     }
                 }
             }
@@ -102,95 +167,11 @@ impl Mapper for Mapper028 {
     }
 }
 
-impl Mapper028 {
-    pub fn new() -> Self {
-        Self {
-            selected_register: Register::ChrBank,
-            action53_layout: Action53Layout::FixedSecondHalf,
-            prg_outer_bank_size: OuterBankSize::Kib32,
-            outer_bank_bits: 0b1111_1111,
-            inner_bank_bits: 0b0000,
-        }
-    }
-
-    fn create_memory_index(&self, bank_mask: BankMask, addr: CpuAddress) -> u32 {
-        let address_clear_count = bank_mask.total_count() - 7;
-        let mut index: u32 = u32::from((*addr << address_clear_count) >> address_clear_count);
-
-        let inner_mask = 0b0000_1111 >> (4 - bank_mask.inner_bit_count);
-        let inner_bank = self.inner_bank_bits & inner_mask;
-        index |= u32::from(inner_bank) << (16 - address_clear_count);
-
-        let outer_shift = 8 - bank_mask.outer_bit_count;
-        let outer_mask = 0b1111_1111 << outer_shift;
-        let outer_bank = (self.outer_bank_bits & outer_mask) >> outer_shift;
-        index |= u32::from(outer_bank) << (16 - address_clear_count + bank_mask.inner_bit_count);
-
-        index
-    }
-
-    const fn bank_mask(layout: Action53Layout, outer_bank_size: OuterBankSize, side: BankSide) -> BankMask {
-        match (layout, outer_bank_size, side) {
-            (Action53Layout::FullySwitchable, OuterBankSize::Kib32 , _             ) => BankMask { outer_bit_count: 8, inner_bit_count: 0 },
-            (Action53Layout::FullySwitchable, OuterBankSize::Kib64 , _             ) => BankMask { outer_bit_count: 7, inner_bit_count: 1 },
-            (Action53Layout::FullySwitchable, OuterBankSize::Kib128, _             ) => BankMask { outer_bit_count: 6, inner_bit_count: 2 },
-            (Action53Layout::FullySwitchable, OuterBankSize::Kib256, _             ) => BankMask { outer_bit_count: 5, inner_bit_count: 3 },
-
-            (Action53Layout::FixedFirstHalf , _                    , BankSide::Low ) => BankMask { outer_bit_count: 8, inner_bit_count: 0 },
-            (Action53Layout::FixedFirstHalf , OuterBankSize::Kib32 , BankSide::High) => BankMask { outer_bit_count: 8, inner_bit_count: 1 },
-            (Action53Layout::FixedFirstHalf , OuterBankSize::Kib64 , BankSide::High) => BankMask { outer_bit_count: 7, inner_bit_count: 2 },
-            (Action53Layout::FixedFirstHalf , OuterBankSize::Kib128, BankSide::High) => BankMask { outer_bit_count: 6, inner_bit_count: 3 },
-            (Action53Layout::FixedFirstHalf , OuterBankSize::Kib256, BankSide::High) => BankMask { outer_bit_count: 5, inner_bit_count: 4 },
-
-            (Action53Layout::FixedSecondHalf, OuterBankSize::Kib32 , BankSide::Low ) => BankMask { outer_bit_count: 8, inner_bit_count: 1 },
-            (Action53Layout::FixedSecondHalf, OuterBankSize::Kib64 , BankSide::Low ) => BankMask { outer_bit_count: 7, inner_bit_count: 2 },
-            (Action53Layout::FixedSecondHalf, OuterBankSize::Kib128, BankSide::Low ) => BankMask { outer_bit_count: 6, inner_bit_count: 3 },
-            (Action53Layout::FixedSecondHalf, OuterBankSize::Kib256, BankSide::Low ) => BankMask { outer_bit_count: 5, inner_bit_count: 4 },
-            (Action53Layout::FixedSecondHalf, _                    , BankSide::High) => BankMask { outer_bit_count: 8, inner_bit_count: 0 },
-        }
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, Default)]
 enum Register {
+    #[default]
     ChrBank,
     InnerPrgBank,
     Mode,
     OuterPrgBank,
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-enum Action53Layout {
-    // AOROM/BNROM
-    FullySwitchable,
-    // UNROM
-    FixedFirstHalf,
-    // UNROM alternate (Mapper 180, Crazy Climber)
-    FixedSecondHalf,
-}
-
-#[derive(Clone, Copy, Debug)]
-enum OuterBankSize {
-    Kib32,
-    Kib64,
-    Kib128,
-    Kib256,
-}
-
-#[derive(Debug)]
-enum BankSide {
-    Low,
-    High,
-}
-
-#[derive(Clone, Copy)]
-struct BankMask {
-    outer_bit_count: u8,
-    inner_bit_count: u8,
-}
-
-impl BankMask {
-    fn total_count(self) -> u8 {
-        self.outer_bit_count + self.inner_bit_count
-    }
 }

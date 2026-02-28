@@ -1,4 +1,4 @@
-use std::num::NonZeroU8;
+use std::num::NonZeroU16;
 
 use log::{info, warn};
 
@@ -35,7 +35,7 @@ impl ChrMemory {
         layouts: Vec<ChrLayout>,
         layout_index: u8,
         align_large_chr_banks: bool,
-        rom_outer_bank_count: NonZeroU8,
+        rom_outer_bank_count: NonZeroU16,
         mut rom: RawMemory,
         mut ram: RawMemory,
         name_table_mirroring: NameTableMirroring,
