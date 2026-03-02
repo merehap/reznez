@@ -4,25 +4,26 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(1024 * KIBIBYTE)
     // UNROM-like
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.fixed_number(0)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT),
         PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P)),
         PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.fixed_number(0x20)),
     ])
     // NROM-like, but reversed ordering of the 16KiB banks.
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.fixed_number(0)),
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(R)), // P0 with a low bit of 1
-        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(Q)), // P0 with a low bit of 0
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT),
+        // P, but with inverted low bits.
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.rom_address_template("p₀₅p₀₄p₀₃p₀₂p₀₁1₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.rom_address_template("p₀₅p₀₄p₀₃p₀₂p₀₁0₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
     ])
     // Reverse UNROM-like
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.fixed_number(0)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT),
         PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.fixed_number(0x1F)),
         PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P)),
     ])
     // Duplicate of the above PRG layout.
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.fixed_number(0)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT),
         PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.fixed_number(0x1F)),
         PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P)),
     ])
@@ -65,10 +66,8 @@ impl Mapper for Mapper167 {
 
         let prg_left_input = self.left_prg_top_bit | self.left_prg_bottom_bits;
         let prg_right_input = self.right_prg_top_bit | self.right_prg_bottom_bits;
-        let prg_bank = prg_left_input & prg_right_input;
+        let prg_bank = prg_left_input ^ prg_right_input;
         bus.set_prg_register(P, prg_bank);
-        bus.set_prg_register(Q, prg_bank & !1); // Clear bottom bit
-        bus.set_prg_register(R, prg_bank | 1); // Set bottom bit
     }
 
     fn layout(&self) -> Layout {
