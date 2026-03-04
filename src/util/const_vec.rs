@@ -59,6 +59,12 @@ impl <T: Clone + Copy, const CAPACITY: usize> ConstVec<T, CAPACITY> {
         unsafe { Some(self.backing[index as usize].assume_init_mut()) }
     }
 
+    pub const fn set(&mut self, index: u8, value: T) {
+        assert!(index < self.len);
+        // SAFETY: The assertion above ensures that the index is initialized.
+        self.backing[index as usize].write(value);
+    }
+
     pub const fn push(&mut self, new_value: T) {
         self.len = self.len.checked_add(1)
             .expect("not more than 256 items to be pushed");
@@ -82,6 +88,23 @@ impl <T: Clone + Copy, const CAPACITY: usize> ConstVec<T, CAPACITY> {
         }
 
         self.backing[0].write(new_value);
+    }
+
+    pub const fn insert(&mut self, index: u8, value: T) {
+        assert!(index < self.len);
+        // After this line, the ConstVec is in an invalid state until the value at self.len - 1 is set.
+        self.len = self.len.checked_add(1)
+            .expect("not more than 256 items to be present");
+        assert!((self.len as usize) <= CAPACITY);
+
+        // Shift up everything at or above index, making room for the value to insert.
+        let mut i = index;
+        while i + 1 < self.len {
+            self.set(i + 1, self.get(i));
+            i += 1;
+        }
+
+        self.set(index, value);
     }
 
     pub const fn decrease_len_to(&mut self, new_len: u8) {

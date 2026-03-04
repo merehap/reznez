@@ -56,6 +56,12 @@ impl BitTemplate {
         Ok(BitTemplate::right_to_left(segments, None))
     }
 
+    pub const fn empty_segment_inserted(&self, index: u8) -> Self {
+        let mut result = *self;
+        result.segments.insert(index, Segment::EMPTY_UNLABELED);
+        result
+    }
+
     pub fn shortened(&self, new_width: u8) -> Self {
         let mut result = *self;
         let mut shorten_amount = result.width().strict_sub(new_width);
@@ -107,6 +113,19 @@ impl BitTemplate {
 
     pub fn constant_at(&self, segment_index: u8) -> Option<u16> {
         Some(self.segments.maybe_get(segment_index)?.constant())
+    }
+
+    pub const fn index_of_label(&self, target: char) -> Option<u8> {
+        let mut i = 0;
+        while i < self.segments.len() {
+            if let Some(label) = self.segments.get(i).label() && label.to_char() == target {
+                return Some(i);
+            }
+
+            i += 1;
+        }
+
+        None
     }
 
     pub fn resolve(&self, raw_values: &[u16]) -> u32 {

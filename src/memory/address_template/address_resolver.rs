@@ -138,7 +138,17 @@ impl AddressResolver {
     }
 
     pub const fn from_formatted(text: &'static str, work_ram_start_inner_bank_number: u16) -> Result<Self, &'static str> {
-        Self::from_bit_template(BitTemplate::from_formatted(text)?, work_ram_start_inner_bank_number)
+        let mut bit_template = BitTemplate::from_formatted(text)?;
+        let base_address_index = bit_template.index_of_label('a').expect("Base Address Segment");
+
+        // If the outer bank segment and base address segment are adjacent,
+        // then insert an empty inner bank segment between them.
+        if let Some(outer_segment_index) = bit_template.index_of_label('o')
+                && outer_segment_index.strict_sub(base_address_index) == 1 {
+            bit_template = bit_template.empty_segment_inserted(outer_segment_index);
+        }
+
+        Self::from_bit_template(bit_template, work_ram_start_inner_bank_number)
     }
 
     const fn from_bit_template(bit_template: BitTemplate, work_ram_start_inner_bank_number: u16) -> Result<Self, &'static str> {
@@ -261,5 +271,7 @@ mod test {
         assert_eq!(reduced_resolver.total_width(), 19);
         assert_eq!(reduced_resolver.resolve_inner_bank_number(), 0);
         assert_eq!(reduced_resolver.formatted(), "o₀₃o₀₂o₀₁o₀₀a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀");
+
+        assert_eq!(reduced_resolver.segment_count(), 3, "Missing empty inner bank segment?");
     }
 }

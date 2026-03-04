@@ -8,6 +8,7 @@ pub struct Segment {
 }
 
 impl Segment {
+    pub const EMPTY_UNLABELED: Self = Self::unlabeled(0, 0);
     const SEGMENT_ATOM_LENGTH: usize = 7;
 
     pub const fn labeled(name: char, magnitude: u8) -> Self {
