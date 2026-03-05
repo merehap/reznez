@@ -1,3 +1,5 @@
+use splitbits::replacebits;
+
 use crate::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
@@ -41,10 +43,8 @@ const LAYOUT: Layout = Layout::builder()
 // TODO: Testing. Need to support non-NTSC.
 #[derive(Default)]
 pub struct Mapper167 {
-    left_prg_top_bit: u8,
-    right_prg_top_bit: u8,
-    left_prg_bottom_bits: u8,
-    right_prg_bottom_bits: u8,
+    left_bits: u8,
+    right_bits: u8,
 }
 
 impl Mapper for Mapper167 {
@@ -53,20 +53,26 @@ impl Mapper for Mapper167 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0x9FFF => {
-                bus.set_name_table_mirroring(value & 1);
-                self.left_prg_top_bit = (value << 1) & 0b0010_0000;
+                let (t, mirroring) = splitbits_named!(min=u8, value, "...t ...m");
+                bus.set_name_table_mirroring(mirroring);
+                self.left_bits = replacebits!(self.left_bits, "00t. ....");
             }
             0xA000..=0xBFFF => {
-                bus.set_prg_layout((value >> 2) & 0b11);
-                self.right_prg_top_bit = (value << 1) & 0b0010_0000;
+                let (t, prg_layout) = splitbits_named!(min=u8, value, "...t ll..");
+                bus.set_prg_layout(prg_layout);
+                self.right_bits = replacebits!(self.right_bits, "00t. ....");
             }
-            0xC000..=0xDFFF => self.left_prg_bottom_bits = value & 0b0001_1111,
-            0xE000..=0xFFFF => self.right_prg_bottom_bits = value & 0b0001_1111,
+            0xC000..=0xDFFF => {
+                let v = value;
+                self.left_bits = replacebits!(self.left_bits, "...v vvvv");
+            }
+            0xE000..=0xFFFF => {
+                let v = value;
+                self.right_bits = replacebits!(self.right_bits, "...v vvvv");
+            }
         }
 
-        let prg_left_input = self.left_prg_top_bit | self.left_prg_bottom_bits;
-        let prg_right_input = self.right_prg_top_bit | self.right_prg_bottom_bits;
-        let prg_bank = prg_left_input ^ prg_right_input;
+        let prg_bank = self.left_bits ^ self.right_bits;
         bus.set_prg_register(P, prg_bank);
     }
 
