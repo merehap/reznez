@@ -12,6 +12,9 @@ use crate::apu::dmc::Dmc;
 use crate::cpu::dmc_dma::DmcDma;
 use crate::mapper::ReadResult;
 use crate::memory::cpu::cpu_pinout::CpuPinout;
+use crate::util::circular_buffer::CircularBuffer;
+
+const STORED_SAMPLE_COUNT: u32 = 1000;
 
 pub struct ApuRegisters {
     pub pulse_1: PulseChannel<{NegateBehavior::OnesComplement}>,
@@ -19,6 +22,13 @@ pub struct ApuRegisters {
     pub triangle: TriangleChannel,
     pub noise: NoiseChannel,
     pub dmc: Dmc,
+
+    pub pulse1_volumes: CircularBuffer<f64>,
+    pub pulse2_volumes: CircularBuffer<f64>,
+    pub triangle_volumes: CircularBuffer<f64>,
+    pub noise_volumes: CircularBuffer<f64>,
+    pub dmc_volumes: CircularBuffer<f64>,
+    pub mixed_values: CircularBuffer<f64>,
 
     pending_step_mode: StepMode,
     dmc_enabled: bool,
@@ -41,6 +51,13 @@ impl ApuRegisters {
             triangle: TriangleChannel::default(),
             noise: NoiseChannel::default(),
             dmc: Dmc::default(),
+
+            pulse1_volumes: CircularBuffer::default_filled(STORED_SAMPLE_COUNT),
+            pulse2_volumes: CircularBuffer::default_filled(STORED_SAMPLE_COUNT),
+            triangle_volumes: CircularBuffer::default_filled(STORED_SAMPLE_COUNT),
+            noise_volumes: CircularBuffer::default_filled(STORED_SAMPLE_COUNT),
+            dmc_volumes: CircularBuffer::default_filled(STORED_SAMPLE_COUNT),
+            mixed_values: CircularBuffer::default_filled(STORED_SAMPLE_COUNT),
 
             pending_step_mode: StepMode::FourStep,
             dmc_enabled: false,

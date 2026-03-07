@@ -65,15 +65,31 @@ impl Apu {
         }
     }
 
-    fn maybe_enqueue_mixed_sample(bus: &Bus) {
+    fn maybe_enqueue_mixed_sample(bus: &mut Bus) {
         if bus.apu_clock().raw_apu_cycle().is_multiple_of(20) {
-            let mut queue = bus.apu.pulse_queue.lock().unwrap();
-            let regs = &bus.apu_regs;
+            let mixed_sampled = Apu::mix_samples(&bus.apu_regs);
+
+            {
+                let mut queue = bus.apu.pulse_queue.lock().unwrap();
+                if queue.len() < MAX_QUEUE_LENGTH {
+                    queue.push_back(mixed_sampled);
+                } else {
+                    warn!("Samples dropped: maximum APU queue length exceeded. Length: {}", queue.len());
+                }
+            }
+
+            bus.apu_regs.pulse1_volumes.push(u8::from(bus.apu_regs.pulse_1.sample_volume()).into());
+            bus.apu_regs.pulse2_volumes.push(u8::from(bus.apu_regs.pulse_2.sample_volume()).into());
+            bus.apu_regs.triangle_volumes.push(u8::from(bus.apu_regs.triangle.sample_volume()).into());
+            bus.apu_regs.noise_volumes.push(u8::from(bus.apu_regs.noise.sample_volume()).into());
+            bus.apu_regs.dmc_volumes.push(u8::from(bus.apu_regs.dmc.sample_volume()).into());
+            bus.apu_regs.mixed_values.push(mixed_sampled.into());
             if log_enabled!(target: "apusamples", Level::Info) {
                 fn disp(volume: u8) -> String {
                     if volume == 0 { String::new() } else { volume.to_string() }
                 }
 
+                let regs = &bus.apu_regs;
                 info!("{:05} ({:08}), PPU Frame: {:05}, P1: {:>2}, P2: {:>2}, T: {:>2}, N: {:>2}, D: {:>2}",
                     bus.master_clock.apu_clock.cpu_cycle(),
                     bus.apu_clock().raw_apu_cycle(),
@@ -84,12 +100,6 @@ impl Apu {
                     disp(regs.noise.sample_volume().into()),
                     disp(regs.dmc.sample_volume()),
                 );
-            }
-
-            if queue.len() < MAX_QUEUE_LENGTH {
-                queue.push_back(Apu::mix_samples(regs));
-            } else {
-                warn!("Samples dropped: maximum APU queue length exceeded. Length: {}", queue.len());
             }
         }
     }

@@ -11,6 +11,7 @@ use winit_input_helper::WinitInputHelper;
 use crate::controller::joypad::{Button, ButtonStatus};
 use crate::gui::gui::{execute_frame, Events};
 pub use crate::gui::window_renderer::{FlowControl, WindowRenderer};
+use crate::gui::window_renderers::audio_visualizer::AudioVisualizer;
 use crate::gui::window_renderers::cartridge_metadata_renderer::CartridgeMetadataRenderer;
 use crate::gui::window_renderers::cartridge_query_renderer::CartridgeQueryPopupRenderer;
 use crate::gui::window_renderers::display_settings_renderer::DisplaySettingsRenderer;
@@ -198,6 +199,14 @@ impl WindowRenderer for PrimaryRenderer {
                             Box::new(MemoryViewerRenderer),
                             Position::Physical(PhysicalPosition { x: 600, y: 200 }),
                             1,
+                        ));
+                    }
+                    if ui.button("Audio Visualizer").clicked() {
+                        ui.close_menu();
+                        result = FlowControl::spawn_window((
+                            Box::new(AudioVisualizer::new()),
+                            Position::Physical(PhysicalPosition { x: 600, y: 200 }),
+                            2,
                         ));
                     }
                     if ui.button("Cartridge Metadata").clicked() {

@@ -1,3 +1,4 @@
+pub mod audio_visualizer;
 pub mod cartridge_metadata_renderer;
 pub mod cartridge_query_renderer;
 pub mod display_settings_renderer;
