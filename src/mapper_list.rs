@@ -477,7 +477,9 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (206, Some(1)) => TodoSubmapper,
         // Taito's X1-005 (alternate name table mirrorings)
         (207, None) => m::mapper207::Mapper207::new().supported(),
-        (208, _) => TodoMapper,
+        (208, None) => UnspecifiedSubmapper,
+        // Street Fighter IV
+        (208, Some(0)) => m::mapper208::Mapper208::new().supported(),
         // Standard J.Y. Company ASIC (512KiB outer bank size)
         (209, None) => m::mapper209::Mapper209::new().supported(),
 
