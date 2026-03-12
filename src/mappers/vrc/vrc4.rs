@@ -89,11 +89,17 @@ impl Mapper for Vrc4 {
                 }
             }
 
-            0xF000 => self.irq_state.set_reload_value_low_bits(value),
-            0xF001 => self.irq_state.set_reload_value_high_bits(value),
-            0xF002 => self.irq_state.set_mode(bus, value),
-            0xF003 => self.irq_state.acknowledge(bus),
-            0x4020..=0xFFFF => { /* All other writes do nothing. */ }
+            0xF000..=0xFFFF => {
+                match (*addr & 0xF) as u8 {
+                    0x0 => self.irq_state.set_reload_value_low_bits(value),
+                    0x1 => self.irq_state.set_reload_value_high_bits(value),
+                    0x2 => self.irq_state.set_mode(bus, value),
+                    0x3 => self.irq_state.acknowledge(bus),
+                    0x4..=0xF => { /* No regs here. */ }
+                    0x10..=0xFF => unreachable!(),
+                }
+            }
+            0x4020..=0xEFFF => { /* All other writes do nothing. */ }
         }
     }
 
