@@ -62,6 +62,7 @@ Gracefully handle bad CHR size? ((( Argus (J) [hM03][o2].nes ))) ((( Atlantis no
 Gracefully handle bad PRG size? ((( Boy and His Blob, A - Trouble on Blobolonia (U) [o5].nes )))
 (Low priority) What should happen when BankIndex > bank_count when bank_count isn't a power of 2? Open bus?
 Arkanoid: Extra sprite.
+Ganbare Goemon Gaiden 2: Bottom half of splash screen is CHR corrupted. Mesen apparently has an APU Frame IRQ triggering at Cycle:235856 but REZNEZ doesn't (who is right is not confirmed).
 
 UNTESTED BY EXISTING TEST ROMS
 IRQ behavior for the vast majority of IRQ mappers
