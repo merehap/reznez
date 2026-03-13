@@ -38,41 +38,39 @@ pub struct Vrc2 {
 
 impl Mapper for Vrc2 {
     fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
-        match *addr {
-            0x0000..=0x401F => unreachable!(),
+        // CHR banking regs are unmasked.
+        if matches!(*addr, 0xB000..=0xEFFF) {
+            let mut bank;
+            let mask;
+            let mut register_id = self.low_address_bank_register_ids.get(&addr);
+            if register_id.is_some() {
+                bank = u16::from(value);
+                mask = Some(0b0000_1111);
+            } else {
+                register_id = self.high_address_bank_register_ids.get(&addr);
+                bank = u16::from(value) << 4;
+                mask = Some(0b1111_0000);
+            }
+
+            if let (Some(&register_id), Some(mut mask)) = (register_id, mask) {
+                if self.chr_bank_low_bit_behavior == BankLowBitBehavior::Ignore {
+                    bank >>= 1;
+                    mask >>= 1;
+                }
+
+                bus.set_chr_bank_register_bits(register_id, bank, mask);
+            }
+        }
+
+        match *addr & 0xF00F {
             // TODO: Properly implement microwire interface.
             0x6000..=0x7FFF => { /* Do nothing. */ }
             // Set bank for 8000 through 9FFF.
             0x8000..=0x8003 => bus.set_prg_register(P, value & 0b0001_1111),
-            0x9000 => bus.set_name_table_mirroring(value & 1),
+            0x9000..=0x9003 => bus.set_name_table_mirroring(value & 1),
             // Set bank for A000 through AFFF.
             0xA000..=0xA003 => bus.set_prg_register(Q, value & 0b0001_1111),
-
-            // Set a CHR bank mapping.
-            0xB000..=0xEFFF => {
-                let mut bank;
-                let mask;
-                let mut register_id = self.low_address_bank_register_ids.get(&addr);
-                if register_id.is_some() {
-                    bank = u16::from(value);
-                    mask = Some(0b0000_1111);
-                } else {
-                    register_id = self.high_address_bank_register_ids.get(&addr);
-                    bank = u16::from(value) << 4;
-                    mask = Some(0b1111_0000);
-                }
-
-                if let (Some(&register_id), Some(mut mask)) = (register_id, mask) {
-                    if self.chr_bank_low_bit_behavior == BankLowBitBehavior::Ignore {
-                        bank >>= 1;
-                        mask >>= 1;
-                    }
-
-                    bus.set_chr_bank_register_bits(register_id, bank, mask);
-                }
-            }
-
-            0x4020..=0xFFFF => { /* All other writes do nothing. */ }
+            0x0000..=0xFFFF => { /* No regs here or handled above. */ }
         }
     }
 
