@@ -34,9 +34,19 @@ pub struct Vrc2 {
     low_address_bank_register_ids: BTreeMap<CpuAddress, ChrBankRegisterId>,
     high_address_bank_register_ids: BTreeMap<CpuAddress, ChrBankRegisterId>,
     chr_bank_low_bit_behavior: BankLowBitBehavior,
+
+    microwire_latch: bool,
 }
 
 impl Mapper for Vrc2 {
+    fn peek_register(&self, _bus: &Bus, addr: CpuAddress) -> ReadResult {
+        if matches!(*addr, 0x6000..=0x6FFF) {
+            ReadResult::partial(self.microwire_latch as u8, 0b0000_0001)
+        } else {
+            ReadResult::OPEN_BUS
+        }
+    }
+
     fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         // CHR banking regs are unmasked.
         if matches!(*addr, 0xB000..=0xEFFF) {
@@ -64,7 +74,7 @@ impl Mapper for Vrc2 {
 
         match *addr & 0xF00F {
             // TODO: Properly implement microwire interface.
-            0x6000..=0x7FFF => { /* Do nothing. */ }
+            0x6000..=0x7FFF => self.microwire_latch = value & 1 == 1,
             // Set bank for 8000 through 9FFF.
             0x8000..=0x8003 => bus.set_prg_register(P, value & 0b0001_1111),
             0x9000..=0x9003 => bus.set_name_table_mirroring(value & 1),
@@ -96,6 +106,7 @@ impl Vrc2 {
             low_address_bank_register_ids,
             high_address_bank_register_ids,
             chr_bank_low_bit_behavior,
+            microwire_latch: false,
         }
     }
 }
