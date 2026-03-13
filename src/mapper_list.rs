@@ -429,7 +429,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (180, None) => m::mapper180::Mapper180.supported(),
         (181, _) => UnassignedMapper,
         (182, _) => TodoMapper,
-        (183, _) => TodoMapper,
+        (183, None) => m::mapper183::Mapper183::new().supported(),
         // Sunsoft-1
         (184, None) => m::mapper184::Mapper184.supported(),
         // CNROM with CHR RAM disable
