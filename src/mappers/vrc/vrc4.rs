@@ -53,9 +53,28 @@ impl Mapper for Vrc4 {
     }
 
     fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
-        match *addr {
-            0x0000..=0x401F => unreachable!(),
-            0x6000..=0x7FFF => { /* Do nothing. */ }
+        // Set a CHR bank mapping regs are unmasked.
+        if matches!(*addr, 0xB000..=0xEFFF) {
+            let bank;
+            let mask;
+            let mut register_id = self.low_address_bank_register_ids.get(&addr);
+            if register_id.is_some() {
+                bank = u16::from(value);
+                mask = Some(0b0_0000_1111);
+            } else {
+                register_id = self.high_address_bank_register_ids.get(&addr);
+                bank = u16::from(value) << 4;
+                mask = Some(0b1_1111_0000);
+            }
+
+            if let (Some(&register_id), Some(mask)) = (register_id, mask) {
+                bus.set_chr_bank_register_bits(register_id, bank, mask);
+            }
+
+            return;
+        }
+
+        match *addr & 0xF00F {
             // Set bank for 8000 through 9FFF (or C000 through DFFF).
             0x8000..=0x8003 => bus.set_prg_register(P, value & 0b0001_1111),
             0x9000 => {
@@ -69,37 +88,11 @@ impl Mapper for Vrc4 {
             }
             // Set bank for A000 through AFFF.
             0xA000..=0xA003 => bus.set_prg_register(Q, value & 0b0001_1111),
-
-            // Set a CHR bank mapping.
-            0xB000..=0xEFFF => {
-                let bank;
-                let mask;
-                let mut register_id = self.low_address_bank_register_ids.get(&addr);
-                if register_id.is_some() {
-                    bank = u16::from(value);
-                    mask = Some(0b0_0000_1111);
-                } else {
-                    register_id = self.high_address_bank_register_ids.get(&addr);
-                    bank = u16::from(value) << 4;
-                    mask = Some(0b1_1111_0000);
-                }
-
-                if let (Some(&register_id), Some(mask)) = (register_id, mask) {
-                    bus.set_chr_bank_register_bits(register_id, bank, mask);
-                }
-            }
-
-            0xF000..=0xFFFF => {
-                match (*addr & 0xF) as u8 {
-                    0x0 => self.irq_state.set_reload_value_low_bits(value),
-                    0x1 => self.irq_state.set_reload_value_high_bits(value),
-                    0x2 => self.irq_state.set_mode(bus, value),
-                    0x3 => self.irq_state.acknowledge(bus),
-                    0x4..=0xF => { /* No regs here. */ }
-                    0x10..=0xFF => unreachable!(),
-                }
-            }
-            0x4020..=0xEFFF => { /* All other writes do nothing. */ }
+            0xF000 => self.irq_state.set_reload_value_low_bits(value),
+            0xF001 => self.irq_state.set_reload_value_high_bits(value),
+            0xF002 => self.irq_state.set_mode(bus, value),
+            0xF003 => self.irq_state.acknowledge(bus),
+            _ => { /* No regs here, or already handled above. */ }
         }
     }
 

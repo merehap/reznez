@@ -34,7 +34,9 @@ impl VrcIrqState {
 
         if self.mode == IrqMode::Scanline {
             self.prescaler -= 3;
+            log::info!("Decremented prescaler to {}", self.prescaler);
             if self.prescaler <= 0 {
+                log::info!("Resetting prescaler");
                 // Reset the prescaler.
                 self.prescaler += 341;
             } else {
@@ -46,7 +48,9 @@ impl VrcIrqState {
         if self.counter == 0xFF {
             bus.cpu_pinout.assert_mapper_irq();
             self.counter = self.counter_reload_value;
+            log::info!("Reloaded counter to {}", self.counter);
         } else {
+            log::info!("Incrementing counter");
             self.counter += 1;
         }
     }
@@ -69,8 +73,10 @@ impl VrcIrqState {
         let mode;
         (mode, self.enable_upon_acknowledgement, self.enabled) = splitbits_named!(value, ".....mae");
         self.mode = if mode { IrqMode::Cycle } else { IrqMode::Scanline };
+        log::info!("Irq Mode set to {:?}", self.mode);
         if self.enabled {
             self.counter = self.counter_reload_value;
+            log::info!("Force reloaded counter to {}", self.counter);
         }
     }
 
