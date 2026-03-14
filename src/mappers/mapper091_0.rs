@@ -1,6 +1,6 @@
 use crate::mapper::*;
 use crate::counter::counter::WhenDisabledPrevent;
-use crate::util::edge_detector::EdgeDetector;
+use crate::util::pattern_table_transition_detector::{PatternTableTransitionDetector, AllowedAddresses};
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)
@@ -37,7 +37,7 @@ const IRQ_COUNTER: ReloadDrivenCounter = CounterBuilder::new()
 // J.Y. Company JY830623C and YY840238C
 pub struct Mapper091_0 {
     irq_counter: ReloadDrivenCounter,
-    pattern_table_transition_detector: EdgeDetector<PatternTableSide>,
+    transition_detector: PatternTableTransitionDetector,
 }
 
 impl Mapper for Mapper091_0 {
@@ -67,8 +67,8 @@ impl Mapper for Mapper091_0 {
     }
 
     fn on_ppu_address_change(&mut self, bus: &mut Bus, address: PpuAddress) {
-        let should_tick = self.pattern_table_transition_detector.set_value_then_detect(address.pattern_table_side());
-        if should_tick && self.irq_counter.tick().triggered {
+        let transition_detected = self.transition_detector.detect(address) == Some(PatternTableSide::Right);
+        if transition_detected && self.irq_counter.tick().triggered {
             bus.cpu_pinout.assert_mapper_irq();
         }
     }
@@ -86,7 +86,8 @@ impl Mapper091_0 {
     pub fn new() -> Self {
         Self {
             irq_counter: IRQ_COUNTER,
-            pattern_table_transition_detector: EdgeDetector::target_value(PatternTableSide::Right),
+            // TODO: Verify if AllowedAddresses::All is correct here.
+            transition_detector: PatternTableTransitionDetector::new(AllowedAddresses::All),
         }
     }
 }

@@ -1,22 +1,10 @@
 use std::marker::ConstParamTy_;
 
-use crate::ppu::pattern_table_side::PatternTableSide;
-
 pub struct EdgeDetector<V: ConstParamTy_> {
     target_value: Option<V>,
 
     previous_value: V,
     value: V,
-}
-
-impl EdgeDetector<PatternTableSide> {
-    pub const fn pattern_table_side_detector(target_side: PatternTableSide) -> Self {
-        Self {
-            target_value: Some(target_side),
-            previous_value: PatternTableSide::Left,
-            value: PatternTableSide::Left,
-        }
-    }
 }
 
 impl <V: PartialEq + Eq + Clone + Copy + Default + ConstParamTy_> EdgeDetector<V> {
