@@ -28,7 +28,7 @@ pub struct TriangleChannel {
 impl TriangleChannel {
     // Write 0x4008
     pub fn set_control_and_linear(&mut self, value: u8) {
-        (self.counter_control, self.linear_counter) = splitbits_named_ux!(value, "clll llll");
+        (self.counter_control, self.linear_counter_reload_value) = splitbits_named_ux!(value, "clll llll");
         self.length_counter.start_halt(self.counter_control);
     }
 
