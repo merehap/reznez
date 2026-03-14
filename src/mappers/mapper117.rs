@@ -1,5 +1,5 @@
 use crate::mapper::*;
-use crate::util::edge_detector::EdgeDetector;
+use crate::util::pattern_table_transition_detector::{PatternTableTransitionDetector, AllowedAddresses};
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(2048 * KIBIBYTE)
@@ -40,7 +40,7 @@ const IRQ_COUNTER: ReloadDrivenCounter = CounterBuilder::new()
 // Future Media
 pub struct Mapper117 {
     irq_counter: ReloadDrivenCounter,
-    pattern_table_side_detector: EdgeDetector<PatternTableSide>,
+    transition_detector: PatternTableTransitionDetector,
 }
 
 impl Mapper for Mapper117 {
@@ -74,13 +74,8 @@ impl Mapper for Mapper117 {
     }
 
     fn on_ppu_address_change(&mut self, bus: &mut Bus, address: PpuAddress) {
-        // Ignore PPUDATA false positives when detecting if a pattern table transition is occurring.
-        if !address.is_in_pattern_table() {
-            return;
-        }
-
-        let right_table_started_rendering = self.pattern_table_side_detector.set_value_then_detect(address.pattern_table_side());
-        if right_table_started_rendering && self.irq_counter.tick().triggered {
+        let transitioned_right = self.transition_detector.detect(address) == Some(PatternTableSide::Right);
+        if transitioned_right && self.irq_counter.tick().triggered {
             bus.cpu_pinout.assert_mapper_irq();
         }
     }
@@ -98,7 +93,7 @@ impl Mapper117 {
     pub fn new() -> Self {
         Self {
             irq_counter: IRQ_COUNTER,
-            pattern_table_side_detector: EdgeDetector::pattern_table_side_detector(PatternTableSide::Right),
+            transition_detector: PatternTableTransitionDetector::new(AllowedAddresses::PatternTableOnly),
         }
     }
 }

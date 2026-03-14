@@ -177,6 +177,7 @@ const IRQ_COUNTER: DirectlySetCounter = CounterBuilder::new()
 const ONE: NonZeroI8 = NonZeroI8::new(1).unwrap();
 const NEGATIVE_ONE: NonZeroI8 = NonZeroI8::new(-1).unwrap();
 
+// Standard J.Y. Company ASIC (512KiB outer bank size)
 pub struct Mapper209 {
     irq_counter: DirectlySetCounter,
     irq_ticked_by: IrqTickedBy,
