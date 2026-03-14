@@ -29,6 +29,7 @@ const LAYOUT: Layout = Layout::builder()
 
 const IRQ_COUNTER: ReloadDrivenCounter = CounterBuilder::new()
     .full_range(0, 255)
+    .initial_range(0, 255)
     .initial_count(0)
     .step(-1)
     .wraps(false)

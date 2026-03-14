@@ -45,6 +45,7 @@ const IRQ_COUNTER: ReloadDrivenCounter = CounterBuilder::new()
     .step(1)
     .wraps(true)
     .full_range(0, 0x7FFF)
+    .initial_range(0, 0x7FFF)
     .initial_count(0)
     .auto_trigger_when(AutoTriggerWhen::EndingOn(0x6000))
     // Todo: Verify timing.

@@ -240,7 +240,7 @@ impl Counter {
                 // The prescaler didn't trigger yet, so don't tick nor trigger the actual counter.
                 return TickResult { skipped: true, wrapped: false, triggered: false };
             }
-            
+
             let end_count_reached = old_count == self.end_count();
             if forced_reload_pending {
                 self.count = self.reload_value();
@@ -389,6 +389,7 @@ impl CounterBuilder {
     pub const fn build_reload_driven_counter(self) -> ReloadDrivenCounter {
         assert!(self.forced_reload_timing.is_some(),
             "forced_reload_timing must be set. If forced-reloading is not needed, use build_directly_settable() instead.");
+        assert!(self.initial_range.is_some(), "ReloadDriveCounters must set initial_range.");
         let counter = self.build();
         assert!(!self.trigger_on_forced_reload_with_target_count || !matches!(counter.auto_triggered_by, AutoTriggerWhen::Wrapping));
         ReloadDrivenCounter {
@@ -418,8 +419,8 @@ impl CounterBuilder {
             assert!(wraps, "Enable wrapping in order to AutoTriggerWhen::Wrapping.");
         }
 
-        let max_range = self.full_range.expect("max_range must be set");
-        let current_range = self.initial_range.unwrap_or(max_range);
+        let full_range = self.full_range.expect("full_range must be set");
+        let current_range = self.initial_range.unwrap_or(full_range);
         if self.initial_count.is_none() && current_range.min == current_range.max {
             // We've verified that there is only one value the initial_count could be, so don't force the caller to specify it.
             self.initial_count = Some(current_range.min);
@@ -429,7 +430,7 @@ impl CounterBuilder {
         assert!(current_range.contains(count), "Initial count must be within initial_range (and full_range)");
 
         Counter {
-            full_range: max_range,
+            full_range,
             current_range,
             wraps,
             step: self.step.expect("step must be set"),

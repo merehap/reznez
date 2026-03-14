@@ -4,6 +4,7 @@ pub const IRQ_COUNTER: ReloadDrivenCounter = CounterBuilder::new()
     .step(1)
     .wraps(true)
     .full_range(0, 0xFFFF)
+    .initial_range(0, 0xFFFF)
     .initial_count(0)
     .auto_trigger_when(AutoTriggerWhen::Wrapping)
     // TODO: Verify.
