@@ -12,7 +12,7 @@ const VOLUME_SEQUENCE: [u8; 0x20] = [
 
 #[derive(Default)]
 pub struct TriangleChannel {
-    pub(super) enabled: bool,
+    enabled: bool,
 
     counter_control: bool,
     linear_counter_reload_value: u7,

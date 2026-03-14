@@ -13,9 +13,9 @@ const NTSC_PERIODS: [u16; 16] =
 //                   v                v
 // Envelope -------> Gate ----------> Gate --> (to mixer)
 pub struct NoiseChannel {
-    pub(super) enabled: bool,
     pub(super) length_counter: LengthCounter,
 
+    enabled: bool,
     frequency_timer: FrequencyTimer,
     shift_register: LinearFeedbackShiftRegister,
     envelope: Envelope,
