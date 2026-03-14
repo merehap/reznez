@@ -18,6 +18,11 @@ const MAX_QUEUE_LENGTH: usize = 2 * SAMPLE_RATE as usize;
 pub struct Apu {
     pulse_queue: Arc<Mutex<VecDeque<f32>>>,
     muted: Arc<Mutex<bool>>,
+    pulse_1_force_muted: bool,
+    pulse_2_force_muted: bool,
+    triangle_force_muted: bool,
+    noise_force_muted: bool,
+    dmc_force_muted: bool,
 }
 
 impl Apu {
@@ -41,11 +46,39 @@ impl Apu {
             });
         }
 
-        Apu { pulse_queue, muted }
+        Apu {
+            pulse_queue,
+            muted,
+            pulse_1_force_muted: false,
+            pulse_2_force_muted: false,
+            triangle_force_muted: false,
+            noise_force_muted: false,
+            dmc_force_muted: false,
+        }
     }
 
     pub fn mute(&mut self) {
         *self.muted.lock().unwrap() = true;
+    }
+
+    pub fn mute_pulse_1(&mut self) {
+        self.pulse_1_force_muted = true;
+    }
+
+    pub fn mute_pulse_2(&mut self) {
+        self.pulse_2_force_muted = true;
+    }
+
+    pub fn mute_triangle(&mut self) {
+        self.triangle_force_muted = true;
+    }
+
+    pub fn mute_noise(&mut self) {
+        self.noise_force_muted = true;
+    }
+
+    pub fn mute_dmc(&mut self) {
+        self.dmc_force_muted = true;
     }
 
     pub fn step(bus: &mut Bus) {
@@ -67,12 +100,12 @@ impl Apu {
 
     fn maybe_enqueue_mixed_sample(bus: &mut Bus) {
         if bus.apu_clock().raw_apu_cycle().is_multiple_of(20) {
-            let mixed_sampled = Apu::mix_samples(&bus.apu_regs);
+            let mixed_sample = bus.apu.mix_samples(&bus.apu_regs);
 
             {
                 let mut queue = bus.apu.pulse_queue.lock().unwrap();
                 if queue.len() < MAX_QUEUE_LENGTH {
-                    queue.push_back(mixed_sampled);
+                    queue.push_back(mixed_sample);
                 } else {
                     warn!("Samples dropped: maximum APU queue length exceeded. Length: {}", queue.len());
                 }
@@ -83,7 +116,7 @@ impl Apu {
             bus.apu_regs.triangle_volumes.push(u8::from(bus.apu_regs.triangle.sample_volume()).into());
             bus.apu_regs.noise_volumes.push(u8::from(bus.apu_regs.noise.sample_volume()).into());
             bus.apu_regs.dmc_volumes.push(u8::from(bus.apu_regs.dmc.sample_volume()).into());
-            bus.apu_regs.mixed_values.push(mixed_sampled.into());
+            bus.apu_regs.mixed_values.push(mixed_sample.into());
             if log_enabled!(target: "apusamples", Level::Info) {
                 fn disp(volume: u8) -> String {
                     if volume == 0 { String::new() } else { volume.to_string() }
@@ -104,12 +137,12 @@ impl Apu {
         }
     }
 
-    fn mix_samples(regs: &ApuRegisters) -> f32 {
-        let pulse_1 = f32::from(u8::from(regs.pulse_1.sample_volume()));
-        let pulse_2 = f32::from(u8::from(regs.pulse_2.sample_volume()));
-        let triangle = f32::from(regs.triangle.sample_volume());
-        let noise = f32::from(u8::from(regs.noise.sample_volume()));
-        let dmc = f32::from(regs.dmc.sample_volume());
+    fn mix_samples(&self, regs: &ApuRegisters) -> f32 {
+        let pulse_1 = if self.pulse_1_force_muted { 0.0 } else { f32::from(u8::from(regs.pulse_1.sample_volume())) };
+        let pulse_2 = if self.pulse_2_force_muted { 0.0 } else { f32::from(u8::from(regs.pulse_2.sample_volume())) };
+        let triangle = if self.triangle_force_muted { 0.0 } else { f32::from(regs.triangle.sample_volume()) };
+        let noise = if self.noise_force_muted { 0.0 } else { f32::from(u8::from(regs.noise.sample_volume())) };
+        let dmc = if self.dmc_force_muted { 0.0 } else { f32::from(regs.dmc.sample_volume()) };
 
         let pulse_out = 95.88 / (8128.0 / (pulse_1 + pulse_2) + 100.0);
         let tnd_out = 159.79 / ((1.0 / (triangle / 8227.0 + noise / 12241.0 + dmc / 22368.0)) + 100.0);
@@ -124,6 +157,7 @@ impl Apu {
 #[derive(Clone, Debug)]
 pub struct PulseWave {
     queue: Arc<Mutex<VecDeque<f32>>>,
+    // TODO: Is this actually necessary? Or can we just perform the muting upon sample mixing?
     muted: Arc<Mutex<bool>>,
     previous_value: f32,
 }

@@ -226,7 +226,6 @@ impl Counter {
             self.current_range = Range::new(self.current_range.min, modify(self.current_range.max));
         }
 
-        log::info!("New range is {:?}", self.current_range);
         assert!(self.current_range.is_subrange_of(self.full_range));
     }
 
