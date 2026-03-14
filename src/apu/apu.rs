@@ -17,7 +17,6 @@ const MAX_QUEUE_LENGTH: usize = 2 * SAMPLE_RATE as usize;
 
 pub struct Apu {
     pulse_queue: Arc<Mutex<VecDeque<f32>>>,
-    muted: Arc<Mutex<bool>>,
     pulse_1_force_muted: bool,
     pulse_2_force_muted: bool,
     triangle_force_muted: bool,
@@ -29,13 +28,11 @@ impl Apu {
     pub fn new(disable_audio: bool) -> Apu {
         // TODO: Select a proper capacity value.
         let pulse_queue = Arc::new(Mutex::new(VecDeque::with_capacity(MAX_QUEUE_LENGTH)));
-        let muted = Arc::new(Mutex::new(false));
 
         if !disable_audio {
             let cloned_queue = pulse_queue.clone();
-            let cloned_muted = muted.clone();
             thread::spawn(move || {
-                let source = PulseWave::new(cloned_queue, cloned_muted);
+                let source = AudioSource::new(cloned_queue);
                 let (_stream, stream_handle) = OutputStream::try_default().unwrap();
                 let sink = Sink::try_new(&stream_handle).unwrap();
                 sink.append(source);
@@ -48,7 +45,6 @@ impl Apu {
 
         Apu {
             pulse_queue,
-            muted,
             pulse_1_force_muted: false,
             pulse_2_force_muted: false,
             triangle_force_muted: false,
@@ -58,7 +54,11 @@ impl Apu {
     }
 
     pub fn mute(&mut self) {
-        *self.muted.lock().unwrap() = true;
+        self.pulse_1_force_muted = true;
+        self.pulse_2_force_muted = true;
+        self.triangle_force_muted = true;
+        self.noise_force_muted = true;
+        self.dmc_force_muted = true;
     }
 
     pub fn mute_pulse_1(&mut self) {
@@ -155,41 +155,37 @@ impl Apu {
 }
 
 #[derive(Clone, Debug)]
-pub struct PulseWave {
+pub struct AudioSource {
     queue: Arc<Mutex<VecDeque<f32>>>,
-    // TODO: Is this actually necessary? Or can we just perform the muting upon sample mixing?
-    muted: Arc<Mutex<bool>>,
     previous_value: f32,
 }
 
-impl PulseWave {
+impl AudioSource {
     #[inline]
-    pub fn new(queue: Arc<Mutex<VecDeque<f32>>>, muted: Arc<Mutex<bool>>) -> Self {
-        PulseWave {
+    pub fn new(queue: Arc<Mutex<VecDeque<f32>>>) -> Self {
+        AudioSource {
             queue,
-            muted,
             previous_value: 0.0,
         }
     }
 }
 
-impl Iterator for PulseWave {
+impl Iterator for AudioSource {
     type Item = f32;
 
     #[inline]
     fn next(&mut self) -> Option<f32> {
-        if *self.muted.lock().unwrap() {
-            None
-        } else if let Some(value) = self.queue.lock().unwrap().pop_front() {
+        if let Some(value) = self.queue.lock().unwrap().pop_front() {
             self.previous_value = value;
             Some(value)
         } else {
+            // If enqueuing has fallen behind, just repeat the previous mixed value and hope no one notices.
             Some(self.previous_value)
         }
     }
 }
 
-impl Source for PulseWave {
+impl Source for AudioSource {
     #[inline]
     fn current_frame_len(&self) -> Option<usize> {
         None
