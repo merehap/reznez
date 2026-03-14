@@ -1,7 +1,7 @@
 use std::num::NonZeroI8;
 
 use crate::mapper::*;
-use crate::util::edge_detector::EdgeDetector;
+use crate::util::pattern_table_transition_detector::{PatternTableTransitionDetector, AllowedAddresses};
 
 // TODO Fix the 0x6000 ROM alignments now that they aren't auto-aligned.
 const LAYOUT: Layout = Layout::builder()
@@ -182,7 +182,7 @@ pub struct Mapper209 {
     irq_counter: DirectlySetCounter,
     irq_ticked_by: IrqTickedBy,
     irq_xor_value: u8,
-    pattern_table_side_detector: EdgeDetector<PatternTableSide>,
+    transition_detector: PatternTableTransitionDetector,
 
     multiplicand: u8,
     multiplier: u8,
@@ -244,20 +244,20 @@ impl Mapper for Mapper209 {
                 //bus.set_prg_register(P9, reverse_lower_seven_bits(value));
             }
             (_, 0x9000, _) => bus.set_chr_register_low_byte(C, value),
-            (_, 0x9001, _) => bus.set_chr_register_low_byte(D, value),
-            (_, 0x9002, _) => bus.set_chr_register_low_byte(E, value),
-            (_, 0x9003, _) => bus.set_chr_register_low_byte(F, value),
-            (_, 0x9004, _) => bus.set_chr_register_low_byte(G, value),
-            (_, 0x9005, _) => bus.set_chr_register_low_byte(H, value),
-            (_, 0x9006, _) => bus.set_chr_register_low_byte(I, value),
-            (_, 0x9007, _) => bus.set_chr_register_low_byte(J, value),
             (_, 0xA000, _) => bus.set_chr_register_high_byte(C, value),
+            (_, 0x9001, _) => bus.set_chr_register_low_byte(D, value),
             (_, 0xA001, _) => bus.set_chr_register_high_byte(D, value),
+            (_, 0x9002, _) => bus.set_chr_register_low_byte(E, value),
             (_, 0xA002, _) => bus.set_chr_register_high_byte(E, value),
+            (_, 0x9003, _) => bus.set_chr_register_low_byte(F, value),
             (_, 0xA003, _) => bus.set_chr_register_high_byte(F, value),
+            (_, 0x9004, _) => bus.set_chr_register_low_byte(G, value),
             (_, 0xA004, _) => bus.set_chr_register_high_byte(G, value),
+            (_, 0x9005, _) => bus.set_chr_register_low_byte(H, value),
             (_, 0xA005, _) => bus.set_chr_register_high_byte(H, value),
+            (_, 0x9006, _) => bus.set_chr_register_low_byte(I, value),
             (_, 0xA006, _) => bus.set_chr_register_high_byte(I, value),
+            (_, 0x9007, _) => bus.set_chr_register_low_byte(J, value),
             (_, 0xA007, _) => bus.set_chr_register_high_byte(J, value),
             (_, 0xB000..=0xB003, _) => {
                 let quadrant = NameTableQuadrant::ALL[usize::from(*addr & 0b11)];
@@ -408,12 +408,12 @@ impl Mapper for Mapper209 {
     }
 
     fn on_ppu_read(&mut self, bus: &mut Bus, address: PpuAddress, _value: u8) {
-        let switched_to_right = self.pattern_table_side_detector.set_value_then_detect(address.pattern_table_side());
-        let should_tick_from_switch_to_right =
-            self.irq_ticked_by == IrqTickedBy::ChangedToRightSidePatternTable && switched_to_right;
+        let transitioned_right = self.transition_detector.detect(address) == Some(PatternTableSide::Right);
+        let should_tick_from_right_transition =
+            self.irq_ticked_by == IrqTickedBy::ChangedToRightSidePatternTable && transitioned_right;
         let should_tick_from_read = self.irq_ticked_by == IrqTickedBy::PpuRead;
 
-        let should_tick = should_tick_from_read || should_tick_from_switch_to_right;
+        let should_tick = should_tick_from_read || should_tick_from_right_transition;
         if should_tick && self.irq_counter.tick().triggered {
             bus.cpu_pinout.assert_mapper_irq();
         }
@@ -442,7 +442,8 @@ impl Mapper209 {
             // Unused starting value.
             irq_ticked_by: IrqTickedBy::CpuCycle,
             irq_xor_value: 0,
-            pattern_table_side_detector: EdgeDetector::target_value(PatternTableSide::Right),
+            // TODO: Verify if this should be AllowedAddresses::PatternTableOnly, the standard option.
+            transition_detector: PatternTableTransitionDetector::new(AllowedAddresses::All),
 
             multiplicand: 0,
             multiplier: 0,

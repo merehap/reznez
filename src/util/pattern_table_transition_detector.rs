@@ -1,4 +1,5 @@
-use crate::{mapper::PpuAddress, ppu::pattern_table_side::PatternTableSide};
+use crate::memory::ppu::ppu_address::PpuAddress;
+use crate::ppu::pattern_table_side::PatternTableSide;
 
 // A specialized EdgeDetector for PatternTableSide transitions.
 pub struct PatternTableTransitionDetector {
@@ -20,13 +21,12 @@ impl PatternTableTransitionDetector {
         }
 
         let curr_side = addr.pattern_table_side();
-        let transitioned_to = if curr_side == self.prev_side {
-            None
-        } else {
-            Some(curr_side)
-        };
+        if curr_side == self.prev_side {
+            return None;
+        }
+
         self.prev_side = curr_side;
-        transitioned_to
+        Some(curr_side)
     }
 }
 
