@@ -7,7 +7,7 @@ pub struct PatternTableTransitionDetector {
 }
 
 impl PatternTableTransitionDetector {
-    pub fn new(allowed_addresses: AllowedAddresses) -> Self {
+    pub const fn new(allowed_addresses: AllowedAddresses) -> Self {
         Self {
             prev_side: PatternTableSide::Left,
             allowed_addresses,

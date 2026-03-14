@@ -1,17 +1,15 @@
-use std::ops::RangeInclusive;
-
 use crate::mapper::IrqCounterInfo;
 use crate::bus::Bus;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::counter::counter::{AutoTriggerWhen, ReloadDrivenCounter, CounterBuilder, ForcedReloadTiming, PrescalerBehaviorOnForcedReload, PrescalerTriggeredBy, WhenDisabledPrevent};
-use crate::util::edge_detector::EdgeDetector;
+use crate::util::pattern_table_transition_detector::{PatternTableTransitionDetector, AllowedAddresses};
 
 pub struct Mmc3IrqState {
     counter: ReloadDrivenCounter,
-    allowed_address_range: RangeInclusive<u16>,
     suppressor: Suppressor,
-    pattern_table_side_detector: EdgeDetector<PatternTableSide>,
+    transition_detector: PatternTableTransitionDetector,
+    target_pattern_table_side: PatternTableSide,
 }
 
 impl Mmc3IrqState {
@@ -28,9 +26,9 @@ impl Mmc3IrqState {
             .forced_reload_timing(ForcedReloadTiming::OnNextTick)
             .when_disabled_prevent(WhenDisabledPrevent::Triggering)
             .build_reload_driven_counter(),
-        allowed_address_range: 0..=0x1FFF,
         suppressor: Suppressor::SUPPRESS_FOR_16_CYCLES,
-        pattern_table_side_detector: EdgeDetector::pattern_table_side_detector(PatternTableSide::Right),
+        transition_detector: PatternTableTransitionDetector::new(AllowedAddresses::PatternTableOnly),
+        target_pattern_table_side: PatternTableSide::Right,
     };
     // Same as Sharp except that automatic IRQs are ONLY triggered on a 1 to 0 transition of the count, not when it was already 0.
     pub const NEC_IRQ_STATE: Self = Self {
@@ -43,9 +41,9 @@ impl Mmc3IrqState {
             .forced_reload_timing(ForcedReloadTiming::OnNextTick)
             .when_disabled_prevent(WhenDisabledPrevent::Triggering)
             .build_reload_driven_counter(),
-        allowed_address_range: 0..=0x1FFF,
         suppressor: Suppressor::SUPPRESS_FOR_16_CYCLES,
-        pattern_table_side_detector: EdgeDetector::pattern_table_side_detector(PatternTableSide::Right),
+        transition_detector: PatternTableTransitionDetector::new(AllowedAddresses::PatternTableOnly),
+        target_pattern_table_side: PatternTableSide::Right,
     };
     // Same as NEC except that forcing a reload of 0 will also trigger an IRQ.
     pub const REV_A_IRQ_STATE: Self = Self {
@@ -59,9 +57,9 @@ impl Mmc3IrqState {
             .forced_reload_timing(ForcedReloadTiming::OnNextTick)
             .when_disabled_prevent(WhenDisabledPrevent::Triggering)
             .build_reload_driven_counter(),
-        allowed_address_range: 0..=0x1FFF,
         suppressor: Suppressor::SUPPRESS_FOR_16_CYCLES,
-        pattern_table_side_detector: EdgeDetector::pattern_table_side_detector(PatternTableSide::Right),
+        transition_detector: PatternTableTransitionDetector::new(AllowedAddresses::PatternTableOnly),
+        target_pattern_table_side: PatternTableSide::Right,
     };
     // Very different from the other MMC3 IRQs since it has a prescaler, doesn't filter PPU addresses,
     // triggers on pattern table side transitions to the LEFT not the right, and doesn't suppress repeats on transition.
@@ -76,22 +74,18 @@ impl Mmc3IrqState {
             .when_disabled_prevent(WhenDisabledPrevent::Triggering)
             .prescaler(8, PrescalerTriggeredBy::AlreadyZero, PrescalerBehaviorOnForcedReload::ClearCount)
             .build_reload_driven_counter(),
-        allowed_address_range: 0..=0xFFFF,
         suppressor: Suppressor::NEVER_SUPPRESS,
-        pattern_table_side_detector: EdgeDetector::pattern_table_side_detector(PatternTableSide::Left),
+        transition_detector: PatternTableTransitionDetector::new(AllowedAddresses::All),
+        target_pattern_table_side: PatternTableSide::Left,
     };
 
     pub fn tick_counter(&mut self, bus: &mut Bus, address: PpuAddress) {
-        if !self.allowed_address_range.contains(&address.to_u16()) {
-            return;
-        }
-
-        let switched_to_target_side = self.pattern_table_side_detector.set_value_then_detect(address.pattern_table_side());
+        let switched_to_target_side = self.transition_detector.detect(address) == Some(self.target_pattern_table_side);
         let should_tick_irq_counter = switched_to_target_side && !self.suppressor.suppressed();
 
         // Keep re-suppressing ticks for as long as we are on the target pattern table side.
         // If NEVER_SUPPRESS is specified, this does nothing.
-        if self.pattern_table_side_detector.matches_target(address.pattern_table_side()) {
+        if address.pattern_table_side() == self.target_pattern_table_side {
             self.suppressor.suppress();
         }
 
