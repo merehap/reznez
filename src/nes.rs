@@ -383,17 +383,20 @@ impl Nes {
             }
         }
 
-        if log_enabled!(target: "mapperirqcounter", Info)
-                && let Some(IrqCounterInfo { counting_enabled, triggering_enabled, count }) = self.mapper.irq_counter_info() {
-            let latest = &mut self.latest_values;
-            if latest.mapper_irq_counting_enabled_detector.set_value_then_detect(counting_enabled) {
-                info!("Mapper IRQ counter counting enabled: {counting_enabled}");
-            }
-            if latest.mapper_irq_triggering_enabled_detector.set_value_then_detect(counting_enabled) {
-                info!("Mapper IRQ counter triggering enabled: {triggering_enabled}");
-            }
-            if latest.mapper_irq_count_detector.set_value_then_detect(count) {
-                info!("Mapper IRQ counter changed to: {count}");
+        if log_enabled!(target: "mapperirqcounter", Info) {
+            if let Some(IrqCounterInfo { counting_enabled, triggering_enabled, count }) = self.mapper.irq_counter_info() {
+                let latest = &mut self.latest_values;
+                if latest.mapper_irq_counting_enabled_detector.set_value_then_detect(counting_enabled) {
+                    info!("Mapper IRQ counter counting enabled: {counting_enabled}");
+                }
+                if latest.mapper_irq_triggering_enabled_detector.set_value_then_detect(counting_enabled) {
+                    info!("Mapper IRQ counter triggering enabled: {triggering_enabled}");
+                }
+                if latest.mapper_irq_count_detector.set_value_then_detect(count) {
+                    info!("Mapper IRQ counter changed to: {count}");
+                }
+            } else {
+                panic!("Can't use mapperirqcounter for a mapper that doesn't have irq_counter_info() enabled.");
             }
         }
 

@@ -67,6 +67,8 @@ static SCHEDULED_BUTTON_EVENTS: LazyLock<BTreeMap<Crc, BTreeMap<FrameNumber, (Bu
     presses_by_full_crc.insert(0xC2928549, vec![(52, 53, Start)]);
     // Tiny Toon Adventures (J)
     presses_by_full_crc.insert(0x935D29C2, vec![(132, 133, Start), (348, 349, Start), (478, 479, Start), (549, 550, Start)]);
+    // Crayon Shin-Chan - [BROKEN] Part of the status bar is CHR-corrupted due to bad IRQ implementation.
+    presses_by_full_crc.insert(0xC15D624F, vec![(279, 280, Start), (449, 450, Start)]);
     // AccuracyCoin
     presses_by_full_crc.insert(0x86475E70, vec![(60, 61, Start)]);
 

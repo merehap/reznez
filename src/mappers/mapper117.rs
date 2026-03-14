@@ -29,8 +29,7 @@ const LAYOUT: Layout = Layout::builder()
 
 const IRQ_COUNTER: ReloadDrivenCounter = CounterBuilder::new()
     .full_range(0, 255)
-    .initial_range(0, 255)
-    .initial_count(0)
+    .initial_range(0, 0)
     .step(-1)
     .wraps(false)
     .auto_trigger_when(AutoTriggerWhen::StepSizedTransitionTo(0))
@@ -47,27 +46,23 @@ pub struct Mapper117 {
 impl Mapper for Mapper117 {
     fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
-            0x8000..=0x8002 => {
-                let reg_id = [P, Q, R][*addr as usize - 0x8000];
-                bus.set_prg_register(reg_id, value);
-            }
-            0xA000..=0xA007 => {
-                let reg_id = [C, D, E, F, G, H, I, J][*addr as usize - 0xA000];
-                bus.set_chr_register(reg_id, value);
-            }
-            0xC001 => {
-                //self.irq_counter.set_reload_value(value);
-                self.irq_counter.force_reload();
-            }
-            0xC002 => {
-                bus.cpu_pinout.acknowledge_mapper_irq();
-            }
-            0xC003 => {
-                self.irq_counter.force_reload();
-            }
-            0xD000 => {
-                bus.set_name_table_mirroring(value & 1);
-            }
+            0x8000 => bus.set_prg_register(P, value),
+            0x8001 => bus.set_prg_register(Q, value),
+            0x8002 => bus.set_prg_register(R, value),
+
+            0xA000 => bus.set_chr_register(C, value),
+            0xA001 => bus.set_chr_register(D, value),
+            0xA002 => bus.set_chr_register(E, value),
+            0xA003 => bus.set_chr_register(F, value),
+            0xA004 => bus.set_chr_register(G, value),
+            0xA005 => bus.set_chr_register(H, value),
+            0xA006 => bus.set_chr_register(I, value),
+            0xA007 => bus.set_chr_register(J, value),
+
+            0xC001 => self.irq_counter.set_reload_value(value),
+            0xC002 => bus.cpu_pinout.acknowledge_mapper_irq(),
+            0xC003 => self.irq_counter.force_reload(),
+            0xD000 => bus.set_name_table_mirroring(value & 1),
             0xE000 => {
                 bus.cpu_pinout.acknowledge_mapper_irq();
                 self.irq_counter.set_enabled(value & 1 == 1);
@@ -79,10 +74,19 @@ impl Mapper for Mapper117 {
     }
 
     fn on_ppu_address_change(&mut self, bus: &mut Bus, address: PpuAddress) {
-        if self.pattern_table_side_detector.set_value_then_detect(address.pattern_table_side())
-                && self.irq_counter.tick().triggered {
+        // Ignore PPUDATA false positives when detecting if a pattern table transition is occurring.
+        if !address.is_in_pattern_table() {
+            return;
+        }
+
+        let right_table_started_rendering = self.pattern_table_side_detector.set_value_then_detect(address.pattern_table_side());
+        if right_table_started_rendering && self.irq_counter.tick().triggered {
             bus.cpu_pinout.assert_mapper_irq();
         }
+    }
+
+    fn irq_counter_info(&self) -> Option<IrqCounterInfo> {
+        Some(self.irq_counter.to_irq_counter_info())
     }
 
     fn layout(&self) -> Layout {

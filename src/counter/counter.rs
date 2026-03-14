@@ -226,6 +226,7 @@ impl Counter {
             self.current_range = Range::new(self.current_range.min, modify(self.current_range.max));
         }
 
+        log::info!("New range is {:?}", self.current_range);
         assert!(self.current_range.is_subrange_of(self.full_range));
     }
 
@@ -526,7 +527,7 @@ pub struct TickResult {
     pub triggered: bool,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Range {
     min: u16,
     max: u16,
