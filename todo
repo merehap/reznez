@@ -1,11 +1,10 @@
 ROADMAP
 1. Fully passing DMC tests
 2. Fully working MMC5
-3. Expansion Audio
-4. Remaining test ROMs
-5. Windows/Mac/WASM support
-6. Fix rendering when multiple sprites on the same scanline
-7. Comments
+3. Remaining test ROMs
+4. Windows/Mac/WASM support
+5. Fix rendering when multiple sprites on the same scanline
+6. Comments
 
 Investigate if lack of MMC5 Extended Ram CHR status register is causing bad renders.
 Re-allow ReadWriteStatuses for MMC5 Extended RAM.
@@ -30,6 +29,7 @@ Detect PpuAddress changes better, then clean up MMC3 and Mapper 91 IRQ logic.
 Give "Fix Metadata" prompt when metadata doesn't match the DB (Test case: mirroring for Dragon Ball - Shen Long no Nazo, also Fighting Hero)
 Split out window.rs, bank.rs, and bank_number.rs into approapriate files.
 Merge PrgBank into PrgWindow and ChrBank into ChrWindow.
+Expansion Audio
 
 REWRITES NEEDED
 OamAddress probably shouldn't know anything about sprite fields. Should just be a simple u8. Remove sprite 0 determination since that is a property of SecondaryOam (or PPU dot 66).
