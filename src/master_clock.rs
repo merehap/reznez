@@ -17,6 +17,21 @@ const NTSC_SCHEDULE: [&[CycleType]; 12] = [
     &[],
 ];
 
+const NTSC_SCHEDULE_WITH_LOGGING: [&[CycleType]; 12] = [
+    &[ApuWithLogging, CpuFirstHalfWithLogging, PpuWithLogging],
+    &[],
+    &[],
+    &[],
+    &[CpuSecondHalfWithLogging, PpuWithLogging],
+    &[],
+    &[],
+    &[],
+    &[PpuWithLogging],
+    &[],
+    &[],
+    &[],
+];
+
 pub struct MasterClock {
     master_cycle: u64,
 
@@ -37,6 +52,18 @@ impl MasterClock {
             apu_clock: ApuClock::new(),
 
             schedule: NTSC_SCHEDULE,
+        }
+    }
+
+    pub fn new_with_diff_logging(starting_cpu_cycle: i64, ppu_clock: PpuClock) -> Self {
+        Self {
+            master_cycle: 0,
+
+            cpu_cycle: starting_cpu_cycle,
+            ppu_clock,
+            apu_clock: ApuClock::new(),
+
+            schedule: NTSC_SCHEDULE_WITH_LOGGING,
         }
     }
 
@@ -87,7 +114,11 @@ impl MasterClock {
 
 pub enum CycleType {
     Apu,
+    ApuWithLogging,
     CpuFirstHalf,
+    CpuFirstHalfWithLogging,
     CpuSecondHalf,
+    CpuSecondHalfWithLogging,
     Ppu,
+    PpuWithLogging,
 }

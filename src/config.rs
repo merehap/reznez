@@ -24,6 +24,7 @@ pub struct Config {
     pub allow_saving: bool,
     pub scheduled_button_events: BTreeMap<i64, (Button, ButtonStatus)>,
     pub dip_switch: u8,
+    pub diff_logging_enabled: bool,
 }
 
 impl Config {
@@ -40,6 +41,7 @@ impl Config {
             allow_saving: !opt.prevent_saving,
             scheduled_button_events: BTreeMap::new(),
             dip_switch: opt.dip_switch,
+            diff_logging_enabled: opt.diff_logging_enabled(),
         };
 
         config.parse_scheduled_button_events(&opt.scheduled_button_presses);
@@ -214,6 +216,48 @@ impl Opt {
             dip_switch: 0,
             assemble: None,
         }
+    }
+
+    // All the logging enabled checks of diff logging severely slow down the emulator, so only do them if we're logging at all.
+    pub fn diff_logging_enabled(&self) -> bool {
+        // Match on all fields so that when a new intensive logging flag is added, it is properly applied here.
+        let Opt {
+            rom_path: _,
+            gui: _,
+            stop_frame: _,
+            target_frame_rate: _,
+            disable_audio: _,
+            log_frames: _, // Only logs once per frame, and needed to view accurate frame rate.
+            log_cpu_all,
+            log_ppu_all,
+            log_apu_all,
+            log_cpu_instructions: _,
+            log_cpu_flow_control,
+            log_cpu_mode,
+            log_detailed_cpu_mode,
+            log_cpu_steps: _,
+            log_ppu_stages,
+            log_ppu_flags,
+            log_ppu_steps: _,
+            log_oam_addr: _,
+            log_apu_cycles: _,
+            log_apu_events: _,
+            log_apu_samples: _,
+            log_mapper_updates,
+            log_mapper_irq_counter,
+            log_mapper_ram_writes: _,
+            log_timings,
+            cpu_step_formatting: _,
+            frame_dump: _,
+            prevent_saving: _,
+            scheduled_button_presses: _,
+            dip_switch: _,
+            assemble: _,
+        } = self.clone();
+
+        log_cpu_all | log_ppu_all | log_apu_all | log_cpu_flow_control | log_cpu_mode
+            | log_detailed_cpu_mode | log_ppu_stages | log_ppu_flags | log_mapper_updates
+            | log_mapper_irq_counter | log_timings
     }
 }
 

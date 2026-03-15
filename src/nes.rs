@@ -185,9 +185,15 @@ impl Nes {
         let (prg_memory, chr_memory, name_table_mirrorings) =
             mapper.layout().make_mapper_params(&metadata, cartridge, config.allow_saving)?;
 
+        let master_clock = if config.diff_logging_enabled {
+            MasterClock::new_with_diff_logging(config.starting_cpu_cycle, config.ppu_clock.clone())
+        } else {
+            MasterClock::new(config.starting_cpu_cycle, config.ppu_clock.clone())
+        };
+
         let bank_color_assigner = BankColorAssigner::new(&chr_memory);
         let mut bus = Bus::new(
-            MasterClock::new(config.starting_cpu_cycle, config.ppu_clock.clone()),
+            master_clock,
             Cpu::new(config.cpu_step_formatting),
             Ppu::new(bank_color_assigner),
             Apu::new(config.disable_audio),
@@ -243,9 +249,13 @@ impl Nes {
         for action in actions {
             match action {
                 CycleType::Apu => self.apu_step(),
+                CycleType::ApuWithLogging => self.apu_step_with_logging(),
                 CycleType::CpuFirstHalf => step = self.cpu_step_first_half(),
+                CycleType::CpuFirstHalfWithLogging => step = self.cpu_step_first_half_with_logging(),
                 CycleType::CpuSecondHalf => self.cpu_step_second_half(),
+                CycleType::CpuSecondHalfWithLogging => self.cpu_step_second_half_with_logging(),
                 CycleType::Ppu => is_last_cycle_of_frame = self.ppu_step(),
+                CycleType::PpuWithLogging => is_last_cycle_of_frame = self.ppu_step_with_logging(),
             }
         }
 
@@ -257,6 +267,11 @@ impl Nes {
     }
 
     fn apu_step(&mut self) {
+        Apu::step(&mut self.bus);
+        self.bus.master_clock_mut().apu_clock_mut().tick();
+    }
+
+    fn apu_step_with_logging(&mut self) {
         if log_enabled!(target: "timings", Info) {
             self.snapshots.current().apu_regs(self.bus.apu_clock(), &self.bus.apu_regs);
         }
@@ -273,6 +288,11 @@ impl Nes {
     }
 
     fn cpu_step_first_half(&mut self) -> Option<Step> {
+        self.bus.master_clock_mut().increment_cpu_cycle();
+        Cpu::step_first_half(&mut self.bus, &mut *self.mapper)
+    }
+
+    fn cpu_step_first_half_with_logging(&mut self) -> Option<Step> {
         self.bus.master_clock_mut().increment_cpu_cycle();
 
         if log_enabled!(target: "timings", Info) {
@@ -311,10 +331,20 @@ impl Nes {
 
     fn cpu_step_second_half(&mut self) {
         Cpu::step_second_half(&mut self.bus, &mut *self.mapper);
+    }
+
+    fn cpu_step_second_half_with_logging(&mut self) {
+        Cpu::step_second_half(&mut self.bus, &mut *self.mapper);
         self.detect_changes();
     }
 
     fn ppu_step(&mut self) -> bool {
+        let is_last_cycle_of_frame = self.bus.master_clock.tick_ppu_clock(self.bus.ppu_regs.rendering_enabled());
+        Ppu::step(&mut self.bus, &mut *self.mapper, &mut self.frame);
+        is_last_cycle_of_frame
+    }
+
+    fn ppu_step_with_logging(&mut self) -> bool {
         let is_last_cycle_of_frame = self.bus.master_clock.tick_ppu_clock(self.bus.ppu_regs.rendering_enabled());
 
         if log_enabled!(target: "timings", Info) {
