@@ -4,7 +4,7 @@ use crate::memory::address_template::bank_sizes::BankSizes;
 use crate::memory::bank::bank_number::PrgBankRegisterId;
 use crate::memory::window::PrgWindow;
 use crate::util::const_vec::ConstVec;
-use crate::util::unit::{KIBIBYTE, KIBIBYTE_U16};
+use crate::util::unit::KIBIBYTE_U16;
 
 #[derive(Clone)]
 pub struct PrgLayouts {
@@ -17,18 +17,18 @@ impl PrgLayouts {
     pub const fn new(
         rom_size: u32,
         outer_bank_count: u16,
+        inner_bank_size: Option<u32>,
         layouts: ConstVec<PrgLayout, 16>,
     ) -> Self {
-        let mut inner_bank_size = layouts.get(0).smallest_rom_window_size() as u32;
+        let mut inferred_inner_bank_size = layouts.get(0).smallest_rom_window_size() as u32;
         let mut i = 1;
         while i < layouts.len() {
             let layout_min = layouts.get(i).smallest_rom_window_size() as u32;
-            inner_bank_size = std::cmp::min(inner_bank_size, layout_min);
+            inferred_inner_bank_size = std::cmp::min(inferred_inner_bank_size, layout_min);
             i += 1;
         }
 
-        inner_bank_size = std::cmp::max(inner_bank_size, 8 * KIBIBYTE);
-
+        let inner_bank_size = inner_bank_size.unwrap_or(inferred_inner_bank_size);
         let outer_bank_size = outer_bank_count as u32 * inner_bank_size;
         let rom_max_bank_sizes = BankSizes::new(rom_size, outer_bank_size, inner_bank_size);
         PrgLayouts { rom_max_bank_sizes, layouts }

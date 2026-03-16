@@ -137,6 +137,7 @@ pub struct LayoutBuilder {
     prg_layouts: ConstVec<PrgLayout, 16>,
     prg_layout_index: u8,
     prg_rom_outer_bank_layout: Option<OuterBankLayout>,
+    prg_rom_inner_bank_size: Option<u32>,
 
     chr_rom_max_size: Option<u32>,
     chr_layouts: ConstVec<ChrLayout, 16>,
@@ -163,6 +164,7 @@ impl LayoutBuilder {
             prg_layout_index: 0,
             prg_layouts: ConstVec::new(),
             prg_rom_outer_bank_layout: None,
+            prg_rom_inner_bank_size: None,
 
             chr_rom_max_size: None,
             align_large_chr_windows: true,
@@ -197,7 +199,7 @@ impl LayoutBuilder {
         self
     }
 
-    pub const fn prg_layout_index(&mut self, value: u8) -> &mut Self  {
+    pub const fn prg_layout_index(&mut self, value: u8) -> &mut Self {
         self.prg_layout_index = value;
         self
     }
@@ -210,6 +212,11 @@ impl LayoutBuilder {
 
     pub const fn prg_rom_outer_bank_size(&mut self, size: u32) -> &mut Self {
         self.prg_rom_outer_bank_layout = Some(OuterBankLayout::Size(size));
+        self
+    }
+
+    pub const fn prg_rom_inner_bank_size(&mut self, size: u32) -> &mut Self {
+        self.prg_rom_inner_bank_size = Some(size);
         self
     }
 
@@ -322,7 +329,7 @@ impl LayoutBuilder {
 
         let prg_rom_max_size = self.prg_rom_max_size.expect("prg_rom_max_size must be set");
         let outer_bank_count = prg_rom_outer_bank_layout.outer_bank_count(prg_rom_max_size);
-        let prg_layouts = PrgLayouts::new(prg_rom_max_size, outer_bank_count.get(), self.prg_layouts);
+        let prg_layouts = PrgLayouts::new(prg_rom_max_size, outer_bank_count.get(), self.prg_rom_inner_bank_size, self.prg_layouts);
 
         Layout {
             prg_layouts,

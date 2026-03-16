@@ -2,6 +2,9 @@ use crate::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(64 * KIBIBYTE)
+    // If this wasn't set, then the bank size would be inferred as 2KiB,
+    // but for this mapper, the 2KiB windows only look at the first 2KiB of a 16KiB bank.
+    .prg_rom_inner_bank_size(16 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x67FF,  2 * KIBIBYTE, PrgBank::ROM.fixed_number(2)),
         PrgWindow::new(0x6800, 0x6FFF,  2 * KIBIBYTE, PrgBank::ROM.fixed_number(2)),
