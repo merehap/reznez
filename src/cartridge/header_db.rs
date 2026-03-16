@@ -104,6 +104,11 @@ const MISSING_ROM_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
     // shxdma.nes
     (0xFEC27D2F, 0x919B7242, 7, 1),
 
+    // oam-decay-test.nes
+    (0x4F8FF278, 0x165324EA, 1, 0),
+    // oamtest3/oam3
+    (0x254A4EA, 0x7E0FAEE4, 7, 1),
+
     // Lagrange Point
     (0xAD2966D3, 0x33CE3FF0, 85, 2),
 
