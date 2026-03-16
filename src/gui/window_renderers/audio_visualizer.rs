@@ -13,7 +13,7 @@ pub struct AudioVisualizer {
 
 impl AudioVisualizer {
     const WIDTH: usize = 500;
-    const HEIGHT: usize = 800;
+    const HEIGHT: usize = 700;
 
     pub fn new() -> Self {
         let mut buffer = vec![[0.0, 0.0]; SAMPLE_COUNT as usize];
