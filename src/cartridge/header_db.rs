@@ -61,7 +61,7 @@ const MISSING_ROM_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
     // holydiverbatman/M7_P128K.nes
     (0x2728D88F, 0xBC6BDB81, 7, 1),
     // holydiverbatman/M34_P128K_H.nes
-    (0x30D6E090, 0xBC6BDB81, 34, 1),
+    (0x30D6E090, 0xBC6BDB81, 34, 2),
     // holydiverbatman/M78.3_P128K_C64K.nes
     (0xA407ABD7, 0xBC6BDB81, 78, 3),
 
