@@ -26,12 +26,27 @@ use reznez::util::hash_util::calculate_hash;
 type Crc = u32;
 type FrameNumber = i64;
 
+#[allow(dead_code)]
+#[derive(Clone, Copy)]
+enum Event {
+    Reset,
+
+    A,
+    B,
+    Select,
+    Start,
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
 // FIXME
 #[allow(clippy::type_complexity)]
-static SCHEDULED_BUTTON_EVENTS: LazyLock<BTreeMap<Crc, BTreeMap<FrameNumber, (Button, ButtonStatus)>>> = LazyLock::new(|| {
-    let mut presses_by_full_crc: BTreeMap<Crc, Vec<(FrameNumber, FrameNumber, Button)>> = BTreeMap::new();
+static SCHEDULED_EVENTS: LazyLock<BTreeMap<Crc, BTreeMap<FrameNumber, (Event, ButtonStatus)>>> = LazyLock::new(|| {
+    let mut presses_by_full_crc: BTreeMap<Crc, Vec<(FrameNumber, FrameNumber, Event)>> = BTreeMap::new();
 
-    use Button::*;
+    use Event::*;
     // Bio Miracle Bokutte Upa - [BROKEN] Status bar should be stationary.
     presses_by_full_crc.insert(0xE50AD737, vec![(100, 101, Start), (300, 301, Start)]);
     // Bio Miracle Bokutte Upa (Mario Baby FDS Hack) - [BROKEN] Flickering pixels.
@@ -72,12 +87,29 @@ static SCHEDULED_BUTTON_EVENTS: LazyLock<BTreeMap<Crc, BTreeMap<FrameNumber, (Bu
     // AccuracyCoin
     presses_by_full_crc.insert(0x86475E70, vec![(60, 61, Start)]);
 
+    // cpu_reset/ram_after_reset
+    presses_by_full_crc.insert(0xED9053BC, vec![(200, 201, Reset)]);
+    // cpu_reset/ram_after_reset
+    presses_by_full_crc.insert(0xEC82A394, vec![(200, 201, Reset)]);
+    // apu_reset/4015_cleared
+    presses_by_full_crc.insert(0x4A04E0C1, vec![(20, 21, Reset)]);
+    // apu_reset/4017_timing
+    presses_by_full_crc.insert(0x5BB05806, vec![(20, 21, Reset)]);
+    // apu_reset/4017_written
+    presses_by_full_crc.insert(0x929A1FC2, vec![(20, 21, Reset), (40, 41, Reset)]);
+    // apu_reset/irq_flag_cleared
+    presses_by_full_crc.insert(0x37F19E49, vec![(20, 21, Reset)]);
+    // apu_reset/len_ctrs_enabled
+    presses_by_full_crc.insert(0xFA7774F1, vec![(20, 21, Reset)]);
+    // apu_reset/works_immediately
+    presses_by_full_crc.insert(0xD106E504, vec![(20, 21, Reset)]);
+
     let mut all_events = BTreeMap::new();
     for (full_crc, presses) in presses_by_full_crc {
-        let mut events: BTreeMap<i64, (Button, ButtonStatus)> = BTreeMap::new();
-        for (press_frame_number, unpress_frame_number, button) in presses {
-            events.insert(press_frame_number, (button, ButtonStatus::Pressed));
-            events.insert(unpress_frame_number, (button, ButtonStatus::Unpressed));
+        let mut events: BTreeMap<i64, (Event, ButtonStatus)> = BTreeMap::new();
+        for (press_frame_number, unpress_frame_number, event) in presses {
+            events.insert(press_frame_number, (event, ButtonStatus::Pressed));
+            events.insert(unpress_frame_number, (event, ButtonStatus::Unpressed));
         }
 
         all_events.insert(full_crc, events);
@@ -129,7 +161,7 @@ impl TestSummary {
 
                 let config = Config::new(&opt);
                 let cartridge = Nes::load_cartridge(&opt.rom_path.unwrap()).unwrap();
-                let scheduled_button_events = SCHEDULED_BUTTON_EVENTS.get(&cartridge.header().full_hash().unwrap())
+                let scheduled_button_events = SCHEDULED_EVENTS.get(&cartridge.header().full_hash().unwrap())
                     .cloned()
                     .unwrap_or(BTreeMap::new());
 
@@ -150,12 +182,24 @@ impl TestSummary {
                 let max_frame_number = frame_entries.keys().last().unwrap();
                 for frame_number in 0..=*max_frame_number {
                     let mut joypad1_button_statuses = BTreeMap::new();
-                    if let Some((button, button_status)) = scheduled_button_events.get(&(frame_number as i64)) {
-                        joypad1_button_statuses.insert(*button, *button_status);
+                    if let Some((event, button_status)) = scheduled_button_events.get(&(frame_number as i64)) {
+                        match event {
+                            Event::Reset => nes.set_reset_signal(),
+
+                            Event::A => _ = joypad1_button_statuses.insert(Button::A, *button_status),
+                            Event::B => _ = joypad1_button_statuses.insert(Button::B, *button_status),
+                            Event::Select => _ = joypad1_button_statuses.insert(Button::Select, *button_status),
+                            Event::Start => _ = joypad1_button_statuses.insert(Button::Start, *button_status),
+                            Event::Up => _ = joypad1_button_statuses.insert(Button::Up, *button_status),
+                            Event::Down => _ = joypad1_button_statuses.insert(Button::Down, *button_status),
+                            Event::Left => _ = joypad1_button_statuses.insert(Button::Left, *button_status),
+                            Event::Right => _ = joypad1_button_statuses.insert(Button::Right, *button_status),
+                        }
                     }
 
                     let events = Events { should_quit: false, joypad1_button_statuses, joypad2_button_statuses: BTreeMap::new() };
                     nes.process_gui_events(&events);
+
                     nes.step_frame();
                     if let Some(frame_entry) = frame_entries.get(&frame_number) {
                         let expected_hash = frame_entry.ppm_hash;
