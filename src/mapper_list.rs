@@ -178,7 +178,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         // Homebrew. Sealie Computing - RET-CUFROM revD
         (29, None) => m::mapper029::Mapper029.supported(),
         (30, _) => TodoMapper,
-        (31, _) => TodoMapper,
+        (31, None) => m::mapper031::Mapper031.supported(),
 
         // Irem G101 submappers
         (32, None) => UnspecifiedSubmapper,
