@@ -1,8 +1,10 @@
 use crate::gui::debug_screens::pattern_table::PatternTable;
 use crate::gui::debug_screens::sprite::Sprite;
 use crate::bus::Bus;
+use crate::memory::primitives::dram_byte::DramByte;
 use crate::ppu::pixel_index::PixelRow;
 use crate::ppu::sprite::oam::Oam;
+use crate::ppu::sprite::oam_address::OamAddress;
 use crate::ppu::sprite::sprite_attributes::Priority;
 use crate::ppu::render::frame::Frame;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
@@ -13,10 +15,17 @@ use crate::ppu::sprite::sprite_height::SpriteHeight;
 impl Oam {
     pub fn only_front_sprites(&self) -> Oam {
         let mut result = self.clone();
-        for chunk in result.to_bytes_mut().as_chunks_mut().0.iter_mut() {
-            let sprite = Sprite::from_u32(u32::from_be_bytes(*chunk));
+        for sprite in 0..16 {
+            let i = 4 * sprite;
+            let sprite = Sprite::from_u32(u32::from_be_bytes([
+                result.to_raw()[i].peek(),
+                result.to_raw()[i].peek(),
+                result.to_raw()[i].peek(),
+                result.to_raw()[i].peek(),
+            ]));
             if sprite.priority() == Priority::Behind {
-                *chunk = [0xFF, 0, 0, 0];
+                // Make this back-sprite transparent since we're only showing front-sprites.
+                result.write(OamAddress::from_u8(i as u8 + 2), 0b1111_1111);
             }
         }
 
@@ -25,10 +34,17 @@ impl Oam {
 
     pub fn only_back_sprites(&self) -> Oam {
         let mut result = self.clone();
-        for chunk in result.to_bytes_mut().as_chunks_mut().0.iter_mut() {
-            let sprite = Sprite::from_u32(u32::from_be_bytes(*chunk));
+        for sprite in 0..16 {
+            let i = 4 * sprite;
+            let sprite = Sprite::from_u32(u32::from_be_bytes([
+                result.to_raw()[i].peek(),
+                result.to_raw()[i].peek(),
+                result.to_raw()[i].peek(),
+                result.to_raw()[i].peek(),
+            ]));
             if sprite.priority() == Priority::InFront {
-                *chunk = [0xFF, 0, 0, 0];
+                // Make this back-sprite transparent since we're only showing front-sprites.
+                result.write(OamAddress::from_u8(i as u8 + 2), 0b1111_1111);
             }
         }
 
@@ -36,9 +52,9 @@ impl Oam {
     }
 
     pub fn sprites(&self) -> [Sprite; 64] {
-        let mut iter = self.to_bytes().as_chunks().0.iter();
+        let mut iter = self.to_raw().as_chunks().0.iter();
         [(); 64].map(|()| {
-            let raw = u32::from_be_bytes(*iter.next().unwrap());
+            let raw = u32::from_be_bytes(iter.next().unwrap().map(DramByte::peek));
             Sprite::from_u32(raw)
         })
     }
