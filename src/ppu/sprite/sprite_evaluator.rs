@@ -45,8 +45,8 @@ impl SpriteEvaluator {
         self.secondary_oam.reset_index();
     }
 
-    pub fn read_oam(&mut self, oam: &Oam, ppu_regs: &PpuRegisters) {
-        self.oam_data_read = oam.peek(ppu_regs.oam_addr);
+    pub fn read_oam(&mut self, oam: &mut Oam, ppu_regs: &PpuRegisters) {
+        self.oam_data_read = oam.read(ppu_regs.oam_addr);
         if self.clear_oam {
             self.oam_data_read = 0xFF;
         }

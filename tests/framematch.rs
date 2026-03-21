@@ -104,6 +104,9 @@ static SCHEDULED_EVENTS: LazyLock<BTreeMap<Crc, BTreeMap<FrameNumber, (Event, Bu
     // apu_reset/works_immediately
     presses_by_full_crc.insert(0xD106E504, vec![(20, 21, Reset)]);
 
+    // oam-decay-test
+    presses_by_full_crc.insert(0x4F8FF278, vec![(20, 40, A)]);
+
     let mut all_events = BTreeMap::new();
     for (full_crc, presses) in presses_by_full_crc {
         let mut events: BTreeMap<i64, (Event, ButtonStatus)> = BTreeMap::new();

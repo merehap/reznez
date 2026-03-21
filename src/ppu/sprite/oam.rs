@@ -13,13 +13,13 @@ pub struct Oam([DramByte; 256]);
 impl Oam {
     pub fn new() -> Oam {
         let sprite = [
-            DramByte::with_mask(0b1111_1111),
-            DramByte::with_mask(0b1111_1111),
-            DramByte::with_mask(0b1110_0011), // Sprite attribute byte
-            DramByte::with_mask(0b1111_1111),
+            DramByte::new().with_mask(0b1111_1111).with_decay_value(0b1111_1111),
+            DramByte::new().with_mask(0b1111_1111).with_decay_value(0b1111_1111),
+            DramByte::new().with_mask(0b1110_0011).with_decay_value(0b1110_0011), // Sprite attribute byte
+            DramByte::new().with_mask(0b1111_1111).with_decay_value(0b1111_1111),
         ];
 
-        // 64 sprites
+        // 64 sprites, 256 bytes
         let raw_oam = [
             &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..],
             &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..],
@@ -42,6 +42,10 @@ impl Oam {
         self.0[address.to_u8() as usize].peek()
     }
 
+    pub fn read(&mut self, address: OamAddress) -> u8 {
+        self.0[address.to_u8() as usize].read()
+    }
+
     pub fn write(&mut self, address: OamAddress, value: u8) {
         self.0[address.to_u8() as usize].write(value);
     }
@@ -53,6 +57,12 @@ impl Oam {
             // TODO: Should this be read() instead of peek()? Probably.
             let value = self.peek(OamAddress::from_u8((raw_address & 0xF8) + index));
             self.write(OamAddress::from_u8(index), value);
+        }
+    }
+
+    pub fn maybe_decay(&mut self) {
+        for dram_byte in self.0.iter_mut() {
+            dram_byte.maybe_decay();
         }
     }
 }
