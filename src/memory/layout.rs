@@ -32,7 +32,6 @@ pub struct Layout {
 
     cartridge_selection_name_table_mirrorings: [Option<NameTableMirroring>; 4],
     name_table_mirrorings: &'static [NameTableMirroring],
-    four_screen_mirroring_definition: Option<NameTableMirroring>,
     fixed_name_table_mirroring: bool,
 
     bank_register_overrides: ConstVec<(PrgBankRegisterId, BankNumber), 5>,
@@ -100,9 +99,9 @@ impl Layout {
             prg_bank_registers,
         );
 
-        let name_table_mirroring = metadata.name_table_mirroring
-            .expect("Four screen mirroring specified, but mapper didn't provide a definition of four screen mirroring.");
-
+        let cartridge_mirroring_index: u8 = cartridge.header().name_table_mirroring_index().unwrap().into();
+        let cartridge_name_table_mirroring =
+            self.cartridge_selection_name_table_mirrorings[usize::from(cartridge_mirroring_index)];
         let chr_memory = ChrMemory::new(
             self.chr_layouts.as_iter().collect(),
             self.chr_layout_index,
@@ -110,20 +109,12 @@ impl Layout {
             self.chr_rom_outer_bank_layout.outer_bank_count(chr_rom_size),
             cartridge.chr_rom().clone(),
             chr_ram,
-            name_table_mirroring,
+            cartridge_name_table_mirroring,
             self.fixed_name_table_mirroring,
             chr_bank_registers,
         );
 
         Ok((prg_memory, chr_memory, self.name_table_mirrorings))
-    }
-
-    pub fn cartridge_selection_name_table_mirrorings(&self) -> [Option<NameTableMirroring>; 4] {
-        self.cartridge_selection_name_table_mirrorings
-    }
-
-    pub fn four_screen_mirroring_definition(&self) -> Option<NameTableMirroring> {
-        self.four_screen_mirroring_definition
     }
 
     pub fn supports_prg_ram(&self) -> bool {
@@ -148,7 +139,6 @@ pub struct LayoutBuilder {
 
     cartridge_selection_name_table_mirrorings: [Option<NameTableMirroring>; 4],
     name_table_mirrorings: &'static [NameTableMirroring],
-    four_screen_mirroring_definition: Option<NameTableMirroring>,
     fixed_name_table_mirroring: Option<bool>,
 
     bank_register_overrides: ConstVec<(PrgBankRegisterId, BankNumber), 5>,
@@ -183,7 +173,7 @@ impl LayoutBuilder {
                 None,
             ],
             name_table_mirrorings: &[],
-            four_screen_mirroring_definition: None,
+
             fixed_name_table_mirroring: None,
 
             bank_register_overrides: ConstVec::new(),
@@ -257,11 +247,6 @@ impl LayoutBuilder {
 
     pub const fn name_table_mirrorings(&mut self, value: &'static [NameTableMirroring]) -> &mut Self {
         self.name_table_mirrorings = value;
-        self
-    }
-
-    pub const fn four_screen_mirroring_definition(&mut self, value: NameTableMirroring) -> &mut Self {
-        self.four_screen_mirroring_definition = Some(value);
         self
     }
 
@@ -345,7 +330,6 @@ impl LayoutBuilder {
 
             cartridge_selection_name_table_mirrorings: self.cartridge_selection_name_table_mirrorings,
             name_table_mirrorings: self.name_table_mirrorings,
-            four_screen_mirroring_definition: self.four_screen_mirroring_definition,
             fixed_name_table_mirroring,
 
             bank_register_overrides: self.bank_register_overrides,

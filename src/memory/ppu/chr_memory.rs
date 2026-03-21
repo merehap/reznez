@@ -38,7 +38,7 @@ impl ChrMemory {
         rom_outer_bank_count: NonZeroU16,
         mut rom: RawMemory,
         mut ram: RawMemory,
-        name_table_mirroring: NameTableMirroring,
+        cartridge_name_table_mirroring: Option<NameTableMirroring>,
         // TODO: Warn on writes to an unused register.
         name_table_mirroring_fixed: bool,
         mut regs: ChrBankRegisters,
@@ -90,7 +90,7 @@ impl ChrMemory {
         let memory_maps = layouts.iter().map(|layout|
             ChrMemoryMap::new(
                 *layout,
-                name_table_mirroring,
+                cartridge_name_table_mirroring,
                 name_table_mirroring_fixed,
                 bank_size,
                 align_large_chr_banks,
@@ -220,14 +220,6 @@ impl ChrMemory {
         &self.memory_maps[self.layout_index as usize]
     }
 
-    pub fn name_table_mirroring(&self) -> NameTableMirroring {
-        let quadrants = &self.memory_maps[0].page_mappings()[8..12];
-        NameTableMirroring::new(
-            quadrants[0].to_name_table_source(&self.regs).unwrap(), quadrants[1].to_name_table_source(&self.regs).unwrap(),
-            quadrants[2].to_name_table_source(&self.regs).unwrap(), quadrants[3].to_name_table_source(&self.regs).unwrap(),
-        )
-    }
-
     pub fn bank_registers(&self) -> &ChrBankRegisters {
         &self.regs
     }
@@ -272,6 +264,14 @@ impl ChrMemory {
     ) {
         self.regs.set_to_ciram_side(id, ciram_side);
         self.update_page_ids();
+    }
+
+    pub fn name_table_mirroring(&self) -> NameTableMirroring {
+        let quadrants = &self.memory_maps[0].page_mappings()[8..12];
+        NameTableMirroring::new(
+            quadrants[0].to_name_table_source(&self.regs).unwrap(), quadrants[1].to_name_table_source(&self.regs).unwrap(),
+            quadrants[2].to_name_table_source(&self.regs).unwrap(), quadrants[3].to_name_table_source(&self.regs).unwrap(),
+        )
     }
 
     pub fn set_name_table_mirroring(&mut self, name_table_mirroring: NameTableMirroring) {

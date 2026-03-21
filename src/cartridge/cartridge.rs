@@ -256,6 +256,7 @@ pub mod test_data {
             .chr_work_ram_size(8 * KIBIBYTE)
             .chr_save_ram_size(0)
             .has_persistent_memory(false)
+            .name_table_mirroring_index(u2::new(0))
             .name_table_mirroring(NameTableMirroring::VERTICAL)
             .full_hash(0)
             .prg_rom_hash(0)

@@ -15,13 +15,11 @@ const LAYOUT: Layout = Layout::builder()
         ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::RAM.fixed_index(5)),
         ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::RAM.fixed_index(6)),
         ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::RAM.fixed_index(7)),
+        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::RAM.fixed_index(0)),
+        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, ChrBank::RAM.fixed_index(1)),
+        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::ciram(CiramSide::Left)),
+        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::ciram(CiramSide::Right)),
     ])
-    .four_screen_mirroring_definition(NameTableMirroring::new(
-        NameTableSource::Ram { bank_number: BankNumber::from_u8(0) },
-        NameTableSource::Ram { bank_number: BankNumber::from_u8(1) },
-        NameTableSource::Ciram(CiramSide::Left),
-        NameTableSource::Ciram(CiramSide::Right),
-    ))
     .fixed_name_table_mirroring()
     .build();
 

@@ -175,12 +175,6 @@ impl Nes {
 
         let mapper = mapper_list::lookup_mapper(&metadata_resolver, cartridge)?;
 
-        let name_table_mirroring_index = usize::try_from(metadata_resolver.cartridge.name_table_mirroring_index().unwrap()).unwrap();
-        let name_table_mirroring = mapper.layout().cartridge_selection_name_table_mirrorings()[name_table_mirroring_index]
-            .or(mapper.layout().four_screen_mirroring_definition())
-            .ok_or(format!("Mapper must provide a definition of four screen mirroring. ROM: {}", cartridge.path().rom_file_name()))?;
-        metadata_resolver.cartridge.set_name_table_mirroring(name_table_mirroring);
-
         let metadata = metadata_resolver.resolve();
         let (prg_memory, chr_memory, name_table_mirrorings) =
             mapper.layout().make_mapper_params(&metadata, cartridge, config.allow_saving)?;
@@ -200,6 +194,9 @@ impl Nes {
             prg_memory, chr_memory, name_table_mirrorings,
             config.dip_switch, config.system_palette.clone());
         mapper.init_mapper_params(&mut bus);
+
+        let name_table_mirroring = bus.chr_memory().name_table_mirroring();
+        metadata_resolver.cartridge.set_name_table_mirroring(name_table_mirroring);
 
         metadata_resolver.layout_supports_prg_ram = mapper.layout().supports_prg_ram();
         let metadata = metadata_resolver.resolve();

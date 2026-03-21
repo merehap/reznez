@@ -21,7 +21,7 @@ pub struct ChrMemoryMap {
 impl ChrMemoryMap {
     pub fn new(
         initial_layout: ChrLayout,
-        name_table_mirroring: NameTableMirroring,
+        cartridge_name_table_mirroring: Option<NameTableMirroring>,
         name_table_mirroring_fixed: bool,
         bank_size: ChrWindowSize,
         align_large_windows: bool,
@@ -49,13 +49,16 @@ impl ChrMemoryMap {
         assert!(matches!(page_mappings.len(), 8 | 12));
 
         // Most mappers only map 0x0000..=0x1FFF for pattern data, but some map up through 0x2FFF.
+        // TODO: Map through 0x3EFF
         if page_mappings.len() == 8 {
+            let cartridge_name_table_mirroring = cartridge_name_table_mirroring
+                .expect("The mapper must specify mappings from 0x2000 to 0x2FFF when four screen mirroring is specified.");
             if name_table_mirroring_fixed {
-                for quadrant in name_table_mirroring.quadrants() {
+                for quadrant in cartridge_name_table_mirroring.quadrants() {
                     page_mappings.push(ChrMapping::from_name_table_source(quadrant));
                 }
             } else {
-                let quadrants_with_source_reg_ids = name_table_mirroring.quadrants().into_iter()
+                let quadrants_with_source_reg_ids = cartridge_name_table_mirroring.quadrants().into_iter()
                     .zip(ChrSourceRegisterId::ALL_NAME_TABLE_SOURCE_IDS);
                 for (quadrant, reg_id) in quadrants_with_source_reg_ids {
                     page_mappings.push(ChrMapping::from_name_table_source_with_register(quadrant, reg_id, regs));
@@ -225,6 +228,8 @@ impl ChrMapping {
         let chr_source = self.bank.current_chr_source(regs).expect("NameTableSource can't come from an empty bank.");
         match chr_source {
             ChrSource::RomOrRam => {
+                assert!(!regs.cartridge_has_rom() || !regs.cartridge_has_ram(),
+                    "Don't know what to do with a Chr RomOrRam bank when the cartridge has both ROM and RAM.");
                 if regs.cartridge_has_rom() {
                     Ok(NameTableSource::Rom { bank_number: self.bank.bank_number(regs).unwrap() })
                 } else if regs.cartridge_has_ram() {
