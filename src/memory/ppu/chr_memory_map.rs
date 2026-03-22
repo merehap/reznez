@@ -14,7 +14,6 @@ const CHR_SLOT_COUNT: usize = 12;
 pub struct ChrMemoryMap {
     // 0x0000 through 0x1FFF (2 pattern tables) and 0x2000 through 0x2FFF (4 name tables).
     page_mappings: [ChrMapping; CHR_SLOT_COUNT],
-    page_ids: [ChrPageId; CHR_SLOT_COUNT],
     name_table_mirroring_fixed: bool,
 }
 
@@ -27,7 +26,6 @@ impl ChrMemoryMap {
         align_large_windows: bool,
         regs: &mut ChrBankRegisters,
     ) -> Self {
-
         let mut page_mappings = Vec::with_capacity(CHR_SLOT_COUNT);
         for window in initial_layout.windows() {
             let pages_per_window = window.size().page_multiple();
@@ -42,6 +40,9 @@ impl ChrMemoryMap {
                     pages_per_bank: bank_size.page_multiple(),
                     page_number_mask,
                     page_offset,
+                    page_number: 0,
+                    bank_number: BankNumber::from_u8(0),
+                    mem_type_status: ChrMemTypeStatus::Rom(ReadStatus::Enabled),
                 });
             }
         }
@@ -67,10 +68,8 @@ impl ChrMemoryMap {
         }
 
         assert_eq!(page_mappings.len(), 12);
-
         let mut memory_map = Self {
             page_mappings: page_mappings.try_into().unwrap(),
-            page_ids: [ChrPageId::Rom { page_number: 0, bank_number: BankNumber::from_u8(0), read_status: ReadStatus::Enabled }; CHR_SLOT_COUNT],
             name_table_mirroring_fixed,
         };
         memory_map.update_page_ids(regs);
@@ -89,18 +88,21 @@ impl ChrMemoryMap {
         let mapping_index = address / (KIBIBYTE as u16);
         let offset = address % (KIBIBYTE as u16);
 
-        let page_id = self.page_ids[mapping_index as usize];
-        let (chr_memory_index, peek_source) = match page_id {
-            ChrPageId::Rom { page_number, bank_number, read_status } => {
+        let page_mapping = self.page_mappings[mapping_index as usize];
+        let page_number = page_mapping.page_number;
+        let bank_number = page_mapping.bank_number;
+        let (chr_memory_index, peek_source) = match page_mapping.mem_type_status() {
+            ChrMemTypeStatus::Rom(read_status) => {
                 (ChrMemoryIndex::Rom(u32::from(page_number) * KIBIBYTE + u32::from(offset), read_status), PeekSource::Rom(bank_number))
             }
-            ChrPageId::Ram { page_number, bank_number, read_status, write_status } => {
+            ChrMemTypeStatus::Ram(read_status, write_status) => {
                 (ChrMemoryIndex::Ram(u32::from(page_number) * KIBIBYTE + u32::from(offset), read_status, write_status), PeekSource::Ram(bank_number))
             }
-            ChrPageId::Ciram(side) => {
+            ChrMemTypeStatus::Ciram => {
+                let side = CiramSide::from_page_number(page_number);
                 (ChrMemoryIndex::Ciram(side, offset.into()), PeekSource::Ciram(side))
             }
-            ChrPageId::MapperCustom { page_id } =>
+            ChrMemTypeStatus::MapperCustom { page_id } =>
                 (ChrMemoryIndex::MapperCustom { page_id, index: offset.into() }, PeekSource::MapperCustom { page_id }),
         };
 
@@ -111,8 +113,8 @@ impl ChrMemoryMap {
         &self.page_mappings
     }
 
-    pub fn pattern_table_page_ids(&self) -> &[ChrPageId] {
-        &self.page_ids[0..8]
+    pub fn pattern_table_page_mappings(&self) -> &[ChrMapping] {
+        &self.page_mappings[0..8]
     }
 
     pub fn set_name_table_mirroring(&mut self, regs: &mut ChrBankRegisters, name_table_mirroring: NameTableMirroring) {
@@ -137,20 +139,21 @@ impl ChrMemoryMap {
 
     pub fn update_page_ids(&mut self, regs: &ChrBankRegisters) {
         for i in 0..CHR_SLOT_COUNT {
-            self.page_ids[i] = self.page_mappings[i].page_id(regs);
+            self.page_mappings[i].update_page_id(regs);
         }
     }
 
     pub fn page_start_index(&self, mapping_index: u8) -> ChrMemoryIndex {
-        let page_id = self.page_ids[mapping_index as usize];
-        match page_id {
-            ChrPageId::Rom { page_number, read_status, .. } =>
+        let mapping = self.page_mappings[mapping_index as usize];
+        let page_number = mapping.page_number;
+        match mapping.mem_type_status {
+            ChrMemTypeStatus::Rom(read_status) =>
                 ChrMemoryIndex::Rom(u32::from(page_number) * KIBIBYTE, read_status),
-            ChrPageId::Ram { page_number, read_status, write_status, .. } =>
+            ChrMemTypeStatus::Ram(read_status, write_status) =>
                 ChrMemoryIndex::Ram(u32::from(page_number) * KIBIBYTE, read_status, write_status),
-            ChrPageId::Ciram(side) =>
-                ChrMemoryIndex::Ciram(side, 0),
-            ChrPageId::MapperCustom { page_id } =>
+            ChrMemTypeStatus::Ciram =>
+                ChrMemoryIndex::Ciram(CiramSide::from_page_number(page_number), 0),
+            ChrMemTypeStatus::MapperCustom { page_id } =>
                 ChrMemoryIndex::MapperCustom { page_id, index: 0 },
         }
     }
@@ -181,6 +184,9 @@ pub struct ChrMapping {
     pages_per_bank: u16,
     page_offset: u16,
     page_number_mask: u16,
+    page_number: u16,
+    bank_number: BankNumber,
+    mem_type_status: ChrMemTypeStatus,
 }
 
 impl ChrMapping {
@@ -190,6 +196,9 @@ impl ChrMapping {
             pages_per_bank: 1,
             page_offset: 0,
             page_number_mask: 0b1111_1111_1111_1111,
+            page_number: 0,
+            bank_number: BankNumber::from_u8(0),
+            mem_type_status: ChrMemTypeStatus::Rom(ReadStatus::Enabled),
         };
         mapping.bank = match name_table_source {
             NameTableSource::Rom { bank_number } => mapping.bank.fixed_index(bank_number.to_raw() as i16),
@@ -211,6 +220,9 @@ impl ChrMapping {
             pages_per_bank: 1,
             page_offset: 0,
             page_number_mask: 0b1111_1111_1111_1111,
+            page_number: 0,
+            bank_number: BankNumber::from_u8(0),
+            mem_type_status: ChrMemTypeStatus::Rom(ReadStatus::Enabled),
         };
 
         let chr_source = match name_table_source {
@@ -222,6 +234,14 @@ impl ChrMapping {
         regs.set_chr_source(source_id, chr_source);
 
         mapping
+    }
+
+    pub fn page_number(self) -> u16 {
+        self.page_number
+    }
+
+    pub fn mem_type_status(self) -> ChrMemTypeStatus {
+        self.mem_type_status
     }
 
     pub fn to_name_table_source(self, regs: &ChrBankRegisters) -> Result<NameTableSource, String> {
@@ -245,7 +265,7 @@ impl ChrMapping {
         }
     }
 
-    pub fn page_id(&self, regs: &ChrBankRegisters) -> ChrPageId {
+    pub fn update_page_id(&mut self, regs: &ChrBankRegisters) {
         let Self { bank, pages_per_bank: bank_multiple, page_offset, page_number_mask, .. } = self;
         let location = bank.location().expect("Location to be present in bank.");
         let bank_number = match location {
@@ -254,7 +274,9 @@ impl ChrMapping {
             ChrBankNumberProvider::MetaSwitchable(meta_id) => regs.get_from_meta(meta_id),
         };
 
-        let page_number = ((bank_multiple * bank_number.to_raw()) & page_number_mask) + page_offset;
+        let page_number = ((*bank_multiple * bank_number.to_raw()) & *page_number_mask) + *page_offset;
+        self.page_number = page_number;
+        self.bank_number = bank_number;
 
         let read_status = bank.read_status_register_id().map_or(ReadStatus::Enabled, |id| regs.read_status(id));
         let write_status = bank.write_status_register_id().map_or(WriteStatus::Enabled, |id| regs.write_status(id));
@@ -264,33 +286,43 @@ impl ChrMapping {
                 match (regs.cartridge_has_rom(), regs.cartridge_has_ram()) {
                     (false, false) => todo!("Absent CHR pages."),
                     (true , true ) => panic!("Not sure what to do for a RomOrRam bank when both are present in the cartridge."),
-                    (true , false) => ChrPageId::Rom {
-                        page_number, bank_number, read_status,
-                    },
-                    (false, true ) => ChrPageId::Ram {
-                        page_number, bank_number, read_status, write_status,
+                    (true , false) => {
+                        self.mem_type_status = ChrMemTypeStatus::Rom(read_status);
+                    }
+                    (false, true ) => {
+                        self.mem_type_status = ChrMemTypeStatus::Ram(read_status, write_status);
                     },
                 }
             }
             Some(ChrSource::Rom) => {
                 assert!(regs.cartridge_has_rom());
-                ChrPageId::Rom { page_number, bank_number, read_status }
+                self.mem_type_status = ChrMemTypeStatus::Rom(read_status);
             }
             Some(ChrSource::WorkRam) => {
                 assert!(regs.cartridge_has_ram());
-                ChrPageId::Ram { page_number, bank_number, read_status, write_status }
+                self.mem_type_status = ChrMemTypeStatus::Ram(read_status, write_status);
             }
-            Some(ChrSource::Ciram(ciram_side)) => ChrPageId::Ciram(ciram_side),
-            Some(ChrSource::MapperCustom { page_id }) => ChrPageId::MapperCustom { page_id },
+            Some(ChrSource::Ciram(ciram_side)) => {
+                self.page_number = ciram_side.to_page_number();
+                self.bank_number = BankNumber::from_u16(ciram_side.to_page_number());
+                assert!(self.page_number < 2);
+                self.mem_type_status = ChrMemTypeStatus::Ciram;
+            },
+            Some(ChrSource::MapperCustom { page_id }) => {
+                assert_eq!(self.page_number, 0);
+                self.mem_type_status = ChrMemTypeStatus::MapperCustom { page_id };
+            }
         }
     }
 }
 
 #[derive(Clone, Copy, Debug)]
-pub enum ChrPageId {
-    Rom { page_number: u16, bank_number: BankNumber, read_status: ReadStatus },
-    Ram { page_number: u16, bank_number: BankNumber, read_status: ReadStatus, write_status: WriteStatus },
-    Ciram(CiramSide),
+pub enum ChrMemTypeStatus {
+    Rom(ReadStatus),
+    Ram(ReadStatus, WriteStatus),
+    // TODO: Read/Write status here in order to disable CIRAM for mapper 111
+    // Or maybe "Disabled" on the wiki just means unmapped?
+    Ciram,
     // TODO: Should Read/WriteStatus be stored here?
     MapperCustom { page_id: u8 },
 }

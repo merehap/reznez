@@ -7,7 +7,7 @@ use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId, ReadStatusRegist
 use crate::memory::bank::bank_number::{ChrBankRegisters, ReadStatus, WriteStatus};
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::ppu_address::PpuAddress;
-use crate::memory::ppu::chr_memory_map::{ChrMemoryIndex, ChrMemoryMap, ChrPageId};
+use crate::memory::ppu::chr_memory_map::{ChrMemTypeStatus, ChrMemoryIndex, ChrMemoryMap};
 use crate::memory::ppu::ciram::Ciram;
 use crate::memory::raw_memory::{RawMemory, RawMemorySlice};
 use crate::memory::small_page::SmallPage;
@@ -370,12 +370,13 @@ impl ChrMemory {
 
     pub fn chr_rom_bank_string(&self) -> String {
         let mut result = String::new();
-        for page_id in self.current_memory_map().pattern_table_page_ids() {
-            let bank_string = match page_id {
-                ChrPageId::Rom { page_number, .. } => page_number.to_string(),
-                ChrPageId::Ram { page_number, .. } => format!("W{page_number}"),
-                ChrPageId::Ciram(side) => format!("C{side:?}"),
-                ChrPageId::MapperCustom { page_id } => format!("M{page_id}"),
+        for mapping in self.current_memory_map().pattern_table_page_mappings() {
+            let page_number = mapping.page_number();
+            let bank_string = match mapping.mem_type_status() {
+                ChrMemTypeStatus::Rom(..) => page_number.to_string(),
+                ChrMemTypeStatus::Ram(..) => format!("W{page_number}"),
+                ChrMemTypeStatus::Ciram => format!("C{page_number}"),
+                ChrMemTypeStatus::MapperCustom { page_id } => format!("M{page_id}"),
             };
 
             let window_size = 1;

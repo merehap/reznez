@@ -50,3 +50,20 @@ pub enum CiramSide {
     Left = 0,
     Right = SIDE_SIZE as isize,
 }
+
+impl CiramSide {
+    pub fn from_page_number(page_number: u16) -> Self {
+        match page_number {
+            0 => Self::Left,
+            1 => Self::Right,
+            _ => panic!("Bad page_number for CIRAM side. Must be 0 or 1, but was {page_number}.")
+        }
+    }
+
+    pub fn to_page_number(self) -> u16 {
+        match self {
+            Self::Left => 0,
+            Self::Right => 1,
+        }
+    }
+}
