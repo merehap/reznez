@@ -12,7 +12,7 @@ use crate::memory::cpu::cpu_address::{CpuAddress, FriendlyCpuAddress};
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::cpu_pinout::CpuPinout;
 use crate::mapper::{ChrBankRegisterId, ChrMemory, CiramSide, KIBIBYTE, Mapper, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource, PpuAddress, PrgBankRegisterId, PrgMemory, ReadResult};
-use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
+use crate::memory::ppu::chr_memory::PpuPeek;
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ciram::Ciram;
 use crate::memory::ppu::ppu_pinout::PpuPinout;
@@ -217,32 +217,8 @@ impl Bus {
         self.chr_memory.set_chr_source(id, chr_source);
     }
 
-    #[inline]
-    pub fn peek_name_table_byte(&self, address: PpuAddress) -> PpuPeek {
-        let (name_table_quadrant, index) = address.to_name_table_index();
-        let value = self.raw_name_table(name_table_quadrant)[index as usize];
-        PpuPeek::new(value, PeekSource::from_name_table_source(self.name_table_mirroring().name_table_source_in_quadrant(name_table_quadrant)))
-    }
-
-    #[inline]
-    pub fn write_name_table_byte(&mut self, address: PpuAddress, value: u8) {
-        let (quadrant, index) = address.to_name_table_index();
-        match self.name_table_mirroring().name_table_source_in_quadrant(quadrant) {
-            NameTableSource::Ciram(side) =>
-                self.ciram.write(side, index, value),
-            NameTableSource::Rom {..} => { /* ROM is read-only. */}
-            // FIXME: This currently ignores whether RAM writes are enabled. It shouldn't be possible to do that.
-            NameTableSource::Ram { bank_number } =>
-                self.chr_memory.work_ram_1kib_page_mut(0x400 * u32::from(bank_number.to_raw()))[index as usize] = value,
-            NameTableSource::MapperCustom { page_id, .. } => {
-                if let Some(page) = self.mapper_custom_pages[page_id as usize].to_raw_ref_mut() {
-                    // This page must be writeable.
-                    page[index as usize] = value;
-                }
-            }
-        }
-    }
-
+    // Only used by a debug screen.
+    // FIXME: Bug for Power Rangers III. Probably just remove this method entirely.
     #[inline]
     pub fn raw_name_table(&self, quadrant: NameTableQuadrant) -> &[u8; KIBIBYTE as usize] {
         match self.name_table_mirroring().name_table_source_in_quadrant(quadrant) {
@@ -471,8 +447,7 @@ impl Bus {
 
     pub fn ppu_peek(&self, address: PpuAddress) -> PpuPeek {
         match address.to_u16() {
-            0x0000..=0x1FFF => self.peek_chr(address),
-            0x2000..=0x3EFF => self.peek_name_table_byte(address),
+            0x0000..=0x3EFF => self.peek_chr(address),
             0x3F00..=0x3FFF => self.palette_ram.peek(address.to_palette_ram_index()),
             0x4000..=0xFFFF => unreachable!(),
         }
@@ -487,8 +462,7 @@ impl Bus {
     #[inline]
     pub fn ppu_write(&mut self, addr: PpuAddress, value: u8) {
         match addr.to_u16() {
-            0x0000..=0x1FFF => self.chr_memory.write(&mut self.ciram, &mut self.mapper_custom_pages, addr, value),
-            0x2000..=0x3EFF => self.write_name_table_byte(addr, value),
+            0x0000..=0x3EFF => self.chr_memory.write(&mut self.ciram, &mut self.mapper_custom_pages, addr, value),
             0x3F00..=0x3FFF => self.palette_ram.write(addr.to_palette_ram_index(), value),
             0x4000..=0xFFFF => unreachable!(),
         }

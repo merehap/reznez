@@ -153,8 +153,7 @@ impl Mapper for Mapper005 {
                 let raw_chr_index = 4 * KIBIBYTE * u32::from(pattern_bank) * KIBIBYTE + u32::from(address.to_u16() % 0x1000);
                 bus.chr_memory().peek_raw(raw_chr_index)
             }
-            0x0000..=0x1FFF => bus.chr_memory().peek(&bus.ciram, &bus.mapper_custom_pages, address),
-            0x2000..=0x3EFF => bus.peek_name_table_byte(address),
+            0x0000..=0x3EFF => bus.chr_memory().peek(&bus.ciram, &bus.mapper_custom_pages, address),
             0x3F00..=0x3FFF if should_substitute => {
                 let palette = Self::peek_ext_rom(bus, self.name_table_index) >> 6;
                 // The same palette is used for all 4 corners.

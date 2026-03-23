@@ -9,7 +9,7 @@ use crate::util::unit::KIBIBYTE;
 use super::chr_memory::PeekSource;
 use super::ciram::CiramSide;
 
-const CHR_SLOT_COUNT: usize = 12;
+const CHR_SLOT_COUNT: usize = 16;
 
 pub struct ChrMemoryMap {
     // 0x0000 through 0x1FFF (2 pattern tables) and 0x2000 through 0x2FFF (4 name tables).
@@ -47,7 +47,7 @@ impl ChrMemoryMap {
             }
         }
 
-        assert!(matches!(page_mappings.len(), 8 | 12));
+        assert!(matches!(page_mappings.len(), 8 | 12 | 16));
 
         // Most mappers only map 0x0000..=0x1FFF for pattern data, but some map up through 0x2FFF.
         // TODO: Map through 0x3EFF
@@ -67,7 +67,15 @@ impl ChrMemoryMap {
             }
         }
 
-        assert_eq!(page_mappings.len(), 12);
+        if page_mappings.len() == 12 {
+            // Normally, 0x3000 through 0x3EFF is a mirror of 0x2000 through 0x2EFF.
+            page_mappings.push(page_mappings[8]);
+            page_mappings.push(page_mappings[9]);
+            page_mappings.push(page_mappings[10]);
+            page_mappings.push(page_mappings[11]);
+        }
+
+        assert_eq!(page_mappings.len(), 16);
         let mut memory_map = Self {
             page_mappings: page_mappings.try_into().unwrap(),
             name_table_mirroring_fixed,
@@ -79,11 +87,7 @@ impl ChrMemoryMap {
 
     pub fn index_for_address(&self, address: PpuAddress) -> (ChrMemoryIndex, PeekSource) {
         let address = address.to_u16();
-        match address {
-            0x0000..=0x2FFF => {}
-            0x3000..=0x3FFF => todo!(),
-            0x4000..=0xFFFF => unreachable!(),
-        }
+        assert!(address < 0x4000);
 
         let mapping_index = address / (KIBIBYTE as u16);
         let offset = address % (KIBIBYTE as u16);
