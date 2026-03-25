@@ -231,7 +231,7 @@ impl Opt {
             log_cpu_all,
             log_ppu_all,
             log_apu_all,
-            log_cpu_instructions: _,
+            log_cpu_instructions,
             log_cpu_flow_control,
             log_cpu_mode,
             log_detailed_cpu_mode,
@@ -255,9 +255,9 @@ impl Opt {
             assemble: _,
         } = self.clone();
 
-        log_cpu_all | log_ppu_all | log_apu_all | log_cpu_flow_control | log_cpu_mode
-            | log_detailed_cpu_mode | log_ppu_stages | log_ppu_flags | log_mapper_updates
-            | log_mapper_irq_counter | log_timings
+        log_cpu_all | log_ppu_all | log_apu_all | log_cpu_instructions | log_cpu_flow_control
+            | log_cpu_mode | log_detailed_cpu_mode | log_ppu_stages | log_ppu_flags
+            | log_mapper_updates | log_mapper_irq_counter | log_timings
     }
 }
 

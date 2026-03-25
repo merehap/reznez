@@ -351,7 +351,9 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (103..=106, _) => TodoMapper,
         // Magic Dragon
         (107, None) => m::mapper107::Mapper107.supported(),
-        (108..=111, _) => TodoMapper,
+        (108..=110, _) => TodoMapper,
+        // Cheapocabra or GTROM
+        (111, None) => m::mapper111::Mapper111.supported(),
         // Huang Di and San Guo Zhi - Qun Xiong Zheng Ba
         (112, None) => m::mapper112::Mapper112::new().supported(),
         // HES NTD-8
