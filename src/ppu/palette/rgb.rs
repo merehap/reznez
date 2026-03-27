@@ -25,14 +25,6 @@ impl Rgb {
         self.blue
     }
 
-    pub fn to_greyscale(self) -> Self {
-        Self {
-            red: self.red & 0x30,
-            green: self.green & 0x30,
-            blue: self.blue & 0x30,
-        }
-    }
-
     pub fn emphasized(self, factors: [f32; 3]) -> Rgb {
         Self {
             red: apply_emphasis_factor(self.red, factors[0]),

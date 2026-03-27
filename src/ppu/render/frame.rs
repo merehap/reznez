@@ -70,10 +70,6 @@ impl Frame {
             (Opaque(rgb), Opaque(_)  , Behind ) => rgb,
         };
 
-        if mask.greyscale_enabled() {
-            rgb = rgb.to_greyscale();
-        }
-
         if !self.show_overscan && (column.is_in_overscan_region() || row.is_in_overscan_region()) {
             rgb = Rgb::BLACK;
         }
