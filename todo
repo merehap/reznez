@@ -3,8 +3,7 @@ ROADMAP
 2. Fully working MMC5
 3. Remaining test ROMs
 4. Windows/Mac/WASM support
-5. Fix rendering when multiple sprites on the same scanline
-6. Comments
+5. Comments
 
 Investigate if lack of MMC5 Extended Ram CHR status register is causing bad renders.
 Re-allow ReadWriteStatuses for MMC5 Extended RAM.
@@ -27,20 +26,12 @@ Use has_persistent_memory correctly (mostly for cases without NES2.0 metadata)
 Why does Sunsoft FME7 (mapper 69) have a holymapperel result of 0010? Mesen behaves the same.
 Detect PpuAddress changes better, then clean up MMC3 and Mapper 91 IRQ logic.
 Give "Fix Metadata" prompt when metadata doesn't match the DB (Test case: mirroring for Dragon Ball - Shen Long no Nazo, also Fighting Hero)
-Split out window.rs, bank.rs, and bank_number.rs into approapriate files.
+Split out window.rs, bank.rs, and bank_number.rs into appropriate files.
 Merge PrgBank into PrgWindow and ChrBank into ChrWindow.
 Expansion Audio
 
 REWRITES NEEDED
 OamAddress probably shouldn't know anything about sprite fields. Should just be a simple u8. Remove sprite 0 determination since that is a property of SecondaryOam (or PPU dot 66).
-Low-level PRG address components API.
-    PRG locations as "oooo pppp aaaa aaaa"
-    Simple case: mapper 235
-    Complex case: Action 53
-    Strange case: mapper 242
-    Other case: mapper 37
-    Unify normal high-level bank handling with this low-level API? Very likely.
-
 Signals-driven refactor.
     Blocked on removing cpu_peek/cpu_read/cpu_write from Mapper
         Blocked on making on_ppu_address_change() and on_ppu_read() signal-based
