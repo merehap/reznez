@@ -448,7 +448,7 @@ impl Bus {
     pub fn ppu_peek(&self, address: PpuAddress) -> PpuPeek {
         match address.to_u16() {
             0x0000..=0x3EFF => self.peek_chr(address),
-            0x3F00..=0x3FFF => self.palette_ram.peek(address.to_palette_ram_index()),
+            0x3F00..=0x3FFF => self.palette_ram.peek(&self.ppu_regs, address.to_palette_ram_index()),
             0x4000..=0xFFFF => unreachable!(),
         }
     }

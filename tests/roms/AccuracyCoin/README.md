@@ -1,23 +1,26 @@
 # AccuracyCoin
 AccuracyCoin is a large collection of NES accuracy tests on a single NROM cartridge.
 
-This ROM was designed for an NTSC console with an RP2A03G CPU and RP2C02G PPU. Some tests might fail on hardware with a different revision.
+This ROM was designed for an NTSC console with an RP2A03G CPU and RP2C02G PPU. Some tests might be automatically skipped on hardware with a different revision.
 
-This ROM currently has 131 tests. These tests print "PASS" or "FAIL" on screen, and in the event of a failure, this ROM also provides an error code. In addition to those tests, this ROM also has 5 tests labeled "DRAW", which don't actually test for anything; rather, they simply print information on screen.
+This ROM currently has 137 tests. These tests print "PASS" or "FAIL" on screen, and in the event of a failure, this ROM also provides an error code. In addition to those tests, this ROM also has 5 tests labeled "DRAW", which don't actually test for anything; rather, they simply print information on screen.
 
-Here's an example of the menu in this ROM shown on an emulator failing a few tests, passing others, and a few tests on screen haven't been run yet. (The cursor is currently next to the "RAM Mirroring" test.)
+Here's an example of the menu in this ROM shown on an emulator failing a few tests, passing others, and a few tests on screen haven't been run yet. (The cursor is currently next to the "The Decimal Flag" test.)
 
-![AccuracyCoin_Page1](https://github.com/user-attachments/assets/2c17ad97-d702-43d1-9650-e185036d95c8)
+<img width="256" height="240" alt="Page1" src="https://github.com/user-attachments/assets/335502f4-d5ac-4aed-ac1f-e31ea614d2a3" />
 
 # Navigating the menus
 Use the D-Pad to move the cursor up or down.  
+Pressing A will run the highlighted test.  
+Pressing B will mark the highlighted test to be skipped. You can press B again to un-mark the test. This is useful if any tests are crashing the console or emulator and you still want to see the table of results.  
 If the cursor is at the top of the page (highlighting the current page index), pressing left and right will scroll to a new page of tests.  
 If the cursor is at the top of the page (highlighting the current page index), pressing A will run all tests on the page.  
+If the cursor is at the top of the page (highlighting the current page index), pressing B will mark all tests on the page to be skipped.  
 If the cursor is at the top of the page (highlighting the current page index), pressing Start will run all tests on the ROM, and then draw a table showing the results of every test.
 
 Examples:
 
-![Result_Table](https://github.com/user-attachments/assets/3244bd9c-1ea1-42ac-8687-49bcc697adcf)
+<img width="563" height="240" alt="TableComp" src="https://github.com/user-attachments/assets/33b6b6d0-0509-4791-a3de-041ab681a43f" />
 
 Any test with multiple acceptable passing behaviors will be drawn with a light blue number over it.
 
@@ -41,6 +44,8 @@ Here's a color-coded version of that image, with boxes around each byte:
 
 # Error Codes
 For more information, I recommend reading the fully commented assembly code for the test.
+
+## Page 1: CPU Behavior
 
 ### ROM is not Writable
   1: Writing to ROM should not overwrite the byte in ROM.  
@@ -66,7 +71,7 @@ For more information, I recommend reading the fully commented assembly code for 
   7: Bit 5 of the 6502 processor flags should be set by BRK.  
   8: Bit 5 of the 6502 processor flags should be set by an IRQ.  
   9: Bit 5 of the 6502 processor flags should be set by an NMI.  
-  
+
 ### Dummy read cycles
   1: A mirror of PPU_STATUS ($2002) should be read twice by LDA $20F2, X (where X = $10).  
   2: The dummy read should not occur if a page boundary is not crossed.  
@@ -96,28 +101,6 @@ For more information, I recommend reading the fully commented assembly code for 
   8: Writing should always update the databus, even writing to $4015.  
   9: Bit 5 of address $4015 should be open bus.  
 
-### Unofficial Instructions
-  1: Does "SLO Absolute" do vaguely what's expected of it?  
-  2: Does "ANC Immediate" do vaguely what's expected of it?  
-  3: Does "RLA Absolute" do vaguely what's expected of it?  
-  4: Does "SRE Absolute" do vaguely what's expected of it?  
-  5: Does "ASR Immediate" do vaguely what's expected of it?  
-  6: Does "RRA Absolute" do vaguely what's expected of it?  
-  7: Does "ARR Immediate" do vaguely what's expected of it?  
-  8: Does "SAX Absolute" do vaguely what's expected of it?  
-  9: Does "ANE Immediate" do vaguely what's expected of it?  
-  A: Does "SHA Absolute, Y" do vaguely what's expected of it?  
-  B: Does "SHX Absolute, Y" do vaguely what's expected of it?  
-  C: Does "SHY Absolute, X" do vaguely what's expected of it?  
-  D: Does "SHS Absolute, Y" do vaguely what's expected of it?  
-  E: Does "SHA (Indirect) Y" do vaguely what's expected of it?  
-  F: Does "LAX Absolute" do vaguely what's expected of it?  
-  G: Does "LXA Immediate" do vaguely what's expected of it?  
-  H: Does "LAE Absolute, Y" do vaguely what's expected of it?  
-  I: Does "DCP Absolute" do vaguely what's expected of it?  
-  J: Does "AXS Immediate" do vaguely what's expected of it?  
-  K: Does "ISC Absolute" do vaguely what's expected of it?  
-  
 ### All NOP Instructions
   (See message printed on screen for more details)  
   1: Opcode $04 (NOP Zero Page) malfunctioned.  
@@ -149,20 +132,22 @@ For more information, I recommend reading the fully commented assembly code for 
   R: Opcode $FA (NOP Implied) malfunctioned.  
   S: Opcode $FC (NOP Absolute, X) malfunctioned.  
 
+## Page 2: Addressing Mode Wraparound
+
 ### Absolute Indexed Wraparound
   1: Absolute indexed addressing did not read from the correct address.  
   2: When indexing with X beyond address $FFFF, the instruction should read from the zero page.  
   3: When indexing with Y beyond address $FFFF, the instruction should read from the zero page.  
-  
+
 ### Zero Page Indexed Wraparound
   1: Zero Page indexed addressing did not read from the correct address.  
   2: When indexing with X beyond address $00FF, the instruction should still read from the zero page.  
   3: When indexing with Y beyond address $00FF, the instruction should still read from the zero page.  
-  
+
 ### Indirect Addressing Wraparound
   1: JMP (Indirect) did not move the program counter to the correct address.  
   2: The address bus should wrap around the page when reading the low and high bytes with indirect addressing.  
-  
+
 ### Indirect Addressing, X Wraparound
   1: Indirect, X addressing did not read from the correct address.  
   2: The indirect indexing should only occur on the zero page, even if X crosses a page boundary.  
@@ -172,35 +157,30 @@ For more information, I recommend reading the fully commented assembly code for 
   1: Indirect, Y addressing did not read from the correct address.  
   2: The Y indexing should be able to cross a page boundary, and the high byte should be updated.  
   3: The address bus should wrap around the page when reading the low and high bytes with indirect addressing.  
-  
+
 ### Relative Addressing Wraparound
   1: You should be able to branch from the Zero Page to page $FF.  
   2: You should be able to branch from page $FF to the Zero Page.  
 
-### Unofficial Instructions: SLO, RLA, SRE, RRA, SAX, LAX, DCP, ISC, ANC, ASR, ARR, ANE, LXA, AXS, SBC, LAE
-  0: This instruction had the wrong number of operand bytes.  
-  1: The target address of the instruction was not the correct value after the test. (Not applicable to the "Immediate" addressing mode.)  
-  2: The A register was not the correct value after the test.  
-  3: The X register was not the correct value after the test.  
-  4: The Y register was not the correct value after the test.  
-  5: The CPU status flags were not correct after the test.  
-  6: The stack pointer was not the correct value after the test. (Only applicable to LAE)  
+## Pages 3, 4, 5, 6, 7, 8, 9, 10, and 11: Unofficial Instructions
 
-### Unofficial Instructions: SHA, SHX, SHY, SHS
-  F: The high byte corruption did not match either known behavior. (Only applicable to SHA and SHS. Corruption with SHX and SHY is consistent across revisions.)  
+### Unofficial Instructions: SLO, RLA, SRE, RRA, SAX, LAX, DCP, ISC, ANC, ASR, ARR, ANE, LXA, AXS, SBC, SHA, SHX, SHY, SHS, LAE
+  F: The high byte corruption did not match any known behavior. (Only applicable to SHA and SHS.)  
   0: This instruction had the wrong number of operand bytes.  
-  1: The target address of the instruction was not the correct value after the test.  
+  1: The target address of the instruction was not correct.  
   2: The A register was not the correct value after the test.  
   3: The X register was not the correct value after the test.  
   4: The Y register was not the correct value after the test.  
   5: The CPU status flags were not correct after the test.  
-  6: The stack pointer was not the correct value after the test.  (Only applicable to SHS)
-  7: If the RDY line goes low 2 cycles before the write cycle, the target address of the instruction was not the correct value after the test.  
-  8: If the RDY line goes low 2 cycles before the write cycle, the A register was not the correct value after the test.  
-  9: If the RDY line goes low 2 cycles before the write cycle, the X register was not the correct value after the test.  
-  A: If the RDY line goes low 2 cycles before the write cycle, the Y register was not the correct Value after the test.  
-  B: If the RDY line goes low 2 cycles before the write cycle, the CPU status flags were not correct after the test.  
-  C: If the RDY line goes low 2 cycles before the write cycle, the stack pointer was not the correct value after the test.  (Only applicable to SHS)
+  6: The stack pointer was not the correct value after the test. (Only applicable to SHS and LAE)  
+  7: If the RDY line goes low 2 cycles before the write cycle, the target address of the instruction was not correct. (SHA, SHX, SHY, and SHS)  
+  8: If the RDY line goes low 2 cycles before the write cycle, the A register was not the correct value after the test. (SHA, SHX, SHY, and SHS)  
+  9: If the RDY line goes low 2 cycles before the write cycle, the X register was not the correct value after the test. (SHA, SHX, SHY, and SHS)  
+  A: If the RDY line goes low 2 cycles before the write cycle, the Y register was not the correct value after the test. (SHA, SHX, SHY, and SHS)  
+  B: If the RDY line goes low 2 cycles before the write cycle, the CPU status flags were not correct after the test. (SHA, SHX, SHY, and SHS)  
+  C: If the RDY line goes low 2 cycles before the write cycle, the stack pointer was not the correct value after the test.  (SHS)
+
+## Page 12: CPU Interrupts
 
 ### Interrupt Flag Latency
   1: An IRQ should occur when a DMC sample ends, the DMC IRQ is enabled, and the CPU's I flag is clear.  
@@ -214,7 +194,10 @@ For more information, I recommend reading the fully commented assembly code for 
   9: Branch instructions should poll for interrupts before cycle 2.  
   A: Branch instructions should not poll for interrupts before cycle 3.  
   B: Branch instructions should poll for interrupts before cycle 4.  
-  C: An interrupt polled successfully on the first poll of a branch, cleared, and then polled again, should still occur.  
+  C: Error code E requires proper PPU open bus emulation to verify the behavior, and your emulator did not pass a pre-requisite PPU open bus test.  
+  D: Error code E requires proper open bus emulation to verify the behavior, and your emulator did not pass a pre-requisite open bus test.  
+  E: An interrupt polled successfully on the first poll of a branch, cleared, and then polled again, should still occur.  
+
 
 ### NMI Overlap BRK
   1: BRK Returned to the wrong address.  
@@ -223,18 +206,66 @@ For more information, I recommend reading the fully commented assembly code for 
 ### NMI Overlap IRQ
   1: Either NMI timing is off, IRQ timing is off, or interrupt hijacking is incorrectly handled.  
 
+## Page 13: APU Registers and DMA tests
+
+### DMA + Open Bus
+  1: LDA $4000 should not read back $00 if a DMA did not occur.  
+  2: The DMC DMA was either on the wrong cycle, or it did not update the data bus.  
+
+### DMA + $2002 Read
+  1: Your emulator did not pass the "SLO Absolute, X" test.  
+  2: The DMC DMA was either on the wrong cycle, or the halt/alignment cycles did not read from $2002.  
+
+### DMA + $2007 Read
+  1: The PPU Read Buffer is not working.  
+  2: The DMC DMA was either on the wrong cycle, or the halt/alignment cycles did not read from $2007.  
+  3: The halt/alignment cycles did not increment the "v" register of the PPU enough times.  
+
+### DMA + $2007 Write
+  1: DMA + $2007 Read did not pass.  
+  2: The DMA was not delayed by the write cycle.  
+
+### DMA + $4015 Read
+  1: The APU Frame Timer Interrupt Flag was never set.  
+  2: The DMC DMA was either on the wrong cycle, or the halt/alignment cycles did not read from $4015, which should have cleared the APU Frame Timer Interrupt Flag.  
+
+### DMA + $4016 Read
+  1: The DMC DMA was either on the wrong cycle, or the halt/alignment cycles did not read from $4016, which otherwise should have clocked the controller port.  
+
+### DMC DMA Bus Conflicts
+  1: The DMA did not occur on the correct CPU cycle.  
+  2: The DMC DMA did not correctly emulate the bus conflict with the APU registers.  
+  3: The DMC DMA bus conflict should clear the APU Frame Counter Interrupt Flag.  
+
+### DMC DMA + OAM DMA
+  1: The DMC DMA timing in your emulator is off.  
+  2: The overlapping DMAs did not spend the correct number of CPU cycles.  
+
+### Explicit DMA Abort
+  1: The DMC DMA timing in your emulator is off.  
+  2: The aborted DMAs did not spend the correct number of CPU cycles.  
+
+### Implicit DMA Abort
+  1: The DMC DMA timing in your emulator is off.  
+  2: The aborted DMAs did not spend the correct number of CPU cycles.  
+  3: The 1-cycle DMA should not get delayed by a write cycle, rather it just shouldn't occur in that case.  
+  4: If the sample was set to keep looping, the DMC DMA timing in your emulator is off.  
+
+## Page 14: APU Tests
+
 ### APU Length Counter
   1: Reading from $4015 should not state that the pulse 1 channel is playing before you write to $4003.  
-  2: Reading from $4015 should state that the pulse 1 channel is playing after you write to $4003  
-  3: Writing $80 to $4017 should immediately clock the Length Counter.  
-  4: Writing $00 to $4017 should not clock the Length Counter.  
-  5: Disabling the audio channel should immediately clear the length counter to zero.  
-  6: The length counter shouldn't be set when the channel is disabled.  
-  7: If the channel is set to play infinitely, it shouldn't clock the length counter.  
-  8: If the channel is set to play infinitely, the length counter should be left unchanged.  
+  2: Reading from $4015 should state that the pulse 1 channel is playing after you write to $4003.  
+  3: The audio caannel should automatically stop playing if you wait for the length counter to expire.  
+  4: Writing $80 to $4017 should immediately clock the Length Counter.  
+  5: Writing $00 to $4017 should not clock the Length Counter.  
+  6: Disabling the audio channel should immediately clear the length counter to zero.  
+  7: The length counter shouldn't be set when the channel is disabled.  
+  8: If the channel is set to play infinitely, it shouldn't clock the length counter.  
+  9: If the channel is set to play infinitely, the length counter should be left unchanged.  
 
 ### APU Length Table
-  1: Your emulator did not pass APU Length Counter.
+  1: Your emulator did not pass APU Length Counter.  
   2: When writing %00000--- to address $4003, the pulse 1 length counter should be set to 10.  
   3: When writing %00001--- to address $4003, the pulse 1 length counter should be set to 254.  
   4: When writing %00010--- to address $4003, the pulse 1 length counter should be set to 20.  
@@ -282,8 +313,8 @@ For more information, I recommend reading the fully commented assembly code for 
   B: The IRQ flag was enabled too late. (writing to $4017 on an odd CPU cycle.)  
   C: The IRQ flag was enabled too early. (writing to $4017 on an even CPU cycle.)  
   D: The IRQ flag was enabled too late. (writing to $4017 on an even CPU cycle.)  
-  E: Reading $4015 on the same cycle the IRQ flag is set should not clear the IRQ flag. (it gets set again on the following 2 CPU cycles)  
-  F: Reading $4015 1 cycle later than the previous test should not clear the IRQ flag. (it gets set again on the following CPU cycle)  
+  E: Reading $4015 on the last cycle before the IRQ flag is set should not clear the IRQ flag. (it gets set on the following 2 CPU cycles)  
+  F: Reading $4015 on the same cycle the IRQ flag is set should not clear the IRQ flag. (it gets set again on the following CPU cycle)  
   G: Reading $4015 1 cycle later than the previous test should not clear the IRQ flag. (it gets set again on this CPU cycle)  
   H: Reading $4015 1 cycle later than the previous test should clear the IRQ flag.  
   I: The Frame Counter Interrupt flag should not have been set 29827 cycles after resetting the frame counter.  
@@ -335,77 +366,111 @@ For more information, I recommend reading the fully commented assembly code for 
   M: Writing to $4015 when the DMC timer has 1 cycle until clocked should not trigger a DMC DMA until after the 3 or 4 CPU cycle delay of writing to $4015.  
   N: Writing to $4015 when the DMC timer has 0 cycles until clocked should not trigger a DMC DMA until after the 3 or 4 CPU cycle delay of writing to $4015.  
 
-### DMA + Open Bus
-  1: LDA $4000 should not read back $00 if a DMA did not occur.  
-  2: The DMC DMA was either on the wrong cycle, or it did not update the data bus.  
-
-### DMA + $2007 Read
-  1: The PPU Read Buffer is not working.  
-  2: The DMC DMA was either on the wrong cycle, or the halt/alignment cycles did not read from $2007.  
-  3: The halt/alignment cycles did not increment the "v" register of the PPU enough times.  
-
-### DMA + $2007 Write
-  1: DMA + $2007 Read did not pass.  
-  2: The DMA was not delayed by the write cycle.  
-
-### DMA + $4015 Read
-  1: The APU Frame Timer Interrupt Flag was never set.  
-  2: The DMC DMA was either on the wrong cycle, or the halt/alignment cycles did not read from $4015, which should have cleared the APU Frame Timer Interrupt Flag.  
-
-### DMA + $4016 Read
-  1: The DMC DMA was either on the wrong cycle, or the halt/alignment cycles did not read from $4016, which otherwise should have clocked the controller port.  
+### APU Register Activation
+  1: A series of prerequisite tests failed. CPU and PPU open bus, PPU Read Buffer, DMA + Open Bus, and DMA + $2007 Read.  
+  2: There were unexpected extra bits when reading from a controller port that should not have been set.  
+  3: Reading from $4015 should clear the APU Frame Counter Interrupt flag.  
+  4: The OAM DMA should not be able to read from the APU registers if $40 is written to $4016, and the CPU Address Bus is not in the range of $4000 to $401F.  
+  5: Something went wrong during the open bus execution. Controller port 2 was possibly clocked too many times.  
+  6: The OAM DMA should be able to read from the APU registers (and mirrors of them) if $40 is written to $4016, and the CPU Address Bus is in the range of $4000 to $401F.  
+  7: Bus conflicts with the APU registers were not properly emulated.  
 
 ### Controller Strobing
   1: A value of $02 written to $4016 should not strobe the controllers.  
   2: Any value with bit 0 set written to $4016 should strobe the controllers.  
   3: Controllers should be strobed when the CPU transitions from a "get" cycle to a "put" cycle.  
   4: Controllers should not be strobed when the CPU transitions from a "put" cycle to a "get" cycle.  
-  
+
 ### Controller Clocking
   1: Reading $4016 more than 8 times should always result in bit 0 being set to 1.  
-  2: Your emulator did not pass the SLO Absolute, X test.  
-  3: (NES / AV Famicom only) Double-reading address $4016 should only clock the controller once.  
-  4: (NES / AV Famicom only) This double-read should be the same value for both reads.  
-  5: (NES / AV Famicom only) The "put"/"halt" cycles of the DMC DMA should be able to clock the controller if the DMA occurs during a read from $4016. The LDA instruction should clock the controller again after the DMC DMA's "get" cycle.  
-  6: (NES / AV Famicom only) If the DMC DMA "get" cycle has a bus conflict with $4016, the controller will only get clocked once during LDA $4016 even with the DMC DMA occurring.  
+  2: Reading from a controller port while it is still strobed shouldn't affect the contents of the shift register, as it should be constantly loaded with the currently held buttons.  
+  3: Your emulator did not pass the SLO Absolute, X test.  
+  4: (NES / AV Famicom only) Double-reading address $4016 should only clock the controller once.  
+  5: (NES / AV Famicom only) This double-read should be the same value for both reads.  
+  6: (NES / AV Famicom only) The "put"/"halt" cycles of the DMC DMA should be able to clock the controller if the DMA occurs during a read from $4016. The LDA instruction should clock the controller again after the DMC DMA's "get" cycle.  
+  7: (NES / AV Famicom only) If the DMC DMA "get" cycle has a bus conflict with $4016, the controller will only get clocked once during LDA $4016 even with the DMC DMA occurring.  
 
-### APU Register Activation
-  1: A series of prerequisite tests failed. CPU and PPU open bus, PPU Read Buffer, DMA + Open Bus, and DMA + $2007 Read.  
-  2: Reading from $4015 should clear the APU Frame Counter Interrupt flag.  
-  3: The OAM DMA should not be able to read from the APU registers if $40 is written to $4016, and the CPU Address Bus is not in the range of $4000 to $401F.  
-  4: Something went wrong during the open bus execution. Controller port 2 was possibly clocked too many times.  
-  5: The OAM DMA should be able to read from the APU registers (and mirrors of them) if $40 is written to $4016, and the CPU Address Bus is in the range of $4000 to $401F.  
-  6: Bus conflicts with the APU registers were not properly emulated.  
-  7: Despite the controller registers not being visible in OAM, the controllers should still be clocked.  
+## Page 15: Power On State
 
-### DMC DMA Bus Conflicts
-  1: The DMA did not occur on the correct CPU cycle.  
-  2: The DMC DMA did not correctly emulate the bus conflict with the APU registers.  
-  3: The DMC DMA bus conflict should clear the APU Frame Counter Interrupt Flag.  
+### DRAW PPU Reset Flag
+  This test attempts to write to the ppu registers before the end of the first VBlank.  
+  "No Reset Flag Detected!" will be printed if the write was successful.  
+  "Reset Flag Detected!" will be printed if the write was unsuccessful.  
 
-### DMC DMA + OAM DMA
-  1: The DMC DMA timing in your emulator is off.  
-  2: The overlapping DMAs did not spend the correct number of CPU cycles.  
+### DRAW CPU RAM
+  This test prints uninitialzed RAM values from address $300 through $31F. Some known examples include the following:  
+<pre>
+F0 F0 0F 0F F0 F0 0F 0F
+F0 F0 0F 0F F0 F0 0F 0F
+0F 0F F0 F0 0F 0F F0 F0
+0F 0F F0 F0 0F 0F F0 F0
+</pre>
+or  
+<pre>
+00 00 00 00 FF FF FF FF
+00 00 00 00 FF FF FF FF
+00 00 00 00 FF FF FF FF
+00 00 00 00 FF FF FF FF
+</pre>
+  Other known patterns include all `00`s or all `FF`s.  
 
-### Explicit DMA Abort
-  1: The DMC DMA timing in your emulator is off.  
-  2: The aborted DMAs did not spend the correct number of CPU cycles.  
-  
-### Implicit DMA Abort
-  1: The DMC DMA timing in your emulator is off.  
-  2: The aborted DMAs did not spend the correct number of CPU cycles.  
-  3: The 1-cycle DMA should not get delayed by a write cycle, rather it just shouldn't occur in that case.  
-  4: If the sample was set to keep looping, the DMC DMA timing in your emulator is off.  
+### DRAW CPU Registers
+  This test prints uninitialized register contents recorded at power on.  
+  Note that there have been consoles known to have noise in some of these bits, and there is no "canonical" power on state for these.  
+<pre>
+              A 00
+              X 00
+              Y 00
+  Stack Pointer FD
+Processor Flags 04
+</pre>
 
-### CPU Registers Power On State
-  1: The A Register should be $00 at power on.  
-  2: The X Register should be $00 at power on.  
-  3: The Y Register should be $00 at power on.  
-  4: The Stack Pointer should be $FD at power on.  
-  5: The Interrupt Flag should be set at power on.
+### DRAW PPU RAM
+  This test prints uninitialzed RAM values from VRAM address $2C00 through $2C1F. Some known examples include the following:  
+<pre>
+F0 F0 0F 0F F0 F0 0F 0F
+F0 F0 0F 0F F0 F0 0F 0F
+0F 0F F0 F0 0F 0F F0 F0
+0F 0F F0 F0 0F 0F F0 F0
+</pre>
+or  
+<pre>
+00 00 00 00 FF FF FF FF
+00 00 00 00 FF FF FF FF
+00 00 00 00 FF FF FF FF
+00 00 00 00 FF FF FF FF
+</pre>
+  Other known patterns include all `00`s or all `FF`s.  
+
+### DRAW Palette RAM
+  This test prints uninitialzed RAM values from Palette RAM, $3F00 through $3F1F.  
+  Note that pre-G PPUs are unable to read palette RAM.  
+  Additionally, every console tested appears to have a unique and consistent power on state for palette RAM. My console has the following:  
+<pre>
+00 00 28 00 00 08 00 00
+00 01 01 20 00 08 00 02
+00 00 00 00 00 02 21 00
+00 00 00 00 00 10 00 00
+</pre>
+  I've ran my test on other consoles, and here are a few other results:  
+<pre>
+10 00 00 00 00 00 00 00
+00 20 00 00 00 00 00 00
+10 20 00 10 00 10 00 00
+00 10 10 20 00 10 20 00
+</pre>
+  While the two result above would suggest it's mostly all zeroes with a few bit flips, I have also seen the following:  
+<pre>
+20 24 0A 25 34 11 0F 02
+00 26 04 25 08 1D 25 12
+20 07 02 00 34 22 00 00
+00 08 00 00 08 02 03 02
+</pre>
+
+## Page 16: PPU Behavior  
 
 ### CHR ROM is not Writable
-  1: Writes to the PPU Address space from the range $0000 through $1FFF should not overwrite teh CHR data if the cartridge has CHR ROM instead of CHR RAM.
+  1: Writes to the PPU Address space from the range $0000 through $1FFF should not overwrite teh CHR data if the cartridge has CHR ROM instead of CHR RAM.  
 
 ### PPU Register Mirroring
   1: PPU registers should be mirrored through $3FFF.  
@@ -413,17 +478,18 @@ For more information, I recommend reading the fully commented assembly code for 
 ### PPU Register Open Bus
   1: Reading from a write-only register PPU should return the most recently written value to the PPU data bus.  
   2: All PPU Registers should update the PPU data bus when written.  
-  3: Bits 0 through 4 when reading from address $2002 should read read the PPU data bus.  
-  4: The PPU data bus value should decay before 1 second passes.  
+  3: Bits 0 through 4 when reading from address $2002 should read the PPU data bus.  
+  4: Reads from $2002 should update the upper 3 bits of the ppu data bus.  
+  5: The PPU data bus value should decay before 1 second passes.  
 
 ### PPU Read Buffer
   1: Reading from the PPU register at $2007 is not working at all in this emulator.  
   2: Reading address $2007 should increment the "v" register.  
   3: There should be a 1-byte buffer when reading from $2007.  
   4: Reading from CHR ROM should use the buffer.  
-  5: Reading from Palette RAM should NOT use the buffer.  
-  6: Writing to $2006 does not modify the buffer value.  
-  7: The value on the nametable at $2700 through $27FF should be put in the buffer when reading from palette RAM at $3F00 through $3FFF.  
+  5: Writing to $2006 does not modify the buffer value.  
+  6: Reading from Palette RAM should NOT use the buffer.  
+  7: The value on the nametable at $2F00 through $2FFF should be put in the buffer when reading from palette RAM at $3F00 through $3FFF.  
 
 ### Palette RAM Quirks
   1: This emulator failed the PPU Read Buffer test.  
@@ -431,11 +497,19 @@ For more information, I recommend reading the fully commented assembly code for 
   3: The backdrop colors for palettes 1, 2, and 3 should not be mirrors of the backdrop color of palette 0.  
   4: The backdrop colors for sprites should be mirrors of the backdrop colors for backgrounds.  
   5: The values read from Palette RAM should only be 6-bit, with the upper 2 bits being PPU open bus.  
+  6: With "Greyscale Mode" enabled, the lower four bits of the value read should all be zero.
+  7: With "Greyscale Mode" enabled, the lower four bits of the value written should be unaffected.
 
 ### Rendering Flag Behavior
   1: Background shift registers should not be initialized or clocked when rendering is entirely disabled.  
   2: Background shift registers should be initialized and clocked when only rendering sprites.  
   3: Sprite Evaluation should still occur when only rendering the background.  
+  
+### $2007 Read w/ Rendering
+  1: Sprite Zero Hits should be working.  
+  2: Reading from $2007 while rendering is enabled should result in a vertical increment of v.  
+
+## Page 17: PPU VBlank Timing
 
 ### VBlank Beginning
   1: The PPU Register $2002 VBlank flag was not set at the correct PPU cycle.  
@@ -465,6 +539,14 @@ For more information, I recommend reading the fully commented assembly code for 
 ### NMI Disabled at VBlank
   1: The NMI could occur too late or was disabled too early.  
 
+## Page 18: Sprite Evaluation
+
+### Sprite Overflow Behavior
+  1: Evaluating 9 sprites in a single scanline should set the Sprite Overflow Flag.  
+  2: The Sprite Overflow Flag should not be the same thing as the CPU's Overflow flag.  
+  3: Evaluating only 8 sprites in a single scanline should not set the Sprite Overflow Flag.  
+  4: Sprite evaluation should occur even if only the background is being rendered. This should also set the Sprite Overflow Flag.  
+
 ### Sprite 0 Hit Behavior
   1: A Sprite zero hit did not occur.  
   2: Sprite zero hits should not happen if background rendering is disabled.  
@@ -481,15 +563,21 @@ For more information, I recommend reading the fully commented assembly code for 
   D: Your sprites are being rendered one scanline higher than they should be, or your sprite zero hit detection isn't actually checking for "solid pixels" overlapping.  
   E: The sprite zero hit flag was set too early.  
 
+### $2002 Flag Timing
+  1: The flags were not cleared on the correct ppu cycle.  
+  2: The flags were not set on the correct ppu cycle.  
+
+### Suddenly Resize Sprite
+  1: Sprite Zero Hits should be working.  
+  2: Writing to $2000 to enable 16 pixel tall sprites at the beginning of HBlank should properly allow an otherwise out-of-range 8 pixel tall sprite to extend into the current scanline.  
+  3: This does the same thing as error code 2, but writes to $2000 after sprite zero would be prepared in the sprite shift registers. The data should still exist in the shift registers despite it now being out of range.
+  4: Writing to $2000 to disable 16 pixel tall sprites at the beginning of HBlank should properly prevent an otherwise in-range 16 pixel tall sprite from extending into the current scanline.  
+  5: This does the same thing as error code 4, but writes to $2000 after sprite zero would be determined out-of-range. The data should not exist in the shift registers despite it now being in range.
+
 ### Arbitrary Sprite Zero
   1: Sprite 0 should trigger a sprite zero hit. No other sprite should.  
   2: The first processed sprite of a scanline should be treated as "sprite zero".  
   3: Misaligned OAM should be able to trigger a sprite zero hit.  
-
-### Sprite Overflow Behavior
-  1: Evaluating 9 sprites in a single scanline should set the Sprite Overflow Flag.  
-  2: The Sprite Overflow Flag should not be the same thing as the CPU's Overflow flag.  
-  3: Evaluating only 8 sprites in a single scanline should not set the Sprite Overflow Flag.  
 
 ### Misaligned OAM Behavior
   1: Misaligned OAM should be able to trigger a sprite zero hit.  
@@ -516,29 +604,35 @@ For more information, I recommend reading the fully commented assembly code for 
   1: This emulator failed to sync the CPU to VBlank during a test that ran when the ROM boots.  
   2: OAM Corruption should "corrupt" a row in OAM by copying the 8 values from row 0 to another row.  
   3: This corruption should not occur immediately after disabling rendering.  
-  4: This corruption should now occur immediately after re-enabling rendering.  
-  
+  4: This corruption should not occur immediately after re-enabling rendering.  
+
 ### INC $4014
   1: The DMC DMA should update the data bus.  
   2: The OAM DMA should use the value of the second write to $4014 as the page number. Requires precise DMC DMA timing, results are tested via a sprite zero hit.  
-  3: Only a single OAM DMA should occur despite two writes to $4014.
-  
+  3: Only a single OAM DMA should occur despite two writes to $4014.  
+
+## Page 19: PPU Misc.
+
 ### Attributes as Tiles
   1: Moving the PPU t register to an attribute table should render the attribute bytes as tile data in scanlines 0 to 15. Results are tested via a sprite zero hit.  
-  2: With the t register pointing to an attribute table, scanlines 16 to 239 should be from the same nametable as the attributes.
-  
+  2: With the t register pointing to an attribute table, scanlines 16 to 239 should be from the same nametable as the attributes.  
+
 ### t Register Quirks
   1: Sprite Zero Hits should be working.  
   2: Writing to $2006 should overwrite some of the bits set up by writing to $2005.  
   3: Writes to $2005 and $2006 should use the same "write latch". Tested by performing a single write to $2006 and then writing to $2005.  
   4: Writes to $2005 and $2006 should use the same "write latch". Tested by performing a single write to $2005 and then writing to $2006.  
-  5: Writing to $2000 between writes to $2006 should still properly set the "nametable select" bits of the t register.
+  5: Writing to $2000 between writes to $2006 should still properly set the "nametable select" bits of the t register.  
 
 ### Stale BG Shift Registers
   1: Sprite Zero Hits should be working.  
   2: Sprite Zero hits shouldn't occur if sprite zero isn't overlapping a solid pixel.  
   3: The background shift registers should not be clocked during H-Blank or F-Blank. After re-enabling rendering, a sprite zero hit should be able to occur entirely on stale background shift register data.  
-  4: The sprite shifters should treat all sprites X positions as 0 if rendering was disabled on dot 339.
+  4: The sprite shifters should treat all sprites X positions as 0 if rendering has already been disabled and remains that way during dot 339.  
+
+### BG Serial In
+  1: Sprite zero hits should not occur when the nametable is entirely blank.  
+  2: Background shift registers should bring in a 1 into bit 0 when shifted. These can be drawn on screen with carefully timed writes to $2001 to enable/disable rendering to skip reloading the shift registers.  
 
 ### Sprites On Scanline 0
   1: Sprites at Y=0 should actually be drawn at Y=1.  
@@ -546,6 +640,15 @@ For more information, I recommend reading the fully commented assembly code for 
   3: (Composite PPU Only) Consecutive frames should shift the background on scanline 0, causing the sprite zero hit to miss on every other frame. (Tested at X=$80)  
   3: (RGB PPU Only) Sprite zero hits should not occur at X=$00 during this test on an RGB PPU.  
   4: (Composite PPU Only) Consecutive frames should shift the background on scanline 0, causing the sprite zero hit to miss on every other frame. (Tested at X=$00)  
+
+### $2004 Stress Test  
+  1: Reading from $2004 (with rendering enabled) should read from the "OAM Buffer" used during OAM Evaluation. Your results did not match the expected results of the test where OAMADDR overflows. See TEST_2004_Stress_Evaluate in the .asm code for details.  
+  2: Reading from $2004 (with rendering enabled) should read from the "OAM Buffer" used during OAM Evaluation. Your results did not match the expected results of the test with more than 8 in-range objects. See TEST_2004_Stress_Evaluate in the .asm code for details.  
+
+### $2007 Stress Test  
+  1: Reading from $2007 should set up the PPU Read Buffer two ppu cycles after the CPU Read ends. Reading from $2007 (with rendering enabled) should set up the PPU Read Buffer with the same value as the resulting read from the background or sprite fetch that occured on the same ppu cycle as the read for the PPU Read Buffer. If you fail this test, you are likely reading from memory to set up the PPU Read Buffer on the wrong ppu cycle, missing dummy nametable reads during sprite fetch, or missing dummy nametable reads at the end of a scanline.  
+
+## Page 20: CPU Behavior 2
 
 ### Instruction Timing
   1: The DMA should update the data bus.  
@@ -609,11 +712,20 @@ For more information, I recommend reading the fully commented assembly code for 
   V: BRK should perform a dummy read on cycle 2.  
   W: RTI should perform a dummy read on cycle 2.  
   X: RTS should perform a dummy read on cycle 2.  
+  Y: RTS should perform a dummy read on cycle 6.  
+
+### Branch Dummy Reads
+  1: Your emulator does not accurately emulate RAM Mirroring.  
+  2: Your emulator does not accurately emulate the PPU Open Bus.  
+  3: Your emulator does not accurately emulate reads from address $2004.  
+  4: The third CPU cycle of branch instructions should dummy read from the byte following the operand.  
+  5: The fourth CPU cycle of branch instructions (if the branch crosses a page boundary) should dummy read from the location of the PC before correcting the high byte.  
 
 ### JSR Edge Cases
   1: Your emulator pushed the wrong value for the return address.  
-  2: Your emulator has incorrect open bus emulation.  
-  3: JSR should leave the value of the second operand on the data bus.  
+  2: JSR should push the return address to the stack between reading the first and second operand.
+  3: Your emulator has incorrect open bus emulation.  
+  4: JSR should leave the value of the second operand on the data bus.  
 
 # Success Codes
 Some tests have multiple acceptable behaviors that are tested for in this ROM. The behavior used will either be printed on screen after running the test, or you'll see a "success code" on the all-test table.  
@@ -623,18 +735,22 @@ Some tests have multiple acceptable behaviors that are tested for in this ROM. T
   2: The Address-Bus-High-Byte-Corruption performed a bitwise AND upon ABH with only X.   
   3: The Address-Bus-High-Byte-Corruption included a magic number to be bitwise ORed with ABH, or did not occur at all.  
 
+### DMA + $2002 Read
+  1: The DMC Load DMA occured after 2 APU cycles. (The common behavior)  
+  2: The DMC Load DMA occured after 3 APU cycles. (The uncommon behavior)  
+
 ### DMA + $4016 Read
   1: The controller was read the way a US-released NES / AV Famicom should read controllers.  
   2: The controller was read the way a Famicom should read controllers.  
-  
+
 ### APU Register Activation
   1: The controllers were not clocked by the bus conflict with the OAM DMA.  
   2: The controllers were clocked by the bus conflict with the OAM DMA.  
-  
+
 ### DMC DMA Bus Conflicts
   1: The controller was read the way a US-released NES should read controllers.  
   2: The controller was read the way a Famicom should read controllers.  
-  
+
 ### Implicit DMA Abort
   1: The abort behaved the way a mid-1990 or later CPU would behave.  
   2: The abort behaved the way a pre-mid-1990 CPU would behave.  
@@ -642,6 +758,14 @@ Some tests have multiple acceptable behaviors that are tested for in this ROM. T
 ### Controller Clocking
   1: The controller was read the way a US-released NES / AV Famicom should read controllers.  
   2: The controller was read the way a Famicom should read controllers.  
+
+### PPU Read Buffer
+  E: The Picture Processing Unit behavide like revision E or earlier.
+  G: The Picture Processing Unit behavide like revision G or earlier.
+
+### Address $2004 Behavior
+  E: The Picture Processing Unit behavide like revision E or earlier.
+  G: The Picture Processing Unit behavide like revision G or earlier.
 
 ### Sprites on Scanline 0
   1: This test was ran on a composite PPU.  
@@ -655,3 +779,36 @@ In case you are running an old version of this ROM and are still looking for an 
   1: A Read-Modify-Write instruction to address $2007 should perform an extra write where the low byte of the PPU address written is the result of the Read-Modify-Write instruction.  
   2: This extra write should not occur when "v" is pointing to Palette RAM. (An extra write still might occur, but that's not the one we're testing for.)  
   3: If "v" is pointing to Palette RAM, this extra write should not get written to the nametable.
+
+### CPU Registers Power On State
+  (removed due to a recent discovery where many consoles were found to have noise in these registers at power on. The values trend towards zero, but there's occasionally an extra bit set. Notably the zero flag has been seen to be set at power on multiple times.)  
+  (This test still exists in the ROM as a "DRAW" test.)  
+  1: The A Register should be $00 at power on.  
+  2: The X Register should be $00 at power on.  
+  3: The Y Register should be $00 at power on.  
+  4: The Stack Pointer should be $FD at power on.  
+  5: The Interrupt Flag should be set at power on.
+
+### Unofficial Instructions
+  (removed because this test no longer needs to exist. I have individual tests for every non-NOP unofficial opcode.)  
+  1: Does "SLO Absolute" do vaguely what's expected of it?  
+  2: Does "ANC Immediate" do vaguely what's expected of it?  
+  3: Does "RLA Absolute" do vaguely what's expected of it?  
+  4: Does "SRE Absolute" do vaguely what's expected of it?  
+  5: Does "ASR Immediate" do vaguely what's expected of it?  
+  6: Does "RRA Absolute" do vaguely what's expected of it?  
+  7: Does "ARR Immediate" do vaguely what's expected of it?  
+  8: Does "SAX Absolute" do vaguely what's expected of it?  
+  9: Does "ANE Immediate" do vaguely what's expected of it?  
+  A: Does "SHA Absolute, Y" do vaguely what's expected of it?  
+  B: Does "SHX Absolute, Y" do vaguely what's expected of it?  
+  C: Does "SHY Absolute, X" do vaguely what's expected of it?  
+  D: Does "SHS Absolute, Y" do vaguely what's expected of it?  
+  E: Does "SHA (Indirect) Y" do vaguely what's expected of it?  
+  F: Does "LAX Absolute" do vaguely what's expected of it?  
+  G: Does "LXA Immediate" do vaguely what's expected of it?  
+  H: Does "LAE Absolute, Y" do vaguely what's expected of it?  
+  I: Does "DCP Absolute" do vaguely what's expected of it?  
+  J: Does "AXS Immediate" do vaguely what's expected of it?  
+  K: Does "ISC Absolute" do vaguely what's expected of it?  
+  
