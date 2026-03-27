@@ -1,4 +1,3 @@
-use log::info;
 use splitbits::{splitbits, combinebits};
 
 use crate::mapper::{PatternTableSide, ReadResult};
@@ -169,7 +168,7 @@ impl PpuRegisters {
         self.ppu_io_bus.update_from_status_read(value.unmasked_value());
 
         self.write_toggle = WriteToggle::FirstByte;
-        self.stop_vblank(clock);
+        self.vblank_active = false;
         // https://wiki.nesdev.org/w/index.php?title=NMI#Race_condition
         if clock.scanline() == 241 && clock.cycle() == 0 {
             self.suppress_vblank_active = true;
@@ -181,19 +180,6 @@ impl PpuRegisters {
     // Write 0x2002 (PPUSTATUS is readonly)
     pub fn write_status(&mut self, register_value: u8) {
         self.ppu_io_bus.update_from_write(register_value);
-    }
-
-    pub(in crate::ppu) fn start_vblank(&mut self, clock: &PpuClock) {
-        info!(target: "ppuflags", " {clock}\tStarting vblank.");
-        self.vblank_active = true;
-    }
-
-    pub(in crate::ppu) fn stop_vblank(&mut self, clock: &PpuClock) {
-        if self.vblank_active {
-            info!(target: "ppuflags", " {clock}\tStopping vblank.");
-        }
-
-        self.vblank_active = false;
     }
 
     // Write 0x2003

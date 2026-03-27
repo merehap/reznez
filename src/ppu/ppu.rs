@@ -332,7 +332,7 @@ impl Ppu {
                 if bus.ppu_regs.suppress_vblank_active {
                     info!(target: "ppuflags", " {}\tSuppressing vblank.", bus.ppu_clock());
                 } else {
-                    bus.ppu_regs.start_vblank(bus.master_clock.ppu_clock());
+                    bus.ppu_regs.vblank_active = true;
                     // "During VBlank ... the value on the PPU address bus is the current value of the v register."
                     bus.set_ppu_address_bus(mapper, bus.ppu_regs.current_address);
                 }
@@ -350,7 +350,7 @@ impl Ppu {
             }
 
             ClearFlags => {
-                bus.ppu_regs.stop_vblank(bus.master_clock.ppu_clock());
+                bus.ppu_regs.vblank_active = false;
                 bus.ppu_regs.sprite0_hit = false;
                 bus.ppu_regs.sprite_overflow = false;
 

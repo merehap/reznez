@@ -383,6 +383,20 @@ impl Nes {
             if latest.emphasize_blue.set_value_then_detect(mask.emphasize_blue()) {
                 info!("Emphasize blue enabled changed to {}", mask.emphasize_blue());
             }
+
+            let regs = &self.bus.ppu_regs;
+            if latest.vblank_active.set_value_then_detect(regs.vblank_active) {
+                info!("VBlank active changed to {}", regs.vblank_active);
+            }
+            if latest.sprite0_hit.set_value_then_detect(regs.sprite0_hit) {
+                info!("Sprite 0 hit changed to {}", regs.sprite0_hit);
+            }
+            if latest.sprite_overflow.set_value_then_detect(regs.sprite_overflow) {
+                info!("Sprite overflow changed to {}", regs.sprite_overflow);
+            }
+            if latest.suppress_vblank_active.set_value_then_detect(regs.suppress_vblank_active) {
+                info!("Suppress VBlank active changed to {}", regs.suppress_vblank_active);
+            }
         }
 
         if log_enabled!(target: "cpuflowcontrol", Info) {
@@ -633,6 +647,11 @@ struct LatestValues {
     emphasize_green: EdgeDetector<bool>,
     emphasize_blue: EdgeDetector<bool>,
 
+    vblank_active: EdgeDetector<bool>,
+    sprite0_hit: EdgeDetector<bool>,
+    sprite_overflow: EdgeDetector<bool>,
+    suppress_vblank_active: EdgeDetector<bool>,
+
     apu_frame_irq_pending_detector: EdgeDetector<bool>,
     dmc_irq_pending_detector: EdgeDetector<bool>,
     mapper_irq_asserted_detector: EdgeDetector<bool>,
@@ -670,6 +689,11 @@ impl LatestValues {
             emphasize_red: EdgeDetector::any_edge(),
             emphasize_green: EdgeDetector::any_edge(),
             emphasize_blue: EdgeDetector::any_edge(),
+
+            vblank_active: EdgeDetector::any_edge(),
+            sprite0_hit: EdgeDetector::any_edge(),
+            sprite_overflow: EdgeDetector::any_edge(),
+            suppress_vblank_active: EdgeDetector::any_edge(),
 
             apu_frame_irq_pending_detector: EdgeDetector::target_value(true),
             dmc_irq_pending_detector: EdgeDetector::target_value(true),

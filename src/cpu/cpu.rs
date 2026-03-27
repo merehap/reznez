@@ -133,6 +133,7 @@ impl Cpu {
         self.nmi_status == NmiStatus::Pending
     }
 
+    // ϕ1. M2 is low
     pub fn step_first_half(bus: &mut Bus, mapper: &mut dyn Mapper) -> Option<Step> {
         if bus.cpu_pinout.reset.current_value() == SignalLevel::Low {
             // The CPU doesn't do anything while the RESET button is held down.
@@ -253,6 +254,7 @@ impl Cpu {
         Some(step)
     }
 
+    // ϕ2. M2 is high
     pub fn step_second_half(bus: &mut Bus, mapper: &mut dyn Mapper) {
         if bus.cpu_pinout.reset.current_value() == SignalLevel::Low {
             // The CPU doesn't do anything while the RESET button is held down.
