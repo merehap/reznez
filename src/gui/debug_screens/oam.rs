@@ -24,8 +24,11 @@ impl Oam {
                 result.to_raw()[i].peek(),
             ]));
             if sprite.priority() == Priority::Behind {
-                // Make this back-sprite transparent since we're only showing front-sprites.
-                result.write(OamAddress::from_u8(i as u8 + 2), 0b1111_1111);
+                // Hide this sprite as well as we can
+                result.write(OamAddress::from_u8(i as u8 + 0), 0b0000_0000);
+                result.write(OamAddress::from_u8(i as u8 + 1), 0b0000_0000);
+                result.write(OamAddress::from_u8(i as u8 + 2), 0b0000_0000);
+                result.write(OamAddress::from_u8(i as u8 + 3), 0b0000_0000);
             }
         }
 
@@ -43,8 +46,11 @@ impl Oam {
                 result.to_raw()[i].peek(),
             ]));
             if sprite.priority() == Priority::InFront {
-                // Make this back-sprite transparent since we're only showing front-sprites.
-                result.write(OamAddress::from_u8(i as u8 + 2), 0b1111_1111);
+                // Hide this sprite as well as we can
+                result.write(OamAddress::from_u8(i as u8 + 0), 0b0000_0000);
+                result.write(OamAddress::from_u8(i as u8 + 1), 0b0000_0000);
+                result.write(OamAddress::from_u8(i as u8 + 2), 0b0000_0000);
+                result.write(OamAddress::from_u8(i as u8 + 3), 0b0000_0000);
             }
         }
 
