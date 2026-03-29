@@ -263,9 +263,15 @@ impl PpuRegisters {
     }
 
     // Read 0x2007
-    pub fn set_ppu_read_buffer_and_advance(&mut self, new_buffer_data: u8) {
+    pub fn set_ppu_read_buffer_and_advance(&mut self, clock: &PpuClock, new_buffer_data: u8) {
         self.ppu_read_buffer = new_buffer_data;
         self.current_address.advance(self.current_address_increment);
+
+        // The current address is corrupted when reading PPUDATA during rendering. Some games depend on this.
+        let is_rendering = self.rendering_enabled && !clock.is_on_vblank_scanline();
+        if is_rendering {
+            self.current_address.increment_fine_y_scroll();
+        }
     }
 
     // Write 0x2007

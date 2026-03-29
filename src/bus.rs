@@ -307,7 +307,7 @@ impl Bus {
                 let pending_data_source = self.ppu_regs.current_address.to_pending_data_source();
                 let buffered_data = mapper.ppu_peek(self, pending_data_source).value();
                 mapper.on_ppu_read(self, pending_data_source, buffered_data);
-                self.ppu_regs.set_ppu_read_buffer_and_advance(buffered_data);
+                self.ppu_regs.set_ppu_read_buffer_and_advance(self.master_clock.ppu_clock(), buffered_data);
                 self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
 
                 new_data

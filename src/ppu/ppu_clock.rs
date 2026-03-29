@@ -43,6 +43,10 @@ impl PpuClock {
         PixelRow::try_from_u16(self.scanline)
     }
 
+    pub fn is_on_vblank_scanline(&self) -> bool {
+        self.scanline >= 240 && self.scanline < 261
+    }
+
     pub fn tick(&mut self, skip_odd_frame_cycle: bool) -> bool {
         self.total_cycles += 1;
 
