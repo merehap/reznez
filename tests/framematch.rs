@@ -85,7 +85,7 @@ static SCHEDULED_EVENTS: LazyLock<BTreeMap<Crc, BTreeMap<FrameNumber, (Event, Bu
     // Crayon Shin-Chan - [BROKEN] Part of the status bar is CHR-corrupted due to bad IRQ implementation.
     presses_by_full_crc.insert(0xC15D624F, vec![(279, 280, Start), (449, 450, Start)]);
     // AccuracyCoin
-    presses_by_full_crc.insert(0x86475E70, vec![(60, 61, Start)]);
+    presses_by_full_crc.insert(0x769083E2, vec![(60, 61, Start)]);
 
     // cpu_reset/ram_after_reset
     presses_by_full_crc.insert(0xED9053BC, vec![(200, 201, Reset)]);
