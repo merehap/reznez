@@ -502,7 +502,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (214..=224, _) => TodoMapper,
 
         // ET-4310 (60-pin) and K-1010
-        (225, None) => m::mapper225::Mapper225.supported(),
+        (225, None) => m::mapper225::Mapper225::default().supported(),
         // 76-in-1 and other multicarts
         (226, None) => m::mapper226::Mapper226.supported(),
 
@@ -539,7 +539,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (247, _) => UnassignedMapper,
         (248..=254, _) => TodoMapper,
         // Duplicate
-        (255, None) => m::mapper225::Mapper225.supported(),
+        (255, None) => m::mapper225::Mapper225::default().supported(),
 
         // Cony UNL-YOKO
         (264, _) => m::mapper264::Mapper264::new().supported(),

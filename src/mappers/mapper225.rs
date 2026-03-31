@@ -1,3 +1,5 @@
+use ux::u4;
+
 use crate::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
@@ -24,14 +26,27 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 // ET-4310 and K-1010
-// TODO: See if there is any reason to implement the 0x5800 RAM bits. No other emulators seem to implement them for some reason.
-pub struct Mapper225;
+#[derive(Default)]
+pub struct Mapper225 {
+    ram: [u4; 4],
+}
 
 impl Mapper for Mapper225 {
-    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, _value: u8) {
+    fn peek_register(&self, _bus: &Bus, addr: CpuAddress) -> ReadResult {
         match *addr {
             0x0000..=0x401F => unreachable!(),
-            0x4020..=0x7FFF => { /* No regs here. */ }
+            0x4020..=0x57FF => ReadResult::OPEN_BUS,
+            0x5800..=0x5FFF => ReadResult::partial(self.ram[*addr as usize & 0b11].into(), 0b0000_1111),
+            0x6000..=0xFFFF => ReadResult::OPEN_BUS,
+        }
+    }
+
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
+        match *addr {
+            0x0000..=0x401F => unreachable!(),
+            0x4020..=0x57FF => { /* No regs here. */ }
+            0x5800..=0x5FFF => self.ram[*addr as usize & 0b11] = u4::new(value & 0b1111),
+            0x6000..=0x7FFF => { /* No regs here. */ }
             0x8000..=0xFFFF => {
                 let fields = splitbits!(min=u8, *addr, ".oml pppp ppcc cccc");
                 bus.set_prg_rom_outer_bank_number(fields.o);
