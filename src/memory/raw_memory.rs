@@ -5,6 +5,7 @@ use std::path::Path;
 
 use log::warn;
 use memmap2::MmapMut;
+use num_traits::Euclid;
 
 // A chunk of primitive memory. Allows indexing on u32s instead of usizes.
 #[derive(Clone, Debug)]
@@ -18,6 +19,32 @@ impl RawMemory {
     pub fn from_vec(vec: Vec<u8>) -> Self {
         assert!(vec.len() <= u32::MAX.try_into().unwrap());
         Self(vec)
+    }
+
+    pub fn mirror_until_power_of_two(self) -> Self {
+        let len = self.0.len();
+        if len.is_power_of_two() || len == 0 {
+            // We're already at a target length, no need for modification.
+            return self;
+        }
+
+        let magnitude = len.ilog2();
+        let mirror_start = 2usize.pow(magnitude);
+        let mirror_atom_size = len - mirror_start;
+        assert!(mirror_start.is_multiple_of(mirror_atom_size), "Very weird mem size can't be mirrored properly.");
+        let (multiple, remainder) = mirror_start.div_rem_euclid(&mirror_atom_size);
+        log::info!("Multiple: {multiple}. Size: {len:X}, Atom: {mirror_atom_size:X}");
+        assert_eq!(remainder, 0);
+
+        let mut result = self.0.clone();
+        for _ in 1..multiple {
+            let mut next = self.0[mirror_start..].to_vec();
+            result.append(&mut next);
+        }
+
+        assert_eq!(result.len(), 2 * mirror_start);
+
+        Self(result)
     }
 
     pub fn peek_u64(&self, range: RangeInclusive<u32>) -> Option<u64> {
