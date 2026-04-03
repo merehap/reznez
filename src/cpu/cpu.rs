@@ -422,7 +422,7 @@ impl Cpu {
                     }
 
                     LAS => {
-                        let value = cpu.operand & cpu.stack_pointer;
+                        let value = cpu.nz(cpu.operand & cpu.stack_pointer);
                         cpu.a = value;
                         cpu.x = value;
                         cpu.stack_pointer = value;

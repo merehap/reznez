@@ -244,6 +244,7 @@ pub enum OpCode {
     SHX,
     // a.k.a. SHS or XAS
     TAS,
+    // a.k.a. LAE
     LAS,
 
     JAM,
