@@ -29,6 +29,8 @@ pub struct Cpu {
     program_counter: CpuAddress,
     status: Status,
 
+    h: u8,
+
     mode_state: CpuModeState,
 
     nmi_status: NmiStatus,
@@ -57,6 +59,8 @@ impl Cpu {
             program_counter: CpuAddress::ZERO,
             stack_pointer: 0x00,
             status: Status::startup(),
+
+            h: 0,
 
             mode_state: CpuModeState::startup(),
 
@@ -539,6 +543,7 @@ impl Cpu {
                 cpu.program_counter = cpu_pinout.address_bus;
             }
             StepAction::AddCarryToAddress => {
+                cpu.h = cpu_pinout.address_bus.high_byte().wrapping_add(1);
                 cpu.computed_address = cpu_pinout.address_bus.offset_high(cpu.address_carry);
                 cpu.address_carry = 0;
             }
