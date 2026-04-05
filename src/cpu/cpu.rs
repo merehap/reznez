@@ -623,19 +623,22 @@ impl Cpu {
                 OpCode::STX => self.x,
                 OpCode::STY => self.y,
                 OpCode::SAX => self.a & self.x,
-                // FIXME: Calculations should be done as part of an earlier StepAction.
                 OpCode::SHX => {
-                    let (low, high) = cpu_pinout.address_bus.to_low_high();
-                    cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.x & high);
-                    self.x & high
+                    if self.address_carry != 0 {
+                        let (low, high) = cpu_pinout.address_bus.to_low_high();
+                        cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.x & high);
+                    }
+
+                    self.x & self.h
                 }
-                // FIXME: Calculations should be done as part of an earlier StepAction.
                 OpCode::SHY => {
-                    let (low, high) = cpu_pinout.address_bus.to_low_high();
-                    cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.y & high);
-                    self.y
+                    if self.address_carry != 0 {
+                        let (low, high) = cpu_pinout.address_bus.to_low_high();
+                        cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.y & high);
+                    }
+
+                    self.y & self.h
                 }
-                // FIXME: Calculations should be done as part of an earlier StepAction.
                 OpCode::AHX => {
                     if self.address_carry != 0 {
                         let (low, high) = cpu_pinout.address_bus.to_low_high();
@@ -650,8 +653,7 @@ impl Cpu {
                         cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.x & high);
                     }
 
-                    let sp = self.a & self.x;
-                    self.stack_pointer = sp;
+                    self.stack_pointer = self.a & self.x;
                     self.a & self.x & self.h
                 }
                 op_code => todo!("{:?}", op_code),
