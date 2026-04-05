@@ -91,15 +91,13 @@ impl Frame {
 
     pub fn clear(&mut self) {
         self.buffer = FrameBuffer::filled(Rgbt::Transparent);
-        self.sprite_buffer =
-            FrameBuffer::filled((Rgbt::Transparent, Priority::Behind, false));
+        self.sprite_buffer = FrameBuffer::filled((Rgbt::Transparent, Priority::Behind, false));
         self.universal_background_rgb = Rgb::BLACK;
     }
 
     pub fn clear_sprite_line(&mut self, row: PixelRow) {
         for column in PixelColumn::iter() {
-            self.sprite_buffer[(column, row)] =
-                (Rgbt::Transparent, Priority::Behind, false);
+            self.sprite_buffer[(column, row)] = (Rgbt::Transparent, Priority::Behind, false);
         }
     }
 

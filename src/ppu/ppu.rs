@@ -160,6 +160,8 @@ impl Ppu {
             SetPixel => {
                 let clock = bus.ppu_clock();
                 let (pixel_column, pixel_row) = PixelIndex::try_from_clock(clock).unwrap().to_column_row();
+
+                let mut background_pixel = Rgbt::Transparent;
                 if bus.ppu_regs.background_enabled() {
                     let palette_table = &bus.palette_table();
                     // TODO: Figure out where this goes. Maybe have frame call palette_table when displaying.
@@ -169,20 +171,20 @@ impl Ppu {
                     let palette_table_index = bus.ppu.attribute_register.palette_table_index(column_in_tile);
                     let palette = palette_table.background_palette(palette_table_index);
 
-                    let background_pixel = bus.ppu.pattern_register
+                    background_pixel = bus.ppu.pattern_register
                         .palette_index(column_in_tile)
                         .map_or(Rgbt::Transparent, |palette_index| Rgbt::Opaque(palette[palette_index]));
-
-                    frame.set_background_pixel(pixel_column, pixel_row, background_pixel);
-
-                    let bank_pixel = if background_pixel.is_transparent() {
-                        Rgbt::Transparent
-                    } else {
-                        let rgb = bus.ppu.bank_color_assigner.rgb_for_source(bus.ppu.pattern_register.current_peek().source());
-                        Rgbt::Opaque(rgb)
-                    };
-                    bus.ppu.pattern_source_frame.set_background_pixel(pixel_column, pixel_row, bank_pixel);
                 }
+
+                frame.set_background_pixel(pixel_column, pixel_row, background_pixel);
+
+                let bank_pixel = if background_pixel.is_transparent() {
+                    Rgbt::Transparent
+                } else {
+                    let rgb = bus.ppu.bank_color_assigner.rgb_for_source(bus.ppu.pattern_register.current_peek().source());
+                    Rgbt::Opaque(rgb)
+                };
+                bus.ppu.pattern_source_frame.set_background_pixel(pixel_column, pixel_row, bank_pixel);
 
                 if bus.ppu_regs.sprites_enabled() || bus.ppu_regs.background_enabled() {
                     let (mut sprite_pixel, priority, is_sprite_0, ppu_peek) = bus.ppu.oam_registers.step(&bus.palette_table());
@@ -191,23 +193,19 @@ impl Ppu {
                         sprite_pixel = Rgbt::Transparent;
                     }
 
-                    if bus.ppu_regs.sprites_enabled() {
-                        frame.set_sprite_pixel(
-                            pixel_column,
-                            pixel_row,
-                            sprite_pixel,
-                            priority,
-                            is_sprite_0,
-                        );
-
-                        let bank_pixel = if sprite_pixel.is_transparent() {
-                            Rgbt::Transparent
-                        } else {
-                            let rgb = bus.ppu.bank_color_assigner.rgb_for_source(ppu_peek.source());
-                            Rgbt::Opaque(rgb)
-                        };
-                        bus.ppu.pattern_source_frame.set_sprite_pixel(pixel_column, pixel_row, bank_pixel, priority, false);
+                    if !bus.ppu_regs.sprites_enabled() {
+                        sprite_pixel = Rgbt::Transparent;
                     }
+
+                    let bank_pixel = if sprite_pixel.is_transparent() {
+                        Rgbt::Transparent
+                    } else {
+                        let rgb = bus.ppu.bank_color_assigner.rgb_for_source(ppu_peek.source());
+                        Rgbt::Opaque(rgb)
+                    };
+
+                    frame.set_sprite_pixel(pixel_column, pixel_row, sprite_pixel, priority, is_sprite_0);
+                    bus.ppu.pattern_source_frame.set_sprite_pixel(pixel_column, pixel_row, bank_pixel, priority, false);
                 }
 
                 // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Sprite_zero_hits
