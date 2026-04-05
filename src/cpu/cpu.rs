@@ -547,9 +547,7 @@ impl Cpu {
                 cpu.computed_address = cpu_pinout.address_bus.offset_high(cpu.address_carry);
             }
             StepAction::AddCarryToPC => {
-                if cpu.address_carry != 0 {
-                    cpu.program_counter = cpu.program_counter.offset_high(cpu.address_carry);
-                }
+                cpu.program_counter = cpu.program_counter.offset_high(cpu.address_carry);
             }
         }
     }
@@ -628,35 +626,19 @@ impl Cpu {
                 OpCode::STY => self.y,
                 OpCode::SAX => self.a & self.x,
                 OpCode::SHX => {
-                    if self.address_carry != 0 {
-                        let (low, high) = cpu_pinout.address_bus.to_low_high();
-                        cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.x & high);
-                    }
-
+                    self.maybe_destabilize_address_bus_high_with(cpu_pinout, self.x);
                     self.x & self.h
                 }
                 OpCode::SHY => {
-                    if self.address_carry != 0 {
-                        let (low, high) = cpu_pinout.address_bus.to_low_high();
-                        cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.y & high);
-                    }
-
+                    self.maybe_destabilize_address_bus_high_with(cpu_pinout, self.y);
                     self.y & self.h
                 }
                 OpCode::AHX => {
-                    if self.address_carry != 0 {
-                        let (low, high) = cpu_pinout.address_bus.to_low_high();
-                        cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.x & high);
-                    }
-
+                    self.maybe_destabilize_address_bus_high_with(cpu_pinout, self.x);
                     self.a & self.x & self.h
                 }
                 OpCode::TAS => {
-                    if self.address_carry != 0 {
-                        let (low, high) = cpu_pinout.address_bus.to_low_high();
-                        cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.x & high);
-                    }
-
+                    self.maybe_destabilize_address_bus_high_with(cpu_pinout, self.x);
                     self.stack_pointer = self.a & self.x;
                     self.a & self.x & self.h
                 }
@@ -763,6 +745,13 @@ impl Cpu {
     fn branch(&mut self) {
         (self.program_counter, self.address_carry) = self.program_counter.offset_with_carry(self.operand as i8);
         self.mode_state.branch_taken();
+    }
+
+    fn maybe_destabilize_address_bus_high_with(&self, cpu_pinout: &mut CpuPinout, value: u8) {
+        if self.address_carry != 0 {
+            let (low, high) = cpu_pinout.address_bus.to_low_high();
+            cpu_pinout.address_bus = CpuAddress::from_low_high(low, high & value);
+        }
     }
 }
 
