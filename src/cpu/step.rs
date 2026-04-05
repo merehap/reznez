@@ -4,7 +4,7 @@ use crate::cpu::step_action::{From, To};
 use crate::cpu::step_action::StepAction;
 use crate::cpu::step_action::StepAction::*;
 use crate::cpu::step::Step::{Read, ReadField, WriteField, OamRead, OamWrite, DmcRead};
-use crate::bus::Bus;
+use crate::bus::{AddressBusType, Bus};
 
 pub static OAM_READ_STEP: Step = OamRead(From::OamDmaAddressTarget, &[]);
 pub static OAM_WRITE_STEP: Step = OamWrite(To::OAM_DATA, &[IncrementOamDmaAddress]);
@@ -337,6 +337,22 @@ impl Step {
         }
     }
 
+    pub fn address_bus_type(&self) -> AddressBusType {
+        match *self {
+            Step::Read(..) | Step::ReadField(..) | Step::Write(..) | Step::WriteField(..) => AddressBusType::Cpu,
+            Step::OamRead(..) | Step::OamWrite(..) => AddressBusType::OamDma,
+            Step::DmcRead(..) => AddressBusType::DmcDma,
+        }
+    }
+
+    pub fn is_read(&self) -> bool {
+        matches!(&self, Step::Read(..) | Step::ReadField(..) | Step::OamRead(..) | Step::DmcRead(..))
+    }
+
+    pub fn is_dma(&self) -> bool {
+        matches!(*self, Self::OamRead(..) | Self::OamWrite(..) | Self::DmcRead(..))
+    }
+
     pub fn has_start_new_instruction(&self) -> bool {
         for action in self.actions() {
             if matches!(action, StepAction::StartNextInstruction) {
@@ -355,10 +371,6 @@ impl Step {
         }
 
         false
-    }
-
-    pub fn is_read(&self) -> bool {
-        matches!(&self, Step::Read(..) | Step::ReadField(..))
     }
 
     pub fn with_actions_removed(&self) -> Step {

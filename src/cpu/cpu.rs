@@ -14,7 +14,7 @@ use crate::cpu::status::Status;
 use crate::cpu::step::*;
 use crate::mapper::Mapper;
 use crate::memory::cpu::cpu_address::CpuAddress;
-use crate::bus::{AddressBusType, Bus, IRQ_VECTOR_HIGH, IRQ_VECTOR_LOW, NMI_VECTOR_HIGH, NMI_VECTOR_LOW, RESET_VECTOR_HIGH, RESET_VECTOR_LOW};
+use crate::bus::{Bus, IRQ_VECTOR_HIGH, IRQ_VECTOR_LOW, NMI_VECTOR_HIGH, NMI_VECTOR_LOW, RESET_VECTOR_HIGH, RESET_VECTOR_LOW};
 use crate::memory::cpu::cpu_pinout::CpuPinout;
 use crate::memory::signal_level::SignalLevel;
 
@@ -176,48 +176,27 @@ impl Cpu {
             OamDmaAction::Write => OAM_WRITE_STEP,
         };
 
-        let mut current_address_bus_type = AddressBusType::Cpu;
-        let value;
-        match step {
-            Step::Read(from, _) => {
-                bus.set_cpu_address_bus(current_address_bus_type, bus.cpu.lookup_from_address(bus, from));
-                value = bus.cpu_read(mapper, current_address_bus_type);
-            }
-            Step::ReadField(field, from, _) => {
-                bus.set_cpu_address_bus(current_address_bus_type, bus.cpu.lookup_from_address(bus, from));
-                value = bus.cpu_read(mapper, current_address_bus_type);
-                bus.cpu.set_field_value(field, value);
-            }
-            Step::Write(to, _) => {
-                bus.set_cpu_address_bus(current_address_bus_type, bus.cpu.lookup_to_address(bus, to));
-                value = bus.cpu_pinout.data_bus;
-                bus.cpu_write(mapper, current_address_bus_type);
-            }
-            Step::WriteField(field, to, _) => {
-                bus.set_cpu_address_bus(current_address_bus_type, bus.cpu.lookup_to_address(bus, to));
-                bus.cpu_pinout.data_bus = bus.cpu.field_value(&mut bus.cpu_pinout, field);
-                value = bus.cpu_pinout.data_bus;
-                bus.cpu_write(mapper, current_address_bus_type);
-            }
-            Step::OamRead(from, _) => {
-                current_address_bus_type = AddressBusType::OamDma;
-                bus.set_cpu_address_bus(current_address_bus_type, bus.cpu.lookup_from_address(bus, from));
-                value = bus.cpu_read(mapper, current_address_bus_type);
-                bus.cpu.h = 0xFF;
-            }
-            Step::OamWrite(to, _) => {
-                current_address_bus_type = AddressBusType::OamDma;
-                bus.set_cpu_address_bus(current_address_bus_type, bus.cpu.lookup_to_address(bus, to));
-                value = bus.cpu_pinout.data_bus;
-                bus.cpu_write(mapper, current_address_bus_type);
-                bus.cpu.h = 0xFF;
-            }
-            Step::DmcRead(from, _) => {
-                current_address_bus_type = AddressBusType::DmcDma;
-                bus.set_cpu_address_bus(current_address_bus_type, bus.cpu.lookup_from_address(bus, from));
-                value = bus.cpu_read(mapper, current_address_bus_type);
-                bus.cpu.h = 0xFF;
-            }
+        let current_address_bus_type = step.address_bus_type();
+        let address = bus.cpu.lookup_step_address(bus, step);
+        bus.set_cpu_address_bus(current_address_bus_type, address);
+
+        if let Step::WriteField(field, ..) = step {
+            bus.cpu_pinout.data_bus = bus.cpu.field_value(&mut bus.cpu_pinout, field);
+        }
+
+        let value = if step.is_read() {
+            bus.cpu_read(mapper, current_address_bus_type)
+        } else {
+            bus.cpu_write(mapper, current_address_bus_type);
+            bus.cpu_pinout.data_bus
+        };
+
+        if let Step::ReadField(field, ..) = step {
+            bus.cpu.set_field_value(field, value);
+        }
+
+        if step.is_dma() {
+            bus.cpu.h = 0xFF;
         }
 
         let formatted_step = if log_enabled!(target: "cpustep", Info) {
@@ -549,6 +528,15 @@ impl Cpu {
             StepAction::AddCarryToPC => {
                 cpu.program_counter = cpu.program_counter.offset_high(cpu.address_carry);
             }
+        }
+    }
+
+    fn lookup_step_address(&self, bus: &Bus, step: Step) -> CpuAddress {
+        match step {
+            Step::Read(from, ..) | Step::ReadField(_, from, ..) | Step::OamRead(from, ..) | Step::DmcRead(from, ..) =>
+                self.lookup_from_address(bus, from),
+            Step::Write(to, ..) | Step::WriteField(_, to, ..) | Step::OamWrite(to, ..) =>
+                self.lookup_to_address(bus, to),
         }
     }
 
