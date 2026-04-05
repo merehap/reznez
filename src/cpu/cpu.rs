@@ -203,17 +203,20 @@ impl Cpu {
                 current_address_bus_type = AddressBusType::OamDma;
                 bus.set_cpu_address_bus(current_address_bus_type, bus.cpu.lookup_from_address(bus, from));
                 value = bus.cpu_read(mapper, current_address_bus_type);
+                bus.cpu.h = 0xFF;
             }
             Step::OamWrite(to, _) => {
                 current_address_bus_type = AddressBusType::OamDma;
                 bus.set_cpu_address_bus(current_address_bus_type, bus.cpu.lookup_to_address(bus, to));
                 value = bus.cpu_pinout.data_bus;
                 bus.cpu_write(mapper, current_address_bus_type);
+                bus.cpu.h = 0xFF;
             }
             Step::DmcRead(from, _) => {
                 current_address_bus_type = AddressBusType::DmcDma;
                 bus.set_cpu_address_bus(current_address_bus_type, bus.cpu.lookup_from_address(bus, from));
                 value = bus.cpu_read(mapper, current_address_bus_type);
+                bus.cpu.h = 0xFF;
             }
         }
 
@@ -516,11 +519,13 @@ impl Cpu {
                 let carry;
                 (cpu.pending_address_low, carry) = cpu.pending_address_low.overflowing_add(cpu.x);
                 cpu.address_carry = carry as i8;
+                cpu.h = cpu.pending_address_high.wrapping_add(1);
             }
             StepAction::YOffsetPendingAddressLow => {
                 let carry;
                 (cpu.pending_address_low, carry) = cpu.pending_address_low.overflowing_add(cpu.y);
                 cpu.address_carry = carry as i8;
+                cpu.h = cpu.pending_address_high.wrapping_add(1);
             }
             StepAction::XOffsetAddress => cpu.computed_address = cpu_pinout.address_bus.offset_low(cpu.x).0,
             StepAction::YOffsetAddress => cpu.computed_address = cpu_pinout.address_bus.offset_low(cpu.y).0,
@@ -539,7 +544,6 @@ impl Cpu {
                 cpu.program_counter = cpu_pinout.address_bus;
             }
             StepAction::AddCarryToAddress => {
-                cpu.h = cpu_pinout.address_bus.high_byte().wrapping_add(1);
                 cpu.computed_address = cpu_pinout.address_bus.offset_high(cpu.address_carry);
             }
             StepAction::AddCarryToPC => {
