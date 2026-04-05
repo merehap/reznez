@@ -29,6 +29,8 @@ pub struct Cpu {
     program_counter: CpuAddress,
     status: Status,
 
+    // Undocumented op codes expose a register that is normally not observable.
+    // This is the high byte of the address bus prior to X/Y offsetting.
     h: u8,
 
     mode_state: CpuModeState,
@@ -512,14 +514,12 @@ impl Cpu {
 
             StepAction::XOffsetPendingAddressLow => {
                 let carry;
-                (cpu.pending_address_low, carry) =
-                    cpu.pending_address_low.overflowing_add(cpu.x);
+                (cpu.pending_address_low, carry) = cpu.pending_address_low.overflowing_add(cpu.x);
                 cpu.address_carry = carry as i8;
             }
             StepAction::YOffsetPendingAddressLow => {
                 let carry;
-                (cpu.pending_address_low, carry) =
-                    cpu.pending_address_low.overflowing_add(cpu.y);
+                (cpu.pending_address_low, carry) = cpu.pending_address_low.overflowing_add(cpu.y);
                 cpu.address_carry = carry as i8;
             }
             StepAction::XOffsetAddress => cpu.computed_address = cpu_pinout.address_bus.offset_low(cpu.x).0,
@@ -637,11 +637,14 @@ impl Cpu {
                 }
                 // FIXME: Calculations should be done as part of an earlier StepAction.
                 OpCode::AHX => {
-                    let (low, high) = cpu_pinout.address_bus.to_low_high();
-                    // This is using later revision logic.
-                    // For early revision logic, use self.a & self.x & self.a
-                    cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.x & high);
-                    self.a & self.x & high
+                    if self.address_carry != 0 {
+                        let (low, high) = cpu_pinout.address_bus.to_low_high();
+                        // This is using later revision logic.
+                        // For early revision logic, use self.a & self.x & high
+                        cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.x & high);
+                    }
+
+                    self.a & self.x & self.h
                 }
                 OpCode::TAS => {
                     let sp = self.a & self.x;
