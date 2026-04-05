@@ -639,17 +639,20 @@ impl Cpu {
                 OpCode::AHX => {
                     if self.address_carry != 0 {
                         let (low, high) = cpu_pinout.address_bus.to_low_high();
-                        // This is using later revision logic.
-                        // For early revision logic, use self.a & self.x & high
                         cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.x & high);
                     }
 
                     self.a & self.x & self.h
                 }
                 OpCode::TAS => {
+                    if self.address_carry != 0 {
+                        let (low, high) = cpu_pinout.address_bus.to_low_high();
+                        cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.x & high);
+                    }
+
                     let sp = self.a & self.x;
                     self.stack_pointer = sp;
-                    self.x & cpu_pinout.address_bus.high_byte()
+                    self.a & self.x & self.h
                 }
                 op_code => todo!("{:?}", op_code),
             }
