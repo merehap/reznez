@@ -514,17 +514,13 @@ impl Cpu {
                 let carry;
                 (cpu.pending_address_low, carry) =
                     cpu.pending_address_low.overflowing_add(cpu.x);
-                if carry {
-                    cpu.address_carry = 1;
-                }
+                cpu.address_carry = carry as i8;
             }
             StepAction::YOffsetPendingAddressLow => {
                 let carry;
                 (cpu.pending_address_low, carry) =
                     cpu.pending_address_low.overflowing_add(cpu.y);
-                if carry {
-                    cpu.address_carry = 1;
-                }
+                cpu.address_carry = carry as i8;
             }
             StepAction::XOffsetAddress => cpu.computed_address = cpu_pinout.address_bus.offset_low(cpu.x).0,
             StepAction::YOffsetAddress => cpu.computed_address = cpu_pinout.address_bus.offset_low(cpu.y).0,
@@ -545,12 +541,10 @@ impl Cpu {
             StepAction::AddCarryToAddress => {
                 cpu.h = cpu_pinout.address_bus.high_byte().wrapping_add(1);
                 cpu.computed_address = cpu_pinout.address_bus.offset_high(cpu.address_carry);
-                cpu.address_carry = 0;
             }
             StepAction::AddCarryToPC => {
                 if cpu.address_carry != 0 {
                     cpu.program_counter = cpu.program_counter.offset_high(cpu.address_carry);
-                    cpu.address_carry = 0;
                 }
             }
         }
