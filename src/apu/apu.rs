@@ -9,19 +9,14 @@ use rodio::{OutputStream, Sink};
 use rodio::source::Source;
 
 use crate::apu::apu_clock::CycleParity;
-use crate::apu::apu_registers::ApuRegisters;
+use crate::apu::mixer::Mixer;
 use crate::bus::Bus;
 
-const SAMPLE_RATE: u32 = 44100;
-const MAX_QUEUE_LENGTH: usize = 2 * SAMPLE_RATE as usize;
+const MAX_QUEUE_LENGTH: usize = 2 * Mixer::SAMPLE_RATE as usize;
 
 pub struct Apu {
+    mixer: Mixer,
     pulse_queue: Arc<Mutex<VecDeque<f32>>>,
-    pulse_1_force_muted: bool,
-    pulse_2_force_muted: bool,
-    triangle_force_muted: bool,
-    noise_force_muted: bool,
-    dmc_force_muted: bool,
 }
 
 impl Apu {
@@ -44,41 +39,37 @@ impl Apu {
         }
 
         Apu {
+            mixer: Mixer::new(),
             pulse_queue,
-            pulse_1_force_muted: false,
-            pulse_2_force_muted: false,
-            triangle_force_muted: false,
-            noise_force_muted: false,
-            dmc_force_muted: false,
         }
     }
 
     pub fn mute(&mut self) {
-        self.pulse_1_force_muted = true;
-        self.pulse_2_force_muted = true;
-        self.triangle_force_muted = true;
-        self.noise_force_muted = true;
-        self.dmc_force_muted = true;
+        self.mixer.pulse_1_force_muted = true;
+        self.mixer.pulse_2_force_muted = true;
+        self.mixer.triangle_force_muted = true;
+        self.mixer.noise_force_muted = true;
+        self.mixer.dmc_force_muted = true;
     }
 
     pub fn mute_pulse_1(&mut self) {
-        self.pulse_1_force_muted = true;
+        self.mixer.pulse_1_force_muted = true;
     }
 
     pub fn mute_pulse_2(&mut self) {
-        self.pulse_2_force_muted = true;
+        self.mixer.pulse_2_force_muted = true;
     }
 
     pub fn mute_triangle(&mut self) {
-        self.triangle_force_muted = true;
+        self.mixer.triangle_force_muted = true;
     }
 
     pub fn mute_noise(&mut self) {
-        self.noise_force_muted = true;
+        self.mixer.noise_force_muted = true;
     }
 
     pub fn mute_dmc(&mut self) {
-        self.dmc_force_muted = true;
+        self.mixer.dmc_force_muted = true;
     }
 
     pub fn step(bus: &mut Bus) {
@@ -100,7 +91,7 @@ impl Apu {
 
     fn maybe_enqueue_mixed_sample(bus: &mut Bus) {
         if bus.apu_clock().raw_apu_cycle().is_multiple_of(20) {
-            let mixed_sample = bus.apu.mix_samples(&bus.apu_regs);
+            let mixed_sample = bus.apu.mixer.mix_filtered(&bus.apu_regs);
 
             {
                 let mut queue = bus.apu.pulse_queue.lock().unwrap();
@@ -135,22 +126,6 @@ impl Apu {
                 );
             }
         }
-    }
-
-    fn mix_samples(&self, regs: &ApuRegisters) -> f32 {
-        let pulse_1 = if self.pulse_1_force_muted { 0.0 } else { f32::from(u8::from(regs.pulse_1.sample_volume())) };
-        let pulse_2 = if self.pulse_2_force_muted { 0.0 } else { f32::from(u8::from(regs.pulse_2.sample_volume())) };
-        let triangle = if self.triangle_force_muted { 0.0 } else { f32::from(regs.triangle.sample_volume()) };
-        let noise = if self.noise_force_muted { 0.0 } else { f32::from(u8::from(regs.noise.sample_volume())) };
-        let dmc = if self.dmc_force_muted { 0.0 } else { f32::from(regs.dmc.sample_volume()) };
-
-        let pulse_out = 95.88 / (8128.0 / (pulse_1 + pulse_2) + 100.0);
-        let tnd_out = 159.79 / ((1.0 / (triangle / 8227.0 + noise / 12241.0 + dmc / 22368.0)) + 100.0);
-        let mix = pulse_out + tnd_out;
-
-        assert!(mix >= 0.0);
-        assert!(mix <= 1.0);
-        mix
     }
 }
 
@@ -198,7 +173,7 @@ impl Source for AudioSource {
 
     #[inline]
     fn sample_rate(&self) -> u32 {
-        SAMPLE_RATE
+        Mixer::SAMPLE_RATE
     }
 
     #[inline]

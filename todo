@@ -3,7 +3,8 @@ ROADMAP
 2. Fully working MMC5
 3. Remaining test ROMs
 4. Windows/Mac/WASM support
-5. Comments
+5. Audio filters: https://forums.nesdev.org/viewtopic.php?t=8602
+6. Comments
 
 Investigate if lack of MMC5 Extended Ram CHR status register is causing bad renders.
 Re-allow ReadWriteStatuses for MMC5 Extended RAM.
