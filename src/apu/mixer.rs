@@ -23,9 +23,14 @@ impl Mixer {
             noise_force_muted: false,
             dmc_force_muted: false,
 
+            /*
             high90_filter: HighPassFilter::new(0.999835),
             high440_filter: HighPassFilter::new(0.996039),
             low14000_filter: LowPassFilter::new(0.815686),
+            */
+            high90_filter: HighPassFilter::new(0.996),
+            high440_filter: HighPassFilter::new(0.983),
+            low14000_filter: LowPassFilter::new(0.120),
         }
     }
 
@@ -66,7 +71,7 @@ impl HighPassFilter {
     }
 
     pub fn transform(&mut self, input: f32) -> f32 {
-        let output = self.k * self.prev_output + input - self.prev_input;
+        let output = self.k * (self.prev_output + input - self.prev_input);
         self.prev_input = input;
         self.prev_output = output;
         output
@@ -84,7 +89,7 @@ impl LowPassFilter {
     }
 
     pub fn transform(&mut self, input: f32) -> f32 {
-        let output = self.k * (input - self.prev_output);
+        let output = self.prev_output + self.k * (input - self.prev_output);
         self.prev_output = output;
         output
     }
