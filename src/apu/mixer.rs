@@ -23,14 +23,9 @@ impl Mixer {
             noise_force_muted: false,
             dmc_force_muted: false,
 
-            /*
-            high90_filter: HighPassFilter::new(0.999835),
-            high440_filter: HighPassFilter::new(0.996039),
-            low14000_filter: LowPassFilter::new(0.815686),
-            */
             high90_filter: HighPassFilter::new(0.996),
             high440_filter: HighPassFilter::new(0.983),
-            low14000_filter: LowPassFilter::new(0.120),
+            low14000_filter: LowPassFilter::new(0.666),
         }
     }
 
@@ -49,8 +44,20 @@ impl Mixer {
         let noise = if self.noise_force_muted { 0.0 } else { f32::from(u8::from(regs.noise.sample_volume())) };
         let dmc = if self.dmc_force_muted { 0.0 } else { f32::from(regs.dmc.sample_volume()) };
 
-        let pulse_out = 95.88 / (8128.0 / (pulse_1 + pulse_2) + 100.0);
-        let tnd_out = 159.79 / ((1.0 / (triangle / 8227.0 + noise / 12241.0 + dmc / 22368.0)) + 100.0);
+        let pulse_sum = pulse_1 + pulse_2;
+        let pulse_out = if pulse_sum == 0.0 {
+            0.0
+        } else {
+            95.88 / (8128.0 / pulse_sum + 100.0)
+        };
+
+        let tnd_sum = triangle / 8227.0 + noise / 12241.0 + dmc / 22638.0;
+        let tnd_out = if tnd_sum == 0.0 {
+            0.0
+        } else {
+            159.79 / ((1.0 / tnd_sum) + 100.0)
+        };
+
         let output = pulse_out + tnd_out;
 
         assert!(output >= 0.0);
@@ -71,7 +78,7 @@ impl HighPassFilter {
     }
 
     pub fn transform(&mut self, input: f32) -> f32 {
-        let output = self.k * (self.prev_output + input - self.prev_input);
+        let output = self.k * self.prev_output + input - self.prev_input;
         self.prev_input = input;
         self.prev_output = output;
         output
