@@ -44,20 +44,8 @@ impl Mixer {
         let noise = if self.noise_force_muted { 0.0 } else { f32::from(u8::from(regs.noise.sample_volume())) };
         let dmc = if self.dmc_force_muted { 0.0 } else { f32::from(regs.dmc.sample_volume()) };
 
-        let pulse_sum = pulse_1 + pulse_2;
-        let pulse_out = if pulse_sum == 0.0 {
-            0.0
-        } else {
-            95.88 / (8128.0 / pulse_sum + 100.0)
-        };
-
-        let tnd_sum = triangle / 8227.0 + noise / 12241.0 + dmc / 22638.0;
-        let tnd_out = if tnd_sum == 0.0 {
-            0.0
-        } else {
-            159.79 / ((1.0 / tnd_sum) + 100.0)
-        };
-
+        let pulse_out = 95.88 / (8128.0 / (pulse_1 + pulse_2) + 100.0);
+        let tnd_out = 159.79 / ((1.0 / (triangle / 8227.0 + noise / 12241.0 + dmc / 22638.0)) + 100.0);
         let output = pulse_out + tnd_out;
 
         assert!(output >= 0.0);
