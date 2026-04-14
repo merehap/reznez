@@ -365,7 +365,8 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (118, None) => m::mapper118::Mapper118::new().supported(),
         // TQROM
         (119, None) => m::mapper119::Mapper119::new().supported(),
-        (120, _) => TodoMapper,
+        // Whirlwind Manu LH15 (FDS Conversions)
+        (120, None) => m::mapper120::Mapper120.supported(),
         (121, _) => TodoMapper,
         // Duplicate
         (122, None) => m::mapper184::Mapper184.supported(),
