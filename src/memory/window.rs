@@ -292,7 +292,7 @@ impl ChrWindowSize {
         self.0 / CHR_PAGE_SIZE
     }
 
-    pub fn to_raw(self) -> u16 {
+    pub const fn to_raw(self) -> u16 {
         self.0
     }
 }

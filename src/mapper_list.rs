@@ -258,7 +258,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (66, None) => m::mapper066::Mapper066.supported(),
         // Sunsoft-3
         (67, None) => m::mapper067::Mapper067::new().supported(),
-        (68, _) => TodoMapper,
+        (68, None) => m::mapper068::Mapper068.supported(),
         // Sunsoft FME-7
         (69, None) => m::mapper069::Mapper069::new().supported(),
         // Family Trainer and others

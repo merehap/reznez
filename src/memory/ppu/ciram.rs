@@ -45,8 +45,9 @@ impl Ciram {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Default)]
 pub enum CiramSide {
+    #[default]
     Left = 0,
     Right = SIDE_SIZE as isize,
 }

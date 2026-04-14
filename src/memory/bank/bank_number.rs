@@ -127,7 +127,7 @@ impl PrgBankRegisters {
 #[derive(Clone, Debug)]
 pub struct ChrBankRegisters {
     registers: [BankNumber; 16],
-    chr_meta_registers: [ChrBankRegisterId; 2],
+    chr_meta_registers: [ChrBankRegisterId; 4],
     read_statuses: [ReadStatus; 15],
     write_statuses: [WriteStatus; 15],
     chr_sources: [ChrSource; 12],
@@ -140,7 +140,7 @@ impl ChrBankRegisters {
         Self {
             registers: [BankNumber(0); 16],
             // Meta registers are only used for CHR currently.
-            chr_meta_registers: [ChrBankRegisterId::C, ChrBankRegisterId::C],
+            chr_meta_registers: [ChrBankRegisterId::C; 4],
             read_statuses: [ReadStatus::Enabled; 15],
             write_statuses: [WriteStatus::Enabled; 15],
             chr_sources: [default_chr_source; 12],
@@ -153,7 +153,7 @@ impl ChrBankRegisters {
         &self.registers
     }
 
-    pub fn meta_registers(&self) -> &[ChrBankRegisterId; 2] {
+    pub fn meta_registers(&self) -> &[ChrBankRegisterId; 4] {
         &self.chr_meta_registers
     }
 
@@ -331,6 +331,8 @@ impl ChrBankRegisterId {
 pub enum MetaRegisterId {
     MR0,
     MR1,
+    MR2,
+    MR3,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]

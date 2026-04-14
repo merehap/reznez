@@ -467,7 +467,7 @@ impl ChrBank {
         }
     }
 
-    pub fn is_rom(self) -> bool {
+    pub const fn is_rom(self) -> bool {
         matches!(
             self.chr_source_provider,
             ChrSourceProvider::Fixed(Some(ChrSource::Rom))
@@ -479,6 +479,14 @@ impl ChrBank {
         matches!(
             self.chr_source_provider,
             ChrSourceProvider::Fixed(Some(ChrSource::WorkRam)) | ChrSourceProvider::Switchable(_),
+        )
+    }
+
+    pub const fn supports_ram(self) -> bool {
+        matches!(
+            self.chr_source_provider,
+            ChrSourceProvider::Fixed(Some(ChrSource::RomOrRam | ChrSource::WorkRam))
+                | ChrSourceProvider::Switchable(_)
         )
     }
 

@@ -5,7 +5,7 @@ use log::{info, warn};
 use crate::mapper::{BankNumber, ChrBankRegisterId, ChrWindow, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource};
 use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId, ReadStatusRegisterId, WriteStatusRegisterId};
 use crate::memory::bank::bank_number::{ChrBankRegisters, ReadStatus, WriteStatus};
-use crate::memory::ppu::chr_layout::ChrLayout;
+use crate::memory::ppu::chr_layout::{ChrLayouts, ChrLayout};
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::chr_memory_map::{ChrMemTypeStatus, ChrMemoryIndex, ChrMemoryMap};
 use crate::memory::ppu::ciram::Ciram;
@@ -17,7 +17,7 @@ use crate::util::unit::KIBIBYTE;
 use super::ciram::CiramSide;
 
 pub struct ChrMemory {
-    layouts: Vec<ChrLayout>,
+    layouts: ChrLayouts,
     memory_maps: Vec<ChrMemoryMap>,
     rom: RawMemory,
     rom_outer_bank_size: u32,
@@ -32,7 +32,7 @@ pub struct ChrMemory {
 impl ChrMemory {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        layouts: Vec<ChrLayout>,
+        layouts: ChrLayouts,
         layout_index: u8,
         align_large_chr_banks: bool,
         rom_outer_bank_count: NonZeroU16,
@@ -47,7 +47,7 @@ impl ChrMemory {
         let mut bank_size = None;
         let mut rom_present_in_layout = false;
         let mut ram_present_in_layout = false;
-        for layout in &layouts {
+        for layout in layouts.iter() {
             for window in layout.windows() {
                 if let Some(size) = bank_size {
                     bank_size = Some(std::cmp::min(window.size(), size));
@@ -82,14 +82,14 @@ impl ChrMemory {
         }
 
         let max_pattern_table_index = layouts[0].max_window_index();
-        for layout in &layouts {
+        for layout in layouts.iter() {
             assert_eq!(layout.max_window_index(), max_pattern_table_index,
                 "The max CHR window index must be the same between all layouts.");
         }
 
         let memory_maps = layouts.iter().map(|layout|
             ChrMemoryMap::new(
-                *layout,
+                layout,
                 cartridge_name_table_mirroring,
                 name_table_mirroring_fixed,
                 bank_size,
@@ -213,7 +213,7 @@ impl ChrMemory {
     }
 
     pub fn current_layout(&self) -> &ChrLayout {
-        &self.layouts[self.layout_index as usize]
+        &self.layouts[self.layout_index]
     }
 
     pub fn current_memory_map(&self) -> &ChrMemoryMap {
@@ -225,7 +225,7 @@ impl ChrMemory {
     }
 
     pub fn set_layout(&mut self, index: u8) {
-        assert!(usize::from(index) < self.layouts.len());
+        assert!(index < self.layouts.count());
         self.layout_index = index;
     }
 

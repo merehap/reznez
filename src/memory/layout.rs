@@ -6,7 +6,7 @@ use crate::mapper::ChrSource;
 use crate::memory::bank::bank_number::{BankNumber, ChrBankRegisters, MetaRegisterId, PrgBankRegisterId, PrgBankRegisters};
 use crate::memory::cpu::prg_layout::{PrgLayout, PrgLayouts};
 use crate::memory::cpu::prg_memory::PrgMemory;
-use crate::memory::ppu::chr_layout::ChrLayout;
+use crate::memory::ppu::chr_layout::{ChrLayout, ChrLayouts};
 use crate::memory::ppu::chr_memory::ChrMemory;
 use crate::memory::raw_memory::{RawMemory, SaveRam};
 use crate::memory::window::PrgWindow;
@@ -26,7 +26,7 @@ pub struct Layout {
     chr_rom_max_size: u32,
     align_large_chr_windows: bool,
     chr_layout_index: u8,
-    chr_layouts: ConstVec<ChrLayout, 16>,
+    chr_layouts: ChrLayouts,
     chr_save_ram_size: u32,
     chr_rom_outer_bank_layout: OuterBankLayout,
 
@@ -103,7 +103,7 @@ impl Layout {
         let cartridge_name_table_mirroring =
             self.cartridge_selection_name_table_mirrorings[usize::from(cartridge_mirroring_index)];
         let chr_memory = ChrMemory::new(
-            self.chr_layouts.as_iter().collect(),
+            self.chr_layouts,
             self.chr_layout_index,
             self.align_large_chr_windows,
             self.chr_rom_outer_bank_layout.outer_bank_count(chr_rom_size),
@@ -134,6 +134,7 @@ pub struct LayoutBuilder {
     chr_layouts: ConstVec<ChrLayout, 16>,
     chr_layout_index: u8,
     chr_rom_outer_bank_layout:  Option<OuterBankLayout>,
+    chr_rom_inner_bank_size: Option<u32>,
     align_large_chr_windows: bool,
     chr_save_ram_size: u32,
 
@@ -161,6 +162,7 @@ impl LayoutBuilder {
             chr_layout_index: 0,
             chr_layouts: ConstVec::new(),
             chr_rom_outer_bank_layout: None,
+            chr_rom_inner_bank_size: None,
             chr_save_ram_size: 0,
 
             // The vast majority of mappers associate these values with the corresponding iNES mirroring bits.
@@ -240,6 +242,11 @@ impl LayoutBuilder {
         self
     }
 
+    pub const fn chr_rom_inner_bank_size(&mut self, size: u32) -> &mut Self {
+        self.chr_rom_inner_bank_size = Some(size);
+        self
+    }
+
     pub const fn cartridge_selection_name_table_mirrorings(&mut self, value: [Option<NameTableMirroring>; 4]) -> &mut Self {
         self.cartridge_selection_name_table_mirrorings = value;
         self
@@ -313,8 +320,11 @@ impl LayoutBuilder {
         };
 
         let prg_rom_max_size = self.prg_rom_max_size.expect("prg_rom_max_size must be set");
-        let outer_bank_count = prg_rom_outer_bank_layout.outer_bank_count(prg_rom_max_size);
-        let prg_layouts = PrgLayouts::new(prg_rom_max_size, outer_bank_count.get(), self.prg_rom_inner_bank_size, self.prg_layouts);
+        let prg_outer_bank_count = prg_rom_outer_bank_layout.outer_bank_count(prg_rom_max_size);
+        let prg_layouts = PrgLayouts::new(prg_rom_max_size, prg_outer_bank_count.get(), self.prg_rom_inner_bank_size, self.prg_layouts);
+        let chr_rom_max_size = self.chr_rom_max_size.expect("chr_rom_max_size must be set");
+        let chr_outer_bank_count = chr_rom_outer_bank_layout.outer_bank_count(chr_rom_max_size);
+        let chr_layouts = ChrLayouts::new(chr_rom_max_size, chr_outer_bank_count.get(), self.chr_rom_inner_bank_size, self.chr_layouts);
 
         Layout {
             prg_layouts,
@@ -322,7 +332,7 @@ impl LayoutBuilder {
             prg_rom_outer_bank_layout,
 
             chr_rom_max_size: self.chr_rom_max_size.expect("chr_rom_max_size must be set"),
-            chr_layouts: self.chr_layouts,
+            chr_layouts,
             chr_layout_index: self.chr_layout_index,
             align_large_chr_windows: self.align_large_chr_windows,
             chr_save_ram_size: self.chr_save_ram_size,
