@@ -367,7 +367,9 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (119, None) => m::mapper119::Mapper119::new().supported(),
         // Whirlwind Manu LH15 (FDS Conversions)
         (120, None) => m::mapper120::Mapper120.supported(),
-        (121, _) => TodoMapper,
+        // Kǎshèng A9711 and A9713
+        // TODO: Actually determine correct board.
+        (121, None) => m::mapper121::Mapper121::new(m::mapper121::Board::A9711).supported(),
         // Duplicate
         (122, None) => m::mapper184::Mapper184.supported(),
         (123, _) => TodoMapper,

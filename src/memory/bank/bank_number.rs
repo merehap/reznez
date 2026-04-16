@@ -34,7 +34,7 @@ impl From<u8> for BankNumber {
 
 #[derive(Debug)]
 pub struct PrgBankRegisters {
-    registers: [BankLocation; 10],
+    registers: [BankLocation; 11],
     read_statuses: [ReadStatus; 16],
     write_statuses: [WriteStatus; 16],
     rom_ram_modes: [PrgSource; 12],
@@ -45,7 +45,7 @@ pub struct PrgBankRegisters {
 impl PrgBankRegisters {
     pub fn new(cartridge_has_ram: bool, work_ram_start_page_number: u16) -> Self {
         Self {
-            registers: [BankLocation::Index(BankNumber(0)); 10],
+            registers: [BankLocation::Index(BankNumber(0)); 11],
             read_statuses: [ReadStatus::Enabled; 16],
             write_statuses: [WriteStatus::Enabled; 16],
             rom_ram_modes: [PrgSource::RamOrRom; 12],
@@ -54,7 +54,7 @@ impl PrgBankRegisters {
         }
     }
 
-    pub fn registers(&self) -> &[BankLocation; 10] {
+    pub fn registers(&self) -> &[BankLocation; 11] {
         &self.registers
     }
 
@@ -261,6 +261,7 @@ pub enum PrgBankRegisterId {
     W,
     X,
     Y,
+    Z,
 }
 
 impl PrgBankRegisterId {
@@ -277,7 +278,9 @@ impl PrgBankRegisterId {
             'w' => W,
             'x' => X,
             'y' => Y,
-            _ => return None,
+            'z' => Z,
+            ..'p' => return None,
+            'z'.. => return None,
         })
     }
 
@@ -294,6 +297,7 @@ impl PrgBankRegisterId {
             W => 'w',
             X => 'x',
             Y => 'y',
+            Z => 'z',
         }
     }
 }

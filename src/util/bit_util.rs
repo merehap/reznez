@@ -38,6 +38,17 @@ pub fn set_bit(byte: u8, index: u32) -> u8 {
     byte & (1 << (7 - index))
 }
 
+pub fn reverse_bits(value: u8) -> u8 {
+    ((value & 0b1000_0000) >> 7)
+        | ((value & 0b0100_0000) >> 5)
+        | ((value & 0b0010_0000) >> 3)
+        | ((value & 0b0001_0000) >> 1)
+        | ((value & 0b0000_1000) << 1)
+        | ((value & 0b0000_0100) << 3)
+        | ((value & 0b0000_0010) << 5)
+        | ((value & 0b0000_0001) << 7)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -96,5 +107,12 @@ mod tests {
     #[test]
     fn clear_already_cleared_bit() {
         assert_eq!(clear_bit(0b10100110, 4), 0b10100110);
+    }
+
+    #[test]
+    fn reverse() {
+        let value = 0b0001_1011;
+        let result = reverse_bits(value);
+        assert_eq!(result, 0b1101_1000);
     }
 }
