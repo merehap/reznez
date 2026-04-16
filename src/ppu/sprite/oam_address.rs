@@ -31,19 +31,13 @@ impl OamAddress {
 
     pub fn increment(&mut self) {
         self.addr = self.addr.wrapping_add(1);
-        info!(target: "oamaddr", "\tIncrementing OamAddress to 0x{:02X}.", self.to_u8());
+        info!(target: "oamaddr", "\tIncrementing OamAddress to 0x{:02X}.", self.addr);
     }
 
     pub fn next_sprite(&mut self) -> bool {
         let end_reached = self.addr / 4 == OamAddress::MAX_SPRITE_INDEX;
-        if end_reached {
-            self.addr %= 4;
-        } else {
-            self.addr += 4;
-        }
-
-        info!(target: "oamaddr", "\tAdvancing to next sprite OamAddress 0x{:02X}.", self.to_u8());
-
+        self.addr = self.addr.wrapping_add(4);
+        info!(target: "oamaddr", "\tAdvancing to next sprite OamAddress 0x{:02X}.", self.addr);
         end_reached
     }
 
@@ -53,7 +47,7 @@ impl OamAddress {
             self.addr -= 4;
         }
 
-        info!(target: "oamaddr", "\tAdvancing to next field OamAddress 0x{:02X}.", self.to_u8());
+        info!(target: "oamaddr", "\tAdvancing to next field OamAddress 0x{:02X}.", self.addr);
         let carry = self.addr % 4 == 0;
         if carry {
             self.next_sprite()
