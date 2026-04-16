@@ -71,6 +71,8 @@ impl SpriteEvaluator {
         }
 
         if !self.secondary_oam.is_full() {
+            // Copy the sprite byte into secondary OAM, but it may be overwritten
+            // if it is a Y coordinate that is not in range.
             self.secondary_oam.write(self.oam_data_read);
         }
 
@@ -87,7 +89,7 @@ impl SpriteEvaluator {
             && let Some(offset) = pixel_row.difference(top_sprite_row)
             && offset < ppu_regs.sprite_height().to_dimension()
         {
-            if ppu_regs.oam_addr.is_at_sprite_0() {
+            if clock.cycle() == 66 {
                 self.sprite_0_present = true;
             }
 

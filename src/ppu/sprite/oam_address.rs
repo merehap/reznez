@@ -23,10 +23,6 @@ impl OamAddress {
         u2::new(self.addr % 4) == self.sprite_start_field_index
     }
 
-    pub fn is_at_sprite_0(self) -> bool {
-        self.addr < 4
-    }
-
     pub fn reset(&mut self) {
         info!(target: "oamaddr", "\tResetting OamAddress to 0x00.");
         self.addr = 0;
