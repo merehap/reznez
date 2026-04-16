@@ -12,6 +12,7 @@ impl OamAddress {
     const MAX_SPRITE_INDEX: u8 = 63;
 
     pub fn from_u8(value: u8) -> OamAddress {
+        info!(target: "oamaddr", "\tSetting OamAddress to 0x{value:02X}.");
         OamAddress {
             addr: value,
             // This field keeps its initial value unless a sprite overflow occurs.
@@ -42,15 +43,12 @@ impl OamAddress {
     }
 
     pub fn next_field(&mut self) -> bool {
+        let end_reached = self.addr / 4 == OamAddress::MAX_SPRITE_INDEX;
         self.addr = self.addr.wrapping_add(1);
-        if self.addr % 4 == 0 {
-            self.addr -= 4;
-        }
-
         info!(target: "oamaddr", "\tAdvancing to next field OamAddress 0x{:02X}.", self.addr);
-        let carry = self.addr % 4 == 0;
-        if carry {
-            self.next_sprite()
+
+        if self.addr % 4 == 0 {
+            end_reached
         } else {
             false
         }
