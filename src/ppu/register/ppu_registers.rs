@@ -83,7 +83,7 @@ impl PpuRegisters {
             suppress_vblank_active: false,
 
             // OAMADDR (0x2003) and OAMDATA (0x2004)
-            oam_addr: OamAddress::new(),
+            oam_addr: OamAddress::from_u8(0),
 
             // PPUSCROLL (0x2005)
             fine_x_scroll: ColumnInTile::Zero,

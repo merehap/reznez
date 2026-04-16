@@ -11,14 +11,6 @@ pub struct OamAddress {
 impl OamAddress {
     const MAX_SPRITE_INDEX: u8 = 63;
 
-    pub fn new() -> OamAddress {
-        OamAddress {
-            addr: 0,
-            // This field keeps its initial value unless a sprite overflow occurs.
-            sprite_start_field_index: u2::new(0),
-        }
-    }
-
     pub fn from_u8(value: u8) -> OamAddress {
         OamAddress {
             addr: value,
@@ -37,12 +29,12 @@ impl OamAddress {
 
     pub fn reset(&mut self) {
         info!(target: "oamaddr", "\tResetting OamAddress to 0x00.");
-        *self = OamAddress::new();
+        self.addr = 0;
+        self.sprite_start_field_index = u2::new(0);
     }
 
     pub fn increment(&mut self) {
-        // TODO: Make efficient?
-        *self = OamAddress::from_u8(self.to_u8().wrapping_add(1));
+        self.addr = self.addr.wrapping_add(1);
         info!(target: "oamaddr", "\tIncrementing OamAddress to 0x{:02X}.", self.to_u8());
     }
 
