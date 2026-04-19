@@ -205,6 +205,7 @@ impl PpuRegisters {
         self.ppu_io_bus.update_from_write(value);
         oam.write(self.oam_addr, value);
         // TODO: What happens if this causes OAMADDR to wrap during sprite evaluation? Is all_sprites_evaluated set prematurely?
+        // Forcing all_sprites_evaluated to true here didn't seem to break any tests, so maybe this is untested.
         self.oam_addr.next_field();
     }
 

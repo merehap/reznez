@@ -38,10 +38,10 @@ impl SpriteEvaluator {
         self.secondary_oam.reset_index();
         self.clear_oam = false;
         self.sprite_0_present = false;
+        self.all_sprites_evaluated = false;
     }
 
     pub fn start_loading_oam_registers(&mut self) {
-        self.all_sprites_evaluated = false;
         // TODO: Determine if this needs to occur on cycle 256 instead.
         self.secondary_oam.reset_index();
     }
