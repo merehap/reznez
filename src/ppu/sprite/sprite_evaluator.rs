@@ -77,38 +77,40 @@ impl SpriteEvaluator {
             self.secondary_oam.write(self.oam_data_read);
         }
 
-        if self.secondary_oam.current_field() == SpriteField::Y {
-            // Check if the y coordinate is on screen.
-            if let Some(pixel_row) = clock.scanline_pixel_row()
-                && let Some(top_sprite_row) = PixelRow::try_from_u8(self.oam_data_read)
-                && let Some(offset) = pixel_row.difference(top_sprite_row)
-                && offset < ppu_regs.sprite_height().to_dimension()
-            {
-                if clock.cycle() == 66 {
-                    self.sprite_0_present = true;
-                }
-
-                if self.secondary_oam.is_full() {
-                    ppu_regs.sprite_overflow = true;
-                }
-
-                self.secondary_oam.advance();
-                self.all_sprites_evaluated = ppu_regs.oam_addr.next_field();
-                return;
-            }
-        } else {
-            // The current sprite is in range, copy one more byte of its data over.
+        // If the Y-index is not currently being evaluated, then the current sprite was already verified to be on screen,
+        // so copy another byte of its data over.
+        if self.secondary_oam.current_field() != SpriteField::Y {
             self.secondary_oam.advance();
             self.all_sprites_evaluated = ppu_regs.oam_addr.next_field();
             return;
         }
 
+        // Check if the sprite's Y-index is on screen and if the current row is inside of the sprite.
+        if let Some(pixel_row) = clock.scanline_pixel_row()
+            && let Some(top_sprite_row) = PixelRow::try_from_u8(self.oam_data_read)
+            && let Some(offset) = pixel_row.difference(top_sprite_row)
+            && offset < ppu_regs.sprite_height().to_dimension()
+        {
+            if clock.cycle() == 66 {
+                self.sprite_0_present = true;
+            }
+
+            if self.secondary_oam.is_full() {
+                ppu_regs.sprite_overflow = true;
+            }
+
+            self.secondary_oam.advance();
+            self.all_sprites_evaluated = ppu_regs.oam_addr.next_field();
+            return;
+        }
+
+        // If the sprite isn't in range and OAM is full, then corrupt the OAMADDR.
+        // Sprite overflow hardware bug: https://www.nesdev.org/wiki/PPU_sprite_evaluation#Details
         if self.secondary_oam.is_full() {
-            // Sprite overflow hardware bug
-            // https://www.nesdev.org/wiki/PPU_sprite_evaluation#Details
             ppu_regs.oam_addr.corrupt_sprite_y_index();
         }
 
+        // If the sprite isn't in range, move to the next sprite.
         self.all_sprites_evaluated = ppu_regs.oam_addr.next_sprite();
     }
 }
