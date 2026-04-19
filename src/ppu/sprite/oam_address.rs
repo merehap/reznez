@@ -9,8 +9,6 @@ pub struct OamAddress {
 }
 
 impl OamAddress {
-    const MAX_SPRITE_INDEX: u8 = 63;
-
     pub fn from_u8(value: u8) -> OamAddress {
         info!(target: "oamaddr", "\tSetting OamAddress to 0x{value:02X}.");
         OamAddress {
@@ -26,28 +24,18 @@ impl OamAddress {
         self.sprite_start_field_index = u2::new(0);
     }
 
-    pub fn increment(&mut self) {
-        self.addr = self.addr.wrapping_add(1);
-        info!(target: "oamaddr", "\tIncrementing OamAddress to 0x{:02X}.", self.addr);
-    }
-
     pub fn next_sprite(&mut self) -> bool {
-        let end_reached = self.addr / 4 == OamAddress::MAX_SPRITE_INDEX;
-        self.addr = self.addr.wrapping_add(4);
+        let end_reached;
+        (self.addr, end_reached) = self.addr.overflowing_add(4);
         info!(target: "oamaddr", "\tAdvancing to next sprite OamAddress 0x{:02X}.", self.addr);
         end_reached
     }
 
     pub fn next_field(&mut self) -> bool {
-        let end_reached = self.addr / 4 == OamAddress::MAX_SPRITE_INDEX;
-        self.addr = self.addr.wrapping_add(1);
+        let end_reached;
+        (self.addr, end_reached) = self.addr.overflowing_add(1);
         info!(target: "oamaddr", "\tAdvancing to next field OamAddress 0x{:02X}.", self.addr);
-
-        if self.addr % 4 == 0 {
-            end_reached
-        } else {
-            false
-        }
+        end_reached
     }
 
     pub fn corrupt_sprite_y_index(&mut self) {

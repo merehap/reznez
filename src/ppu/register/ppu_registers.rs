@@ -204,7 +204,8 @@ impl PpuRegisters {
     pub fn write_oam_data(&mut self, oam: &mut Oam, value: u8) {
         self.ppu_io_bus.update_from_write(value);
         oam.write(self.oam_addr, value);
-        self.oam_addr.increment();
+        // TODO: What happens if this causes OAMADDR to wrap during sprite evaluation? Is all_sprites_evaluated set prematurely?
+        self.oam_addr.next_field();
     }
 
     // Write 0x2005
