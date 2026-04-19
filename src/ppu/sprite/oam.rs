@@ -5,8 +5,6 @@ use itertools::Itertools;
 use crate::memory::primitives::dram_byte::DramByte;
 use crate::ppu::sprite::oam_address::OamAddress;
 
-// TODO: OAM should decay:
-// https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Dynamic_RAM_decay
 #[derive(Clone)]
 pub struct Oam([DramByte; 256]);
 
@@ -15,22 +13,12 @@ impl Oam {
         let sprite = [
             DramByte::new().with_mask(0b1111_1111).with_decay_value(0b1111_1111),
             DramByte::new().with_mask(0b1111_1111).with_decay_value(0b1111_1111),
-            DramByte::new().with_mask(0b1110_0011).with_decay_value(0b1110_0011), // Sprite attribute byte
+            DramByte::new().with_mask(0b1110_0011).with_decay_value(0b1110_0011), // Sprite attribute byte, normally
             DramByte::new().with_mask(0b1111_1111).with_decay_value(0b1111_1111),
         ];
 
         // 64 sprites, 256 bytes
-        let raw_oam = [
-            &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..],
-            &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..],
-            &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..],
-            &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..],
-            &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..],
-            &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..],
-            &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..],
-            &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..], &sprite[..],
-        ].concat();
-
+        let raw_oam = [&sprite[..]; 64].concat();
         Oam(raw_oam.try_into().unwrap())
     }
 
