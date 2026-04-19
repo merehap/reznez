@@ -17,6 +17,16 @@ impl SecondaryOam {
         self.is_full
     }
 
+    pub fn current_field(&self) -> SpriteField {
+        match self.index % 4 {
+            0 => SpriteField::Y,
+            1 => SpriteField::Tile,
+            2 => SpriteField::Attributes,
+            3 => SpriteField::X,
+            _ => unreachable!(),
+        }
+    }
+
     pub fn peek(&self) -> u8 {
         self.data[self.index]
     }
@@ -44,4 +54,12 @@ impl SecondaryOam {
             self.index += 1;
         }
     }
+}
+
+#[derive(PartialEq, Eq)]
+pub enum SpriteField {
+    Y,
+    Tile,
+    Attributes,
+    X,
 }

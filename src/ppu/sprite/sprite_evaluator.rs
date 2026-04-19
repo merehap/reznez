@@ -2,6 +2,7 @@ use crate::ppu::pixel_index::PixelRow;
 use crate::ppu::ppu_clock::PpuClock;
 use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::ppu::sprite::oam::Oam;
+use crate::ppu::sprite::secondary_oam::SpriteField;
 
 use super::secondary_oam::SecondaryOam;
 
@@ -76,27 +77,27 @@ impl SpriteEvaluator {
             self.secondary_oam.write(self.oam_data_read);
         }
 
-        if !ppu_regs.oam_addr.new_sprite_started() {
+        if self.secondary_oam.current_field() == SpriteField::Y {
+            // Check if the y coordinate is on screen.
+            if let Some(pixel_row) = clock.scanline_pixel_row()
+                && let Some(top_sprite_row) = PixelRow::try_from_u8(self.oam_data_read)
+                && let Some(offset) = pixel_row.difference(top_sprite_row)
+                && offset < ppu_regs.sprite_height().to_dimension()
+            {
+                if clock.cycle() == 66 {
+                    self.sprite_0_present = true;
+                }
+
+                if self.secondary_oam.is_full() {
+                    ppu_regs.sprite_overflow = true;
+                }
+
+                self.secondary_oam.advance();
+                self.all_sprites_evaluated = ppu_regs.oam_addr.next_field();
+                return;
+            }
+        } else {
             // The current sprite is in range, copy one more byte of its data over.
-            self.secondary_oam.advance();
-            self.all_sprites_evaluated = ppu_regs.oam_addr.next_field();
-            return;
-        }
-
-        // Check if the y coordinate is on screen.
-        if let Some(pixel_row) = clock.scanline_pixel_row()
-            && let Some(top_sprite_row) = PixelRow::try_from_u8(self.oam_data_read)
-            && let Some(offset) = pixel_row.difference(top_sprite_row)
-            && offset < ppu_regs.sprite_height().to_dimension()
-        {
-            if clock.cycle() == 66 {
-                self.sprite_0_present = true;
-            }
-
-            if self.secondary_oam.is_full() {
-                ppu_regs.sprite_overflow = true;
-            }
-
             self.secondary_oam.advance();
             self.all_sprites_evaluated = ppu_regs.oam_addr.next_field();
             return;
