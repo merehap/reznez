@@ -43,10 +43,7 @@ impl SpriteEvaluator {
     }
 
     pub fn read_oam(&mut self, oam: &mut Oam, clock: &PpuClock, ppu_regs: &PpuRegisters) {
-        self.oam_data_read = oam.read(ppu_regs.oam_addr);
-        if clock.is_oam_clearing() {
-            self.oam_data_read = 0xFF;
-        }
+        self.oam_data_read = oam.read(clock, ppu_regs.oam_addr, ppu_regs.rendering_enabled());
     }
 
     pub fn read_secondary_oam_and_advance(&mut self) -> u8 {

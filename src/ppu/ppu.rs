@@ -220,8 +220,7 @@ impl Ppu {
                 if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
                 // Unclear if these are the correct cycles to trigger on.
                 let oam_addr = bus.ppu_regs.oam_addr;
-                let cycle = bus.ppu_clock().cycle();
-                bus.oam.maybe_corrupt_starting_byte(oam_addr, cycle);
+                bus.oam.maybe_corrupt_starting_byte(bus.master_clock.ppu_clock(), oam_addr, bus.ppu_regs.rendering_enabled());
             }
 
             ResetOamAddress => {

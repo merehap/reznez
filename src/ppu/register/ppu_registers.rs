@@ -189,15 +189,15 @@ impl PpuRegisters {
     }
 
     // Peek 0x2004
-    pub fn peek_oam_data(&self, oam: &Oam) -> ReadResult {
-        ReadResult::full(oam.peek(self.oam_addr))
+    pub fn peek_oam_data(&self, oam: &Oam, clock: &PpuClock) -> ReadResult {
+        ReadResult::full(oam.peek(clock, self.oam_addr, self.rendering_enabled))
     }
 
     // Read 0x2004
-    pub fn read_oam_data(&mut self, oam: &Oam) -> ReadResult {
-        let value = self.peek_oam_data(oam);
-        self.ppu_io_bus.update_from_read(value.unmasked_value());
-        value
+    pub fn read_oam_data(&mut self, oam: &mut Oam, clock: &PpuClock) -> ReadResult {
+        let value = oam.read(clock, self.oam_addr, self.rendering_enabled);
+        self.ppu_io_bus.update_from_read(value);
+        ReadResult::full(value)
     }
 
     // Write 0x2004

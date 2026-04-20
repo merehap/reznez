@@ -240,7 +240,7 @@ impl Bus {
         let normal_peek_value = match addr.to_friendly() {
             Addr::CpuInternalRam(index) => self.cpu_internal_ram().peek(index),
             Addr::PpuStatus             => self.ppu_regs.peek_status(),
-            Addr::OamData               => self.ppu_regs.peek_oam_data(&self.oam),
+            Addr::OamData               => self.ppu_regs.peek_oam_data(&self.oam, &self.ppu_clock()),
             Addr::PpuData => {
                 let old_value = mapper.ppu_peek(self, self.ppu_regs.current_address).value();
                 self.ppu_regs.peek_ppu_data(old_value)
@@ -297,7 +297,7 @@ impl Bus {
         let normal_read_value = match addr.to_friendly() {
             Addr::CpuInternalRam(index) => self.cpu_internal_ram().peek(index),
             Addr::PpuStatus             => self.ppu_regs.read_status(self.master_clock.ppu_clock()),
-            Addr::OamData               => self.ppu_regs.read_oam_data(&self.oam),
+            Addr::OamData               => self.ppu_regs.read_oam_data(&mut self.oam, self.master_clock.ppu_clock()),
             Addr::PpuData => {
                 self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
                 // TODO: Instead of peeking the old data, it must be available as part of some register.

@@ -3,6 +3,7 @@ use std::fmt;
 use itertools::Itertools;
 
 use crate::memory::primitives::dram_byte::DramByte;
+use crate::ppu::ppu_clock::PpuClock;
 use crate::ppu::sprite::oam_address::OamAddress;
 
 #[derive(Clone)]
@@ -27,24 +28,35 @@ impl Oam {
         &self.0
     }
 
-    pub fn peek(&self, address: OamAddress) -> u8 {
-        self.0[address.to_u8() as usize].peek()
+    pub fn peek(&self, clock: &PpuClock, oam_addr: OamAddress, rendering_enabled: bool) -> u8 {
+        if clock.is_oam_clearing() && rendering_enabled {
+            0xFF
+        } else {
+            self.0[oam_addr.to_u8() as usize].peek()
+        }
     }
 
-    pub fn read(&mut self, address: OamAddress) -> u8 {
-        self.0[address.to_u8() as usize].read()
+    pub fn read(&mut self, clock: &PpuClock, oam_addr: OamAddress, rendering_enabled: bool) -> u8 {
+        // TODO: Verify that the read still actually happens if oam is being cleared, since the value is discarded.
+        let mut value = self.0[oam_addr.to_u8() as usize].read();
+        if clock.is_oam_clearing() && rendering_enabled {
+            value = 0xFF;
+        }
+
+        value
     }
 
     pub fn write(&mut self, address: OamAddress, value: u8) {
         self.0[address.to_u8() as usize].write(value);
     }
 
-    pub fn maybe_corrupt_starting_byte(&mut self, address: OamAddress, cycle: u16) {
-        let index = u8::try_from(cycle).unwrap() - 1;
-        let raw_address = address.to_u8();
+    pub fn maybe_corrupt_starting_byte(&mut self, clock: &PpuClock, oam_addr: OamAddress, rendering_enabled: bool) {
+        let index = u8::try_from(clock.cycle()).unwrap() - 1;
+        let raw_address = oam_addr.to_u8();
         if raw_address >= 0x08 {
+            let corrupted_addr = OamAddress::from_u8((raw_address & 0xF8) + index);
             // TODO: Should this be read() instead of peek()? Probably.
-            let value = self.peek(OamAddress::from_u8((raw_address & 0xF8) + index));
+            let value = self.peek(clock, corrupted_addr, rendering_enabled);
             self.write(OamAddress::from_u8(index), value);
         }
     }
