@@ -55,8 +55,12 @@ impl PpuClock {
         self.scanline == 261
     }
 
-    pub fn is_oam_clearing(&self) -> bool {
+    pub fn is_oam_clearing_window(&self) -> bool {
         self.is_on_visible_scanline() && self.cycle >= 1 && self.cycle <= 64
+    }
+
+    pub fn is_secondary_oam_transfer_window(&self) -> bool {
+        self.is_on_visible_scanline() && self.cycle >= 256 && self.cycle <= 320
     }
 
     pub fn tick(&mut self, skip_odd_frame_cycle: bool) -> bool {

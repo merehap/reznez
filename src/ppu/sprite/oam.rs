@@ -30,7 +30,7 @@ impl Oam {
 
     pub fn peek(&self, clock: &PpuClock, oam_addr: OamAddress, rendering_enabled: bool) -> u8 {
         let mut value = self.0[oam_addr.to_u8() as usize].peek();
-        if clock.is_oam_clearing() && rendering_enabled {
+        if (clock.is_oam_clearing_window() || clock.is_secondary_oam_transfer_window()) && rendering_enabled {
             value = 0xFF;
         }
 
@@ -40,7 +40,7 @@ impl Oam {
     pub fn read(&mut self, clock: &PpuClock, oam_addr: OamAddress, rendering_enabled: bool) -> u8 {
         // TODO: Verify that the read still actually happens if oam is being cleared, since the value is discarded.
         let mut value = self.0[oam_addr.to_u8() as usize].read();
-        if clock.is_oam_clearing() && rendering_enabled {
+        if (clock.is_oam_clearing_window() || clock.is_secondary_oam_transfer_window()) && rendering_enabled {
             value = 0xFF;
         }
 

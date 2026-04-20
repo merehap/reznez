@@ -51,7 +51,7 @@ impl SpriteEvaluator {
     }
 
     pub fn write_secondary_oam(&mut self, clock: &PpuClock, ppu_regs: &mut PpuRegisters) {
-        if clock.is_oam_clearing() {
+        if clock.is_oam_clearing_window() {
             self.secondary_oam.write(self.oam_data_read);
             self.secondary_oam.advance();
             return;
