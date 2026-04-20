@@ -56,10 +56,12 @@ impl PpuClock {
     }
 
     pub fn is_oam_clearing_window(&self) -> bool {
+        // TODO: Should the prerender scanline be included here, too?
         self.is_on_visible_scanline() && self.cycle >= 1 && self.cycle <= 64
     }
 
     pub fn is_secondary_oam_transfer_window(&self) -> bool {
+        // TODO: Should the prerender scanline be included here, too?
         self.is_on_visible_scanline() && self.cycle >= 256 && self.cycle <= 320
     }
 

@@ -207,7 +207,7 @@ impl PpuRegisters {
         // TODO: What happens if this causes OAMADDR to wrap during sprite evaluation? Is all_sprites_evaluated set prematurely?
         // Forcing all_sprites_evaluated to true here didn't seem to break any tests, so maybe this is untested.
         if self.rendering_enabled && (clock.is_on_visible_scanline() || clock.is_on_prerender_scanline()) {
-            self.oam_addr.next_sprite();
+            self.oam_addr.corrupt_by_write();
         } else {
             oam.write(self.oam_addr, value);
             self.oam_addr.next_field();

@@ -37,6 +37,11 @@ impl OamAddress {
         info!(target: "oamaddr", "\tCorrupting OamAddress 0x{:02X}.", self.0);
     }
 
+    // Suspiciously similar to corrupt_sprite_y_index()
+    pub fn corrupt_by_write(&mut self) {
+        self.0 = self.0.wrapping_add(4) & 0xFC;
+    }
+
     pub fn to_u8(self) -> u8 {
         self.0
     }
