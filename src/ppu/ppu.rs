@@ -248,7 +248,7 @@ impl Ppu {
             }
             ReadOamByte => {
                 if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
-                bus.ppu.sprite_evaluator.read_oam(&mut bus.oam, &bus.ppu_regs);
+                bus.ppu.sprite_evaluator.read_oam(&mut bus.oam, &bus.master_clock.ppu_clock(), &bus.ppu_regs);
             }
             WriteSecondaryOamByte => {
                 if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }

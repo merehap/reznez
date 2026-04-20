@@ -22,6 +22,7 @@ impl Oam {
         Oam(raw_oam.try_into().unwrap())
     }
 
+    // For debug screens only.
     pub fn to_raw(&self) -> &[DramByte; 256] {
         &self.0
     }

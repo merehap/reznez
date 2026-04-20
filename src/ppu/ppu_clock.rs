@@ -47,6 +47,14 @@ impl PpuClock {
         self.scanline >= 240 && self.scanline < 261
     }
 
+    pub fn is_on_visible_scanline(&self) -> bool {
+        self.scanline < 240
+    }
+
+    pub fn is_oam_clearing(&self) -> bool {
+        self.is_on_visible_scanline() && self.cycle >= 1 && self.cycle <= 64
+    }
+
     pub fn tick(&mut self, skip_odd_frame_cycle: bool) -> bool {
         self.total_cycles += 1;
 

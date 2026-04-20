@@ -9,7 +9,6 @@ use super::secondary_oam::SecondaryOam;
 pub struct SpriteEvaluator {
     oam_data_read: u8,
     secondary_oam: SecondaryOam,
-    clear_oam: bool,
     all_sprites_evaluated: bool,
     sprite_0_present: bool,
 }
@@ -19,7 +18,6 @@ impl SpriteEvaluator {
         Self {
             oam_data_read: 0,
             secondary_oam: SecondaryOam::new(),
-            clear_oam: false,
             all_sprites_evaluated: false,
             sprite_0_present: false,
         }
@@ -31,12 +29,10 @@ impl SpriteEvaluator {
 
     pub fn start_clearing_secondary_oam(&mut self) {
         self.secondary_oam.reset_index();
-        self.clear_oam = true;
     }
 
     pub fn start_sprite_evaluation(&mut self) {
         self.secondary_oam.reset_index();
-        self.clear_oam = false;
         self.sprite_0_present = false;
         self.all_sprites_evaluated = false;
     }
@@ -46,9 +42,9 @@ impl SpriteEvaluator {
         self.secondary_oam.reset_index();
     }
 
-    pub fn read_oam(&mut self, oam: &mut Oam, ppu_regs: &PpuRegisters) {
+    pub fn read_oam(&mut self, oam: &mut Oam, clock: &PpuClock, ppu_regs: &PpuRegisters) {
         self.oam_data_read = oam.read(ppu_regs.oam_addr);
-        if self.clear_oam {
+        if clock.is_oam_clearing() {
             self.oam_data_read = 0xFF;
         }
     }
@@ -58,7 +54,7 @@ impl SpriteEvaluator {
     }
 
     pub fn write_secondary_oam(&mut self, clock: &PpuClock, ppu_regs: &mut PpuRegisters) {
-        if self.clear_oam {
+        if clock.is_oam_clearing() {
             self.secondary_oam.write(self.oam_data_read);
             self.secondary_oam.advance();
             return;
