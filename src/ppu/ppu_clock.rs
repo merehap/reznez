@@ -43,12 +43,16 @@ impl PpuClock {
         PixelRow::try_from_u16(self.scanline)
     }
 
+    pub fn is_on_visible_scanline(&self) -> bool {
+        self.scanline < 240
+    }
+
     pub fn is_on_vblank_scanline(&self) -> bool {
         self.scanline >= 240 && self.scanline < 261
     }
 
-    pub fn is_on_visible_scanline(&self) -> bool {
-        self.scanline < 240
+    pub fn is_on_prerender_scanline(&self) -> bool {
+        self.scanline == 261
     }
 
     pub fn is_oam_clearing(&self) -> bool {

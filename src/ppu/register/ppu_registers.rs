@@ -201,12 +201,17 @@ impl PpuRegisters {
     }
 
     // Write 0x2004
-    pub fn write_oam_data(&mut self, oam: &mut Oam, value: u8) {
+    pub fn write_oam_data(&mut self, oam: &mut Oam, clock: &PpuClock, value: u8) {
         self.ppu_io_bus.update_from_write(value);
-        oam.write(self.oam_addr, value);
+
         // TODO: What happens if this causes OAMADDR to wrap during sprite evaluation? Is all_sprites_evaluated set prematurely?
         // Forcing all_sprites_evaluated to true here didn't seem to break any tests, so maybe this is untested.
-        self.oam_addr.next_field();
+        if self.rendering_enabled && (clock.is_on_visible_scanline() || clock.is_on_prerender_scanline()) {
+            self.oam_addr.next_sprite();
+        } else {
+            oam.write(self.oam_addr, value);
+            self.oam_addr.next_field();
+        }
     }
 
     // Write 0x2005

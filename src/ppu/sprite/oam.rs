@@ -29,11 +29,12 @@ impl Oam {
     }
 
     pub fn peek(&self, clock: &PpuClock, oam_addr: OamAddress, rendering_enabled: bool) -> u8 {
+        let mut value = self.0[oam_addr.to_u8() as usize].peek();
         if clock.is_oam_clearing() && rendering_enabled {
-            0xFF
-        } else {
-            self.0[oam_addr.to_u8() as usize].peek()
+            value = 0xFF;
         }
+
+        value
     }
 
     pub fn read(&mut self, clock: &PpuClock, oam_addr: OamAddress, rendering_enabled: bool) -> u8 {

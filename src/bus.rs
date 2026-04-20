@@ -382,7 +382,7 @@ impl Bus {
             Addr::PpuMask    => self.ppu_regs.write_mask(self.cpu_pinout.data_bus),
             Addr::PpuStatus  => self.ppu_regs.write_status(self.cpu_pinout.data_bus), // Read-only
             Addr::OamAddress => self.ppu_regs.write_oam_addr(self.cpu_pinout.data_bus),
-            Addr::OamData    => self.ppu_regs.write_oam_data(&mut self.oam, self.cpu_pinout.data_bus),
+            Addr::OamData    => self.ppu_regs.write_oam_data(&mut self.oam, self.master_clock.ppu_clock(), self.cpu_pinout.data_bus),
             Addr::PpuScroll  => self.ppu_regs.write_scroll(self.cpu_pinout.data_bus),
             Addr::PpuAddress => {
                 self.ppu_regs.write_ppu_addr(self.cpu_pinout.data_bus);
