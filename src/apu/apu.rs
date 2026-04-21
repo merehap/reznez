@@ -83,6 +83,8 @@ impl Apu {
                 bus.apu_regs.tick_get(clock, &mut bus.cpu_pinout, &mut bus.dmc_dma);
             }
             CycleParity::Put => {
+                bus.joypad1.tick();
+                bus.joypad2.tick();
                 bus.apu_regs.tick_put(clock, &mut bus.cpu_pinout, &mut bus.dmc_dma);
                 Self::maybe_enqueue_mixed_sample(bus);
             }

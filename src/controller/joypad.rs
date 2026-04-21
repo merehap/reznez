@@ -3,12 +3,13 @@ use std::ops::{Index, IndexMut};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
-use crate::mapper::ReadResult;
+use crate::memory::read_result::ReadResult;
 
 // https://wiki.nesdev.com/w/index.php/Controller_reading_code
 #[derive(Clone, Copy)]
 pub struct Joypad {
     strobe_mode: StrobeMode,
+    pending_strobe_mode: Option<StrobeMode>,
     selected_button: Option<Button>,
     button_statuses: ButtonStatuses,
 }
@@ -17,6 +18,7 @@ impl Joypad {
     pub fn new() -> Joypad {
         Joypad {
             strobe_mode: StrobeMode::On,
+            pending_strobe_mode: None,
             selected_button: Some(Button::A),
             button_statuses: ButtonStatuses::ALL_UNPRESSED,
         }
@@ -45,21 +47,19 @@ impl Joypad {
         status
     }
 
-    pub fn change_strobe(&mut self, value: u8) {
-        if value & 1 == 1 {
-            self.strobe_on();
-        } else {
-            self.strobe_off();
+    // Called on every PUT cycle
+    pub fn tick(&mut self) {
+        if let Some(strobe_mode) = self.pending_strobe_mode.take() {
+            self.strobe_mode = strobe_mode;
+            if strobe_mode == StrobeMode::On {
+                self.selected_button = Some(Button::A);
+            }
         }
     }
 
-    pub fn strobe_on(&mut self) {
-        self.strobe_mode = StrobeMode::On;
-        self.selected_button = Some(Button::A);
-    }
-
-    pub fn strobe_off(&mut self) {
-        self.strobe_mode = StrobeMode::Off;
+    pub fn change_strobe(&mut self, value: u8) {
+        let mode = if value & 1 == 0 { StrobeMode::Off } else { StrobeMode::On };
+        self.pending_strobe_mode = Some(mode);
     }
 
     pub fn set_button_status(&mut self, button: Button, status: ButtonStatus) {
