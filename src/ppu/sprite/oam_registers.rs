@@ -2,7 +2,6 @@ use crate::memory::ppu::chr_memory::PpuPeek;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::sprite::sprite_attributes::{SpriteAttributes, Priority};
-use crate::util::bit_util::get_bit;
 
 pub struct OamRegisters {
     pub registers: [SpriteRegisters; 8],
@@ -90,13 +89,13 @@ impl SpriteRegisters {
         let low_bit;
         let high_bit;
         if self.attributes.flip_horizontally() {
-            low_bit = get_bit(self.low_pattern, 7);
-            high_bit = get_bit(self.high_pattern, 7);
+            low_bit = self.low_pattern & 1 == 1;
+            high_bit = self.high_pattern & 1 == 1;
             self.low_pattern >>= 1;
             self.high_pattern >>= 1;
         } else {
-            low_bit = get_bit(self.low_pattern, 0);
-            high_bit = get_bit(self.high_pattern, 0);
+            low_bit = self.low_pattern >> 7 == 1;
+            high_bit = self.high_pattern >> 7 == 1;
             self.low_pattern <<= 1;
             self.high_pattern <<= 1;
         }

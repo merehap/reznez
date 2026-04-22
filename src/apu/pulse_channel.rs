@@ -4,7 +4,6 @@ use ux::{u2, u4};
 use crate::apu::envelope::Envelope;
 use crate::apu::length_counter::LengthCounter;
 use crate::apu::sweep::{NegateBehavior, Sweep};
-use crate::util::bit_util;
 
 //                  Sweep -----> Timer
 //                    |            |
@@ -120,7 +119,7 @@ impl Sequencer {
     }
 
     pub fn on_duty(&self) -> bool {
-        bit_util::get_bit(self.duty as u8, self.index)
+        self.duty as u8 >> (7 - self.index) == 1
     }
 
     pub fn set_duty(&mut self, duty: Duty) {

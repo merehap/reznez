@@ -10,7 +10,6 @@ use crate::ppu::palette::palette::Palette;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::pixel_index::{ColumnInTile, RowInTile};
 use crate::ppu::tile_number::TileNumber;
-use crate::util::bit_util::get_bit;
 use crate::util::unit::KIBIBYTE;
 
 const PATTERN_SIZE: u32 = 16;
@@ -57,8 +56,8 @@ impl<'a> PatternTable<'a> {
         let low_byte = self.read(low_index);
         let high_byte = self.read(high_index);
 
-        let low_bit = get_bit(low_byte, column_in_tile as u32);
-        let high_bit = get_bit(high_byte, column_in_tile as u32);
+        let low_bit = low_byte >> (7 - column_in_tile as u32) == 1;
+        let high_bit = high_byte >> (7 - column_in_tile as u32) == 1;
         *pixel = palette.rgbt_from_low_high(low_bit, high_bit);
     }
 
@@ -104,8 +103,8 @@ impl<'a> PatternTable<'a> {
         let high_byte = self.read(high_index);
 
         for (column_in_tile, pixel) in tile_sliver.iter_mut().enumerate() {
-            let low_bit = get_bit(low_byte, column_in_tile as u32);
-            let high_bit = get_bit(high_byte, column_in_tile as u32);
+            let low_bit = low_byte >> (7 - column_in_tile as u32) == 1;
+            let high_bit = high_byte >> (7 - column_in_tile as u32) == 1;
             *pixel = palette.rgbt_from_low_high(low_bit, high_bit);
         }
     }

@@ -19,25 +19,6 @@ pub fn unpack_bools(value: u8) -> [bool; 8] {
     bools
 }
 
-#[inline]
-pub fn get_bit(byte: u8, index: u32) -> bool {
-    assert!(index < 8);
-    let mask = 0b1000_0000 >> index as u8;
-    byte & mask != 0
-}
-
-#[allow(dead_code)]
-pub fn clear_bit(byte: u8, index: u32) -> u8 {
-    assert!(index < 8);
-    byte & !(1 << (7 - index))
-}
-
-#[allow(dead_code)]
-pub fn set_bit(byte: u8, index: u32) -> u8 {
-    assert!(index < 8);
-    byte & (1 << (7 - index))
-}
-
 pub fn reverse_bits(value: u8) -> u8 {
     ((value & 0b1000_0000) >> 7)
         | ((value & 0b0100_0000) >> 5)
@@ -87,26 +68,6 @@ mod tests {
             unpack_bools(0xDA),
             [true, true, false, true, true, false, true, false]
         );
-    }
-
-    #[test]
-    fn get_bit_0_true() {
-        assert!(get_bit(0b10100110, 0));
-    }
-
-    #[test]
-    fn get_bit_7_false() {
-        assert!(!get_bit(0b10100110, 7));
-    }
-
-    #[test]
-    fn clear_bit_clears() {
-        assert_eq!(clear_bit(0b10100110, 5), 0b10100010);
-    }
-
-    #[test]
-    fn clear_already_cleared_bit() {
-        assert_eq!(clear_bit(0b10100110, 4), 0b10100110);
     }
 
     #[test]

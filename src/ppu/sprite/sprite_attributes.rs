@@ -1,5 +1,6 @@
+use splitbits::splitbits;
+
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
-use crate::util::bit_util::get_bit;
 
 #[derive(Clone, Copy, Debug)]
 pub struct SpriteAttributes {
@@ -20,17 +21,19 @@ impl SpriteAttributes {
     }
 
     pub fn from_u8(value: u8) -> SpriteAttributes {
-        let palette_table_index = match (get_bit(value, 6), get_bit(value, 7)) {
-            (false, false) => PaletteTableIndex::Zero,
-            (false, true ) => PaletteTableIndex::One,
-            (true , false) => PaletteTableIndex::Two,
-            (true , true ) => PaletteTableIndex::Three,
+        let fields = splitbits!(value, "vhp. ..ii");
+        let palette_table_index = match fields.i {
+            0 => PaletteTableIndex::Zero,
+            1 => PaletteTableIndex::One,
+            2 => PaletteTableIndex::Two,
+            3 => PaletteTableIndex::Three,
+            _ => unreachable!(),
         };
 
         SpriteAttributes {
-            flip_vertically:   get_bit(value, 0),
-            flip_horizontally: get_bit(value, 1),
-            priority:          get_bit(value, 2).into(),
+            flip_vertically:   fields.v,
+            flip_horizontally: fields.h,
+            priority:          fields.p.into(),
             palette_table_index,
         }
     }
