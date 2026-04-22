@@ -82,7 +82,7 @@ pub static VISIBLE_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(|
 
     // Unused name table fetches.
     line.add(          338, vec![GetPatternIndex            ,                     ReadSpriteY                                         ]);
-    line.add(          339, vec![SetPatternIndexAddress     ,                     ReadSpriteY                                         ]);
+    line.add(          339, vec![SetPatternIndexAddress     ,                     ReadSpriteY, MaybeClearSpriteX                      ]);
     line.add(          340, vec![GetPatternIndex            ,                     ReadSpriteY                                         ]);
 
     line

@@ -274,6 +274,14 @@ impl Ppu {
             DummyReadSpriteX => {
                 // TODO
             }
+            MaybeClearSpriteX => {
+                if !bus.ppu_regs.rendering_enabled() {
+                    // This is a quirk of the rendering pipeline. There may be a better way to represent this.
+                    for i in 0..8 {
+                        bus.ppu.oam_registers.registers[i].set_x_counter(0);
+                    }
+                }
+            }
 
             SetSpritePatternLowAddress => {
                 let select_high = false;

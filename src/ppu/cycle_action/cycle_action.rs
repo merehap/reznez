@@ -33,6 +33,7 @@ pub enum CycleAction {
     ReadSpriteAttributes,
     ReadSpriteX,
     DummyReadSpriteX,
+    MaybeClearSpriteX,
 
     StartVisibleScanlines,
     StartPostRenderScanline,
