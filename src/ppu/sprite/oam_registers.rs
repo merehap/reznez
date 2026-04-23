@@ -1,10 +1,12 @@
+use std::ops::{Index, IndexMut};
+
 use crate::memory::ppu::chr_memory::PpuPeek;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::sprite::sprite_attributes::{SpriteAttributes, Priority};
 
 pub struct OamRegisters {
-    pub registers: [SpriteRegisters; 8],
+    registers: [SpriteRegisters; 8],
 }
 
 impl OamRegisters {
@@ -28,6 +30,20 @@ impl OamRegisters {
         }
 
         result
+    }
+}
+
+impl Index<usize> for OamRegisters {
+    type Output = SpriteRegisters;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.registers[index]
+    }
+}
+
+impl IndexMut<usize> for OamRegisters {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.registers[index]
     }
 }
 

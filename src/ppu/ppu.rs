@@ -264,12 +264,12 @@ impl Ppu {
             ReadSpriteAttributes => {
                 if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
                 let attributes = SpriteAttributes::from_u8(bus.ppu.sprite_evaluator.read_secondary_oam_and_advance());
-                bus.ppu.oam_registers.registers[bus.ppu.oam_register_index].set_attributes(attributes);
+                bus.ppu.oam_registers[bus.ppu.oam_register_index].set_attributes(attributes);
             }
             ReadSpriteX => {
                 if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
                 let x_counter = bus.ppu.sprite_evaluator.read_secondary_oam_and_advance();
-                bus.ppu.oam_registers.registers[bus.ppu.oam_register_index].set_x_counter(x_counter);
+                bus.ppu.oam_registers[bus.ppu.oam_register_index].set_x_counter(x_counter);
             }
             DummyReadSpriteX => {
                 // TODO
@@ -278,7 +278,7 @@ impl Ppu {
                 if !bus.ppu_regs.rendering_enabled() {
                     // This is a quirk of the rendering pipeline. There may be a better way to represent this.
                     for i in 0..8 {
-                        bus.ppu.oam_registers.registers[i].set_x_counter(0);
+                        bus.ppu.oam_registers[i].set_x_counter(0);
                     }
                 }
             }
@@ -298,13 +298,13 @@ impl Ppu {
             GetSpritePatternLowByte => {
                 let pattern_low = bus.ppu_internal_read(mapper);
                 if (bus.ppu_regs.background_enabled() || bus.ppu_regs.sprites_enabled()) && bus.ppu.sprite_visible {
-                    bus.ppu.oam_registers.registers[bus.ppu.oam_register_index].set_pattern_low(pattern_low);
+                    bus.ppu.oam_registers[bus.ppu.oam_register_index].set_pattern_low(pattern_low);
                 }
             }
             GetSpritePatternHighByte => {
                 let pattern_high = bus.ppu_internal_read(mapper);
                 if (bus.ppu_regs.background_enabled() || bus.ppu_regs.sprites_enabled()) && bus.ppu.sprite_visible {
-                    bus.ppu.oam_registers.registers[bus.ppu.oam_register_index].set_pattern_high(pattern_high);
+                    bus.ppu.oam_registers[bus.ppu.oam_register_index].set_pattern_high(pattern_high);
                 }
             }
             IncrementOamRegisterIndex => {
@@ -381,7 +381,7 @@ impl Ppu {
         let address;
         let visible;
         if let Some(pixel_row) = bus.ppu_clock().scanline_pixel_row() {
-            let attributes = self.oam_registers.registers[self.oam_register_index].attributes();
+            let attributes = self.oam_registers[self.oam_register_index].attributes();
             if let Some((tile_number, row_in_half, v)) = self.next_sprite_tile_number.number_and_row(
                 self.current_sprite_y,
                 attributes.flip_vertically(),
