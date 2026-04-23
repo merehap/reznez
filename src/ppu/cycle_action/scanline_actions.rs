@@ -150,10 +150,10 @@ pub static PRE_RENDER_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::ne
     // Cycles 257 through 320
     for sprite in 0..8 {
         let cycle = 8 * sprite + 257;
-        scanline.add(cycle + 0, vec![                             ResetOamAddress                        ]);
-        scanline.add(cycle + 1, vec![                             ResetOamAddress                        ]);
-        scanline.add(cycle + 2, vec![                             ResetOamAddress                        ]);
-        scanline.add(cycle + 3, vec![                             ResetOamAddress                        ]);
+        scanline.add(cycle + 0, vec![SetPatternIndexAddress     , ResetOamAddress                        ]);
+        scanline.add(cycle + 1, vec![GetPatternIndex            , ResetOamAddress                        ]);
+        scanline.add(cycle + 2, vec![SetPaletteIndexAddress     , ResetOamAddress                        ]);
+        scanline.add(cycle + 3, vec![GetPaletteIndex            , ResetOamAddress                        ]);
         scanline.add(cycle + 4, vec![SetSpritePatternLowAddress , ResetOamAddress                        ]);
         scanline.add(cycle + 5, vec![GetSpritePatternLowByte    , ResetOamAddress                        ]);
         scanline.add(cycle + 6, vec![SetSpritePatternHighAddress, ResetOamAddress                        ]);
