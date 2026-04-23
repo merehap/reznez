@@ -42,12 +42,6 @@ pub trait Mapper {
     // Every mapper must implement write_register.
     fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8);
 
-    // Hack to allow Action 53 to use its own custom peeking logic.
-    // TODO: Provide a proper solution for Action 53.
-    fn peek_prg(&self, bus: &Bus, addr: CpuAddress) -> ReadResult {
-        bus.prg_memory.peek(addr)
-    }
-
     // Most mappers don't need to modify the MapperParams before ROM execution begins, but this
     // provides a relief valve for the rare settings that can't be expressed in a Layout.
     fn init_mapper_params(&self, _bus: &mut Bus) {}

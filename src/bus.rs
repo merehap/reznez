@@ -252,7 +252,7 @@ impl Bus {
             Addr::MapperRegisters => {
                 match *addr {
                     0x4020..=0x5FFF => mapper.peek_register(self, addr),
-                    0x6000..=0xFFFF => mapper.peek_prg(self, addr),
+                    0x6000..=0xFFFF => self.prg_memory.peek(addr),
                     _ => unreachable!(),
                 }
             }
@@ -319,7 +319,7 @@ impl Bus {
                 match *addr {
                     0x0000..=0x401F => unreachable!(),
                     0x4020..=0x5FFF => mapper.peek_register(self, addr),
-                    0x6000..=0xFFFF => mapper.peek_prg(self, addr),
+                    0x6000..=0xFFFF => self.prg_memory.peek(addr),
                 }
             }
 
