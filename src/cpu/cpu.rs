@@ -34,6 +34,7 @@ pub struct Cpu {
     h: u8,
 
     mode_state: CpuModeState,
+    step: Step,
 
     nmi_status: NmiStatus,
     irq_status: IrqStatus,
@@ -46,6 +47,8 @@ pub struct Cpu {
     computed_address: CpuAddress,
     address_carry: i8,
     operand: u8,
+
+    vblank_active_latch: bool,
 
     step_formatting: CpuStepFormatting,
 }
@@ -65,6 +68,8 @@ impl Cpu {
             h: 0,
 
             mode_state: CpuModeState::startup(),
+            // Dummy step that is never used.
+            step: Step::Read(From::ProgramCounterTarget, &[]),
 
             nmi_status: NmiStatus::Inactive,
             irq_status: IrqStatus::Inactive,
@@ -78,6 +83,8 @@ impl Cpu {
             computed_address: CpuAddress::ZERO,
             address_carry: 0,
             operand: 0,
+
+            vblank_active_latch: false,
 
             step_formatting,
         }
@@ -157,59 +164,61 @@ impl Cpu {
             bus.cpu.irq_status = IrqStatus::Ready;
         }
 
-        let mut step = bus.cpu.mode_state.current_step();
+        bus.cpu.vblank_active_latch = bus.ppu_regs.vblank_active;
+
+        bus.cpu.step = bus.cpu.mode_state.current_step();
 
         let cycle_parity = bus.apu_clock().cycle_parity();
-        bus.dmc_dma.step(step.is_read(), cycle_parity);
+        bus.dmc_dma.step(bus.cpu.step.is_read(), cycle_parity);
         match bus.dmc_dma.latest_action() {
             DmcDmaAction::DoNothing => {}
-            DmcDmaAction::Halt | DmcDmaAction::Dummy | DmcDmaAction::Align => step = step.with_actions_removed(),
-            DmcDmaAction::Read => step = DMC_READ_STEP,
+            DmcDmaAction::Halt | DmcDmaAction::Dummy | DmcDmaAction::Align => bus.cpu.step = bus.cpu.step.with_actions_removed(),
+            DmcDmaAction::Read => bus.cpu.step = DMC_READ_STEP,
         }
 
         let block_oam_dma_memory_access = bus.dmc_dma.latest_action() == DmcDmaAction::Read;
-        bus.oam_dma.step(step.is_read(), cycle_parity, block_oam_dma_memory_access);
-        step = match bus.oam_dma.latest_action() {
-            OamDmaAction::DoNothing => step,
-            OamDmaAction::Halt | OamDmaAction::Align => step.with_actions_removed(),
+        bus.oam_dma.step(bus.cpu.step.is_read(), cycle_parity, block_oam_dma_memory_access);
+        bus.cpu.step = match bus.oam_dma.latest_action() {
+            OamDmaAction::DoNothing => bus.cpu.step,
+            OamDmaAction::Halt | OamDmaAction::Align => bus.cpu.step.with_actions_removed(),
             OamDmaAction::Read => OAM_READ_STEP,
             OamDmaAction::Write => OAM_WRITE_STEP,
         };
 
-        let current_address_bus_type = step.address_bus_type();
-        let address = bus.cpu.lookup_step_address(bus, step);
+        let current_address_bus_type = bus.cpu.step.address_bus_type();
+        let address = bus.cpu.lookup_step_address(bus, bus.cpu.step);
         bus.set_cpu_address_bus(current_address_bus_type, address);
 
-        if let Step::WriteField(field, ..) = step {
+        if let Step::WriteField(field, ..) = bus.cpu.step {
             bus.cpu_pinout.data_bus = bus.cpu.field_value(&mut bus.cpu_pinout, field);
         }
 
-        let value = if step.is_read() {
+        let value = if bus.cpu.step.is_read() {
             bus.cpu_read(mapper, current_address_bus_type)
         } else {
             bus.cpu_write(mapper, current_address_bus_type);
             bus.cpu_pinout.data_bus
         };
 
-        if let Step::ReadField(field, ..) = step {
+        if let Step::ReadField(field, ..) = bus.cpu.step {
             bus.cpu.set_field_value(field, value);
         }
 
-        if step.is_dma() {
+        if bus.cpu.step.is_dma() {
             bus.cpu.h = 0xFF;
         }
 
         let formatted_step = if log_enabled!(target: "cpustep", Info) {
             match bus.cpu.step_formatting {
-                CpuStepFormatting::NoData => format!("{step:?}"),
-                CpuStepFormatting::Data => step.format_with_read_write_values(bus, value),
+                CpuStepFormatting::NoData => format!("{:?}", bus.cpu.step),
+                CpuStepFormatting::Data => bus.cpu.step.format_with_read_write_values(bus, value),
             }
         } else {
             String::new()
         };
 
         let original_program_counter = bus.cpu.program_counter;
-        for &action in step.actions() {
+        for &action in bus.cpu.step.actions() {
             Cpu::execute_step_action(bus, action, value);
         }
 
@@ -231,7 +240,7 @@ impl Cpu {
         if !halted {
             bus.cpu.mode_state.step();
 
-            if step.has_start_new_instruction() {
+            if bus.cpu.step.has_start_new_instruction() {
                 bus.cpu.mode_state.set_current_instruction_with_address(
                     Instruction::from_code_point(value),
                     bus.cpu_pinout.address_bus,
@@ -239,7 +248,7 @@ impl Cpu {
             }
         }
 
-        Some(step)
+        Some(bus.cpu.step)
     }
 
     // ϕ2. M2 is high
