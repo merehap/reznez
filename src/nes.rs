@@ -247,10 +247,10 @@ impl Nes {
             match action {
                 CycleType::Apu => self.apu_step(),
                 CycleType::ApuWithLogging => self.apu_step_with_logging(),
-                CycleType::CpuFirstHalf => step = self.cpu_step_first_half(),
-                CycleType::CpuFirstHalfWithLogging => step = self.cpu_step_first_half_with_logging(),
-                CycleType::CpuSecondHalf => self.cpu_step_second_half(),
-                CycleType::CpuSecondHalfWithLogging => self.cpu_step_second_half_with_logging(),
+                CycleType::CpuFirstHalf => self.cpu_step_first_half(),
+                CycleType::CpuFirstHalfWithLogging => self.cpu_step_first_half_with_logging(),
+                CycleType::CpuSecondHalf => step = self.cpu_step_second_half(),
+                CycleType::CpuSecondHalfWithLogging => step = self.cpu_step_second_half_with_logging(),
                 CycleType::Ppu => is_last_cycle_of_frame = self.ppu_step(),
                 CycleType::PpuWithLogging => is_last_cycle_of_frame = self.ppu_step_with_logging(),
             }
@@ -284,12 +284,12 @@ impl Nes {
         self.bus.master_clock_mut().apu_clock_mut().tick();
     }
 
-    fn cpu_step_first_half(&mut self) -> Option<Step> {
+    fn cpu_step_first_half(&mut self) {
         self.bus.master_clock_mut().increment_cpu_cycle();
-        Cpu::step_first_half(&mut self.bus, &mut *self.mapper)
+        Cpu::step_first_half(&mut self.bus, &mut *self.mapper);
     }
 
-    fn cpu_step_first_half_with_logging(&mut self) -> Option<Step> {
+    fn cpu_step_first_half_with_logging(&mut self) {
         self.bus.master_clock_mut().increment_cpu_cycle();
 
         if log_enabled!(target: "timings", Info) {
@@ -326,13 +326,14 @@ impl Nes {
         step
     }
 
-    fn cpu_step_second_half(&mut self) {
-        Cpu::step_second_half(&mut self.bus, &mut *self.mapper);
+    fn cpu_step_second_half(&mut self) -> Option<Step> {
+        Cpu::step_second_half(&mut self.bus, &mut *self.mapper)
     }
 
-    fn cpu_step_second_half_with_logging(&mut self) {
-        Cpu::step_second_half(&mut self.bus, &mut *self.mapper);
+    fn cpu_step_second_half_with_logging(&mut self) -> Option<Step> {
+        let step = Cpu::step_second_half(&mut self.bus, &mut *self.mapper);
         self.detect_changes();
+        step
     }
 
     fn ppu_step(&mut self) -> bool {
