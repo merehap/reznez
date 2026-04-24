@@ -186,7 +186,7 @@ impl Ppu {
                 };
                 bus.ppu.pattern_source_frame.set_background_pixel(pixel_column, pixel_row, bank_pixel);
 
-                if bus.ppu_regs.sprites_enabled() || bus.ppu_regs.background_enabled() {
+                if bus.ppu_regs.rendering_enabled() {
                     let (mut sprite_pixel, priority, is_sprite_0, ppu_peek) = bus.ppu.oam_registers.step(&bus.palette_table());
                     // HACK: Transparent sprites on row 0 should be a natural consequence of the shifter pipeline instead.
                     if pixel_row == PixelRow::ZERO {
@@ -206,13 +206,10 @@ impl Ppu {
 
                     frame.set_sprite_pixel(pixel_column, pixel_row, sprite_pixel, priority, is_sprite_0);
                     bus.ppu.pattern_source_frame.set_sprite_pixel(pixel_column, pixel_row, bank_pixel, priority, false);
-                }
 
-                // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Sprite_zero_hits
-                if bus.ppu_regs.sprites_enabled() && bus.ppu_regs.background_enabled()
-                    && frame.pixel(bus.ppu_regs.mask(), pixel_column, pixel_row).1.hit()
-                {
-                    bus.ppu_regs.sprite0_hit = true;
+                    if frame.pixel(bus.ppu_regs.mask(), pixel_column, pixel_row).1.hit() {
+                        bus.ppu_regs.sprite0_hit = true;
+                    }
                 }
             }
 
