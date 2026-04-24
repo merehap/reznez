@@ -212,10 +212,6 @@ impl Cpu {
         if let Step::ReadField(field, ..) = bus.cpu.step {
             bus.cpu.set_field_value(field, bus.cpu.value);
         }
-
-        if bus.cpu.step.is_dma() {
-            bus.cpu.h = 0xFF;
-        }
     }
 
     // ϕ2. M2 is high
@@ -223,6 +219,10 @@ impl Cpu {
         if bus.cpu_pinout.reset.current_value() == SignalLevel::Low {
             // The CPU doesn't do anything while the RESET button is held down.
             return None;
+        }
+
+        if bus.cpu.step.is_dma() {
+            bus.cpu.h = 0xFF;
         }
 
         bus.cpu.formatted_step = if log_enabled!(target: "cpustep", Info) {
