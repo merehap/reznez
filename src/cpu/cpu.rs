@@ -50,6 +50,11 @@ pub struct Cpu {
 
     vblank_active_latch: bool,
 
+    // TODO: Remove
+    formatted_step: String,
+    original_program_counter: CpuAddress,
+    value: u8,
+
     step_formatting: CpuStepFormatting,
 }
 
@@ -85,6 +90,10 @@ impl Cpu {
             operand: 0,
 
             vblank_active_latch: false,
+
+            formatted_step: "".to_owned(),
+            original_program_counter: CpuAddress::ZERO,
+            value: 0,
 
             step_formatting,
         }
@@ -193,7 +202,7 @@ impl Cpu {
             bus.cpu_pinout.data_bus = bus.cpu.field_value(&mut bus.cpu_pinout, field);
         }
 
-        let value = if bus.cpu.step.is_read() {
+        bus.cpu.value = if bus.cpu.step.is_read() {
             bus.cpu_read(mapper, current_address_bus_type)
         } else {
             bus.cpu_write(mapper, current_address_bus_type);
@@ -201,51 +210,25 @@ impl Cpu {
         };
 
         if let Step::ReadField(field, ..) = bus.cpu.step {
-            bus.cpu.set_field_value(field, value);
+            bus.cpu.set_field_value(field, bus.cpu.value);
         }
 
         if bus.cpu.step.is_dma() {
             bus.cpu.h = 0xFF;
         }
 
-        let formatted_step = if log_enabled!(target: "cpustep", Info) {
+        bus.cpu.formatted_step = if log_enabled!(target: "cpustep", Info) {
             match bus.cpu.step_formatting {
                 CpuStepFormatting::NoData => format!("{:?}", bus.cpu.step),
-                CpuStepFormatting::Data => bus.cpu.step.format_with_read_write_values(bus, value),
+                CpuStepFormatting::Data => bus.cpu.step.format_with_read_write_values(bus, bus.cpu.value),
             }
         } else {
             String::new()
         };
 
-        let original_program_counter = bus.cpu.program_counter;
+        bus.cpu.original_program_counter = bus.cpu.program_counter;
         for &action in bus.cpu.step.actions() {
-            Cpu::execute_step_action(bus, action, value);
-        }
-
-        let halted = bus.dmc_dma.cpu_should_be_halted() || bus.oam_dma.cpu_should_be_halted();
-        if log_enabled!(target: "cpustep", Info) {
-            let step_name = if halted { "HALTED".to_string() } else { bus.cpu.mode_state.step_name() };
-            let cpu_cycle = bus.cpu_cycle();
-            let current_address = bus.cpu_address_bus(current_address_bus_type);
-            let prg_index = if *current_address < 0x6000 {
-                String::new()
-            } else {
-                bus.prg_memory().current_memory_map()
-                    .index_for_address(current_address)
-                    .map_or("Open Bus".to_owned(), |(index, _)| format!(" ${index:06X}"))
-            };
-            info!("{prg_index:08} {step_name} PC: {original_program_counter}, Cycle: {cpu_cycle}, {formatted_step}");
-        }
-
-        if !halted {
-            bus.cpu.mode_state.step();
-
-            if bus.cpu.step.has_start_new_instruction() {
-                bus.cpu.mode_state.set_current_instruction_with_address(
-                    Instruction::from_code_point(value),
-                    bus.cpu_pinout.address_bus,
-                );
-            }
+            Cpu::execute_step_action(bus, action, bus.cpu.value);
         }
     }
 
@@ -254,6 +237,33 @@ impl Cpu {
         if bus.cpu_pinout.reset.current_value() == SignalLevel::Low {
             // The CPU doesn't do anything while the RESET button is held down.
             return None;
+        }
+
+        let halted = bus.dmc_dma.cpu_should_be_halted() || bus.oam_dma.cpu_should_be_halted();
+        if log_enabled!(target: "cpustep", Info) {
+            let step_name = if halted { "HALTED".to_string() } else { bus.cpu.mode_state.step_name() };
+            let cpu_cycle = bus.cpu_cycle();
+            let current_address_bus_type = bus.cpu.step.address_bus_type();
+            let current_address = bus.cpu_address_bus(current_address_bus_type);
+            let prg_index = if *current_address < 0x6000 {
+                String::new()
+            } else {
+                bus.prg_memory().current_memory_map()
+                    .index_for_address(current_address)
+                    .map_or("Open Bus".to_owned(), |(index, _)| format!(" ${index:06X}"))
+            };
+            info!("{prg_index:08} {step_name} PC: {}, Cycle: {cpu_cycle}, {}", bus.cpu.original_program_counter, bus.cpu.formatted_step);
+        }
+
+        if !halted {
+            bus.cpu.mode_state.step();
+
+            if bus.cpu.step.has_start_new_instruction() {
+                bus.cpu.mode_state.set_current_instruction_with_address(
+                    Instruction::from_code_point(bus.cpu.value),
+                    bus.cpu_pinout.address_bus,
+                );
+            }
         }
 
         let edge_detected = bus.cpu_pinout.nmi_signal_detector.detect();
