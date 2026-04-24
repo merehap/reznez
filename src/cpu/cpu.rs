@@ -216,6 +216,14 @@ impl Cpu {
         if bus.cpu.step.is_dma() {
             bus.cpu.h = 0xFF;
         }
+    }
+
+    // ϕ2. M2 is high
+    pub fn step_second_half(bus: &mut Bus, mapper: &mut dyn Mapper) -> Option<Step> {
+        if bus.cpu_pinout.reset.current_value() == SignalLevel::Low {
+            // The CPU doesn't do anything while the RESET button is held down.
+            return None;
+        }
 
         bus.cpu.formatted_step = if log_enabled!(target: "cpustep", Info) {
             match bus.cpu.step_formatting {
@@ -229,14 +237,6 @@ impl Cpu {
         bus.cpu.original_program_counter = bus.cpu.program_counter;
         for &action in bus.cpu.step.actions() {
             Cpu::execute_step_action(bus, action, bus.cpu.value);
-        }
-    }
-
-    // ϕ2. M2 is high
-    pub fn step_second_half(bus: &mut Bus, mapper: &mut dyn Mapper) -> Option<Step> {
-        if bus.cpu_pinout.reset.current_value() == SignalLevel::Low {
-            // The CPU doesn't do anything while the RESET button is held down.
-            return None;
         }
 
         let halted = bus.dmc_dma.cpu_should_be_halted() || bus.oam_dma.cpu_should_be_halted();
