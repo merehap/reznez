@@ -351,7 +351,9 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (103..=106, _) => TodoMapper,
         // Magic Dragon
         (107, None) => m::mapper107::Mapper107.supported(),
-        (108..=109, _) => TodoMapper,
+        (108, _) => TodoMapper,
+        // Duplicate
+        (109, None) => m::mapper137::Mapper137::new().supported(),
         // Duplicate
         (110, None) => m::mapper243::Mapper243::default().supported(),
         // Cheapocabra or GTROM
@@ -381,7 +383,8 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (126..=132, _) => TodoMapper,
         // Sachen 3009
         (133, None) => m::mapper133::Mapper133.supported(),
-        (134..=137, _) => TodoMapper,
+        (134..=136, _) => TodoMapper,
+        (137, None) => m::mapper137::Mapper137::new().supported(),
         // Sachen 8259 B (UNL-Sachen-8259B)
         (138, None) => m::mapper138::MAPPER138.supported(),
         // Sachen 8259 C (UNL-Sachen-8259C)
