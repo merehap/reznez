@@ -196,6 +196,10 @@ impl LayoutBuilder {
         self
     }
 
+
+
+
+
     pub const fn prg_layout(&mut self, windows: &'static [PrgWindow]) -> &mut Self {
         let prg_rom_max_size = self.prg_rom_max_size.expect("PRG ROM max size must be set before creating a PrgLayout.");
         self.prg_layouts.push(PrgLayout::new(windows, prg_rom_max_size));

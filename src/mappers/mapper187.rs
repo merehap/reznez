@@ -30,7 +30,6 @@ pub const LAYOUT: Layout = Layout::builder()
 // TODO: Figure out why Mesen has an interrupt at Cycle:658782 of Street Fighter Zero 2 but REZNEZ doesn't.
 pub struct Mapper187 {
     mmc3: mmc3::Mapper004Mmc3,
-    mmc3_prg_layout_index: u8,
     prg_layout_mode: PrgLayoutMode,
 }
 
@@ -47,44 +46,39 @@ impl Mapper for Mapper187 {
 
     fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         if *addr & 0xF001 == 0x5000 {
-            if self.prg_layout_mode == PrgLayoutMode::Mmc3 {
-                // Remember what MMC3 layout was last used so we can switch back to it once NROM mode is over.
-                self.mmc3_prg_layout_index = bus.prg_memory.layout_index();
+            let fields = splitbits!(value, "n.mp pppp");
+            self.prg_layout_mode = if fields.n {
+                // 2 is NROM128, 3 is NROM256
+                PrgLayoutMode::Nrom(fields.m as u8 + 2)
+            } else {
+                PrgLayoutMode::Mmc3
+            };
+            bus.set_prg_register(R, fields.p); // Bottom bit is ignored for NROM128, bottom two for NROM256
+        } else {
+            // For all other registers, use normal MMC3 behavior except for PRG layout selection.
+            self.mmc3.write_register(bus, addr, value);
+
+            let (left_siders, right_siders) = if bus.chr_memory.layout_index() == 0 {
+                (vec![C, D], vec![E, F, G, H])
+            } else {
+                (vec![E, F, G, H], vec![C, D])
+            };
+
+            for reg_id in left_siders {
+                bus.set_chr_bank_register_bits(reg_id, 0b0000_0000_0000_0000, 0b0000_0001_0000_0000);
             }
 
-            let fields = splitbits!(value, "n.mp pppp");
-            self.prg_layout_mode = if fields.n { PrgLayoutMode::Nrom } else { PrgLayoutMode::Mmc3 };
-            let prg_layout_index = match self.prg_layout_mode {
-                PrgLayoutMode::Mmc3 => self.mmc3_prg_layout_index,
-                PrgLayoutMode::Nrom => fields.m as u8 + 2, // 2 is NROM128, 3 is NROM256
-            };
-            bus.set_prg_layout(prg_layout_index);
-            bus.set_prg_register(R, fields.p); // Bottom bit is ignored for NROM128, bottom two for NROM256
-
-            return;
+            for reg_id in right_siders {
+                bus.set_chr_bank_register_bits(reg_id, 0b0000_0001_0000_0000, 0b0000_0001_0000_0000);
+            }
         }
 
-        // For all other registers, use normal MMC3 behavior except for PRG layout selection.
-        let prev_prg_layout_index = bus.prg_memory.layout_index();
-        self.mmc3.write_register(bus, addr, value);
-        if self.prg_layout_mode == PrgLayoutMode::Nrom {
-            // Ignore/overwrite whatever layout MMC3 just set since we're not in MMC3 PRG layout mode.
-            bus.set_prg_layout(prev_prg_layout_index);
-        }
-
-        let (left_siders, right_siders) = if bus.chr_memory.layout_index() == 0 {
-            (vec![C, D], vec![E, F, G, H])
-        } else {
-            (vec![E, F, G, H], vec![C, D])
-        };
-
-        for reg_id in left_siders {
-            bus.set_chr_bank_register_bits(reg_id, 0b0000_0000_0000_0000, 0b0000_0001_0000_0000);
-        }
-
-        for reg_id in right_siders {
-            bus.set_chr_bank_register_bits(reg_id, 0b0000_0001_0000_0000, 0b0000_0001_0000_0000);
-        }
+        bus.modify_base_prg_layout_index(|base_index| {
+            match self.prg_layout_mode {
+                PrgLayoutMode::Mmc3 => base_index,
+                PrgLayoutMode::Nrom(nrom_layout_index) => nrom_layout_index,
+            }
+        });
     }
 
     fn layout(&self) -> Layout {
@@ -97,7 +91,6 @@ impl Mapper187 {
         Self {
             // Sharp IRQs assumed, but not verified.
             mmc3: mmc3::Mapper004Mmc3::new(Mmc3IrqState::SHARP_IRQ_STATE),
-            mmc3_prg_layout_index: 0,
             prg_layout_mode: PrgLayoutMode::Mmc3,
         }
     }
@@ -106,5 +99,5 @@ impl Mapper187 {
 #[derive(PartialEq, Eq, Clone, Copy)]
 enum PrgLayoutMode {
     Mmc3,
-    Nrom,
+    Nrom(u8),
 }

@@ -18,6 +18,7 @@ use log::{info, warn};
 pub struct PrgMemory {
     layouts: PrgLayouts,
     memory_maps: Vec<PrgMemoryMap>,
+    base_memory_map_index: u8,
     memory_map_index: u8,
     rom: RawMemory,
     rom_outer_bank_number: u8,
@@ -30,7 +31,7 @@ impl PrgMemory {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         layouts: PrgLayouts,
-        memory_map_index: u8,
+        base_memory_map_index: u8,
         rom: RawMemory,
         rom_outer_bank_layout: OuterBankLayout,
         mut work_ram: RawMemory,
@@ -70,7 +71,8 @@ impl PrgMemory {
         PrgMemory {
             layouts,
             memory_maps,
-            memory_map_index,
+            base_memory_map_index,
+            memory_map_index: base_memory_map_index,
             rom,
             rom_outer_bank_number: 0,
             work_ram,
@@ -84,7 +86,7 @@ impl PrgMemory {
     }
 
     pub fn peek(&self, address: CpuAddress) -> ReadResult {
-        if let Some((index, mem_type_status)) = self.memory_maps[self.memory_map_index as usize].index_for_address(address) {
+        if let Some((index, mem_type_status)) = self.memory_maps[self.layout_index() as usize].index_for_address(address) {
             match (mem_type_status, mem_type_status.read_status()) {
                 (_, ReadStatus::Disabled) => ReadResult::OPEN_BUS,
                 (_, ReadStatus::ReadOnlyZeros) => ReadResult::full(0),
@@ -108,7 +110,7 @@ impl PrgMemory {
     }
 
     pub fn write(&mut self, address: CpuAddress, value: u8) {
-        let prg_source_and_index = self.memory_maps[self.memory_map_index as usize].index_for_address(address);
+        let prg_source_and_index = self.memory_maps[self.layout_index() as usize].index_for_address(address);
         use PrgMemTypeStatus::*;
         match prg_source_and_index {
             Some((index, WorkRam(_, WriteStatus::Enabled))) => {
@@ -173,11 +175,11 @@ impl PrgMemory {
     }
 
     pub fn current_layout(&self) -> &PrgLayout {
-        &self.layouts[self.memory_map_index]
+        &self.layouts[self.layout_index()]
     }
 
     pub fn current_memory_map(&self) -> &PrgMemoryMap {
-        &self.memory_maps[self.memory_map_index as usize]
+        &self.memory_maps[self.layout_index() as usize]
     }
 
     pub fn memory_maps(&self) -> &[PrgMemoryMap] {
@@ -194,7 +196,13 @@ impl PrgMemory {
 
     pub fn set_layout(&mut self, index: u8) {
         assert!(index < self.layouts.count());
+        self.base_memory_map_index = index;
         self.memory_map_index = index;
+    }
+
+    pub fn modify_base_layout_index<F>(&mut self, f: F)
+    where F: FnOnce(u8) -> u8 {
+        self.memory_map_index = f(self.base_memory_map_index);
     }
 
     pub fn rom_outer_bank_number(&self) -> u8 {

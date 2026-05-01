@@ -175,6 +175,11 @@ impl Bus {
         self.prg_memory.set_layout(index);
     }
 
+    pub fn modify_base_prg_layout_index<F>(&mut self, f: F)
+    where F: FnOnce(u8) -> u8 {
+        self.prg_memory.modify_base_layout_index(f);
+    }
+
     pub fn set_chr_layout(&mut self, index: u8) {
         self.chr_memory.set_layout(index);
     }

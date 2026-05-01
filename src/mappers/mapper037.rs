@@ -45,7 +45,7 @@ pub const LAYOUT: Layout = Layout::builder()
     .build();
 
 // Super Mario Bros. + Tetris + Nintendo World Cup
-// FIXME: Untested since PAL PPUs aren't supported yet (only NTSC)
+// FIXME: Graphical glitches on Nintendo World Cup.
 pub struct Mapper037 {
     mmc3: mmc3::Mapper004Mmc3,
 }
@@ -64,14 +64,16 @@ impl Mapper for Mapper037 {
 
         self.mmc3.write_register(bus, addr, value);
 
-        // MMC3 doesn't know about this mapper's layouts, so modify its layout index to work with this mapper.
-        if bus.prg_rom_outer_bank_number() == 2 {
-            // Use the 128kiB outer bank layouts.
-            bus.set_prg_layout(bus.prg_memory.layout_index() | 0b10);
-        } else {
-            // Use the 64kiB outer bank layouts.
-            bus.set_prg_layout(bus.prg_memory.layout_index() & 0b01);
-        }
+        let prg_outer_bank_number = bus.prg_rom_outer_bank_number();
+        bus.modify_base_prg_layout_index(|base_index| {
+            if prg_outer_bank_number == 2 {
+                // Use the 128kiB outer bank layouts.
+                base_index | 0b10
+            } else {
+                // Use the 64kiB outer bank layouts.
+                base_index
+            }
+        });
     }
 
     fn layout(&self) -> Layout {

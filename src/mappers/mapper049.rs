@@ -54,7 +54,6 @@ impl Mapper for Mapper049 {
                     let fields = splitbits!(value, "oopp ...m");
                     bus.set_chr_rom_outer_bank_number(fields.o);
                     bus.set_prg_rom_outer_bank_number(fields.o);
-                    log::info!("Changing outer banks to {}", fields.o);
                     bus.set_prg_register(R, fields.p);
                     self.mode = MODES[fields.m as usize];
                 }
@@ -69,14 +68,12 @@ impl Mapper for Mapper049 {
             }
         }
 
-        // The PRG layout may have changed, either through a 0x6000 mode change, or through the MMC3.
-        // Either way, fix it such that the mode setting is respected.
-        let old_prg_layout = bus.prg_memory.layout_index();
-        let new_prg_layout = match self.mode {
-            Mode::BigPrgWindow => old_prg_layout | 0b10,
-            Mode::NormalMmc3 => old_prg_layout & 0b01,
-        };
-        bus.set_prg_layout(new_prg_layout);
+        bus.modify_base_prg_layout_index(|base_index| {
+            match self.mode {
+                Mode::BigPrgWindow => base_index | 0b10,
+                Mode::NormalMmc3 => base_index,
+            }
+        });
     }
 
     fn layout(&self) -> Layout {
