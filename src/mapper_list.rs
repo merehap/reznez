@@ -376,7 +376,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (121, None) => m::mapper121::Mapper121::new(m::mapper121::Board::A9711).supported(),
         // Duplicate
         (122, None) => m::mapper184::Mapper184.supported(),
-        (123, _) => TodoMapper,
+        (123, None) => m::mapper123::Mapper123::new().supported(),
         (124, _) => TodoMapper,
         // Monty on the Run (Whirlwind Manu's FDS conversion)
         (125, None) => m::mapper125::Mapper125.supported(),
