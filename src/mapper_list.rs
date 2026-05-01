@@ -380,7 +380,10 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (124, _) => TodoMapper,
         // Monty on the Run (Whirlwind Manu's FDS conversion)
         (125, None) => m::mapper125::Mapper125.supported(),
-        (126..=132, _) => TodoMapper,
+        (126..=128, _) => TodoMapper,
+        // Duplicate
+        (129, None) => m::mapper058::Mapper058.supported(),
+        (130..=132, _) => TodoMapper,
         // Sachen 3009
         (133, None) => m::mapper133::Mapper133.supported(),
         (134..=136, _) => TodoMapper,
