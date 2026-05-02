@@ -56,7 +56,7 @@ static SCHEDULED_EVENTS: LazyLock<BTreeMap<Crc, BTreeMap<FrameNumber, (Event, Bu
         vec![(147, 148, Start), (372, 373, Start), (453, 454, Start), (556, 557, Start), (768, 769, Start), (888, 889, Start),
              (999, 1000, Start), (1124, 1125, Start)]);
     // Fantastic Adventures of Dizzy - [BROKEN] Scanline lifts by one then returns, repeating.
-    presses_by_full_crc.insert(0x59318584, vec![(364, 365, Start), (456, 457, Start), (570, 571, Start)]);
+    presses_by_full_crc.insert(0x59318584, vec![(364, 365, Start), (456, 457, Start), (580, 581, Start)]);
     // Super Fighter 3 - [BROKEN] Flickering scanline segment.
     presses_by_full_crc.insert(0x520C552E, vec![(690, 691, Start), (798, 799, Start)]);
     // Armadillo - [BROKEN] Flickering scanline.

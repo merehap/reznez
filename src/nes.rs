@@ -295,12 +295,24 @@ impl Nes {
         if log_enabled!(target: "timings", Info) {
             self.snapshots.current().instruction(self.bus.cpu.mode_state().state_label());
         }
+
+        let step = Cpu::step_first_half(&mut self.bus, &mut *self.mapper);
+        self.detect_changes();
+        step
+    }
+
+    fn cpu_step_second_half(&mut self) -> Option<Step> {
+        Cpu::step_second_half(&mut self.bus, &mut *self.mapper)
+    }
+
+    fn cpu_step_second_half_with_logging(&mut self) -> Option<Step> {
         let mut interrupt_text = String::new();
         if log_enabled!(target: "cpuinstructions", Info) {
             interrupt_text = formatter::interrupts(self);
         }
 
-        let step = Cpu::step_first_half(&mut self.bus, &mut *self.mapper);
+        let step = Cpu::step_second_half(&mut self.bus, &mut *self.mapper);
+
         if log_enabled!(target: "cpuinstructions", Info) &&
                 let Some((current_instruction, start_address)) = self.bus.cpu.mode_state().new_instruction_with_address() {
 
@@ -322,16 +334,6 @@ impl Nes {
             self.snapshots.current().nmi_status(self.bus.cpu.nmi_status());
         }
 
-        self.detect_changes();
-        step
-    }
-
-    fn cpu_step_second_half(&mut self) -> Option<Step> {
-        Cpu::step_second_half(&mut self.bus, &mut *self.mapper)
-    }
-
-    fn cpu_step_second_half_with_logging(&mut self) -> Option<Step> {
-        let step = Cpu::step_second_half(&mut self.bus, &mut *self.mapper);
         self.detect_changes();
         step
     }

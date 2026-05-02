@@ -16,7 +16,7 @@ pub struct PpuClock {
 
 impl PpuClock {
     pub fn mesen_compatible() -> PpuClock {
-        PpuClock { frame: 0, scanline: 0, cycle: 6, total_cycles: 0 }
+        PpuClock { frame: 0, scanline: 0, cycle: 5, total_cycles: 0 }
     }
 
     pub fn starting_at(frame: i64, scanline: u16, cycle: u16) -> PpuClock {
