@@ -1,3 +1,5 @@
+use crate::mapper::PrgBankRegisterId;
+
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct Segment {
     label: Option<Label>,
@@ -11,9 +13,9 @@ impl Segment {
     pub const EMPTY_UNLABELED: Self = Self::unlabeled(0, 0);
     const SEGMENT_ATOM_LENGTH: usize = 7;
 
-    pub const fn labeled(name: char, magnitude: u8) -> Self {
+    pub const fn labeled(label: Label, magnitude: u8) -> Self {
         Self {
-            label: Some(Label(name)),
+            label: Some(label),
             raw_constant: 0,
             constant_mask: 0b0000_0000_0000_0000,
             magnitude,
@@ -225,19 +227,31 @@ impl LabelParse {
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub struct Label(char);
+pub enum Label {
+    OuterBank,
+    InnerBankSegment(PrgBankRegisterId),
+    AddressBus,
+}
 
 impl Label {
     pub const fn new(c: char) -> Result<Self, &'static str> {
         match c {
-            'a' | 'o'..='z' => Ok(Self(c)),
+            'o' => Ok(Self::OuterBank),
+            'a' => Ok(Self::AddressBus),
+            'p'..='z' => PrgBankRegisterId::from_char(c)
+                .map(Label::InnerBankSegment)
+                .ok_or("Bad label char"),
             'A' | 'O'..='Z' => Err("Template labels must be lower-case."),
             _ => Err("Bad template label char"),
         }
     }
 
     pub const fn to_char(self) -> char {
-        self.0
+        match self {
+            Self::OuterBank => 'o',
+            Self::InnerBankSegment(reg_id) => reg_id.to_char(),
+            Self::AddressBus => 'a',
+        }
     }
 }
 

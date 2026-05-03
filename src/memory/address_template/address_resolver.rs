@@ -89,7 +89,7 @@ impl AddressResolver {
      */
     pub const fn prg(window: &PrgWindow, bank_sizes: &BankSizes, work_ram_start_inner_bank_number: u16) -> Self {
         let inner_bank_width = bank_sizes.inner_bank_width();
-        let address_bus_segment = Segment::labeled('a', inner_bank_width);
+        let address_bus_segment = Segment::labeled(Label::AddressBus, inner_bank_width);
         let inner_bank_segment = match window.bank().prg_bank_number_provider() {
             PrgBankNumberProvider::Fixed(bank_number) => {
                 // o₀₁o₀₀1₁₆1₁₅1₁₄1₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
@@ -97,11 +97,11 @@ impl AddressResolver {
             }
             PrgBankNumberProvider::Switchable(reg_id) => {
                 // o₀₁o₀₀p₀₃p₀₂p₀₁p₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
-                Segment::labeled(reg_id.to_char(), bank_sizes.inner_bank_number_width())
+                Segment::labeled(Label::InnerBankSegment(reg_id), bank_sizes.inner_bank_number_width())
             }
         };
 
-        let outer_bank_segment = Segment::labeled('o', bank_sizes.outer_bank_number_width());
+        let outer_bank_segment = Segment::labeled(Label::OuterBank, bank_sizes.outer_bank_number_width());
 
         let mut segments = ConstVec::new();
         segments.push(address_bus_segment);
