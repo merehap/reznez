@@ -68,7 +68,6 @@ pub struct AddressResolver {
     // Never changed after initialization.
     inner_bank_width: u8,
 
-    raw_outer_bank_number: u16,
     raw_inner_bank_number: u16,
 
     // TODO: This should only be present for RAM resolvers.
@@ -123,7 +122,6 @@ impl AddressResolver {
         let address_template = Self {
             bit_template,
             inner_bank_width,
-            raw_outer_bank_number: 0,
             raw_inner_bank_number: 0,
             work_ram_start_inner_bank_number,
         };
@@ -169,7 +167,6 @@ impl AddressResolver {
         Ok(Self {
             bit_template,
             inner_bank_width: base_address_width + inner_bank_ignored_low_count,
-            raw_outer_bank_number: 0,
             raw_inner_bank_number: 0,
             work_ram_start_inner_bank_number,
         })
@@ -205,7 +202,14 @@ impl AddressResolver {
     }
 
     pub fn resolve_index(&self, addr: CpuAddress) -> u32 {
-        self.bit_template.resolve(&[*addr, self.raw_inner_bank_number, self.raw_outer_bank_number])
+        let last_segment = self.bit_template.segment_count() - 1;
+        let outer_bank_number = if self.bit_template.label_at(last_segment) == Some(Label::OuterBank) {
+            self.bit_template.raw_value_at(last_segment)
+        } else {
+            0
+        };
+
+        self.bit_template.resolve(&[*addr, self.raw_inner_bank_number, outer_bank_number])
     }
 
     pub fn formatted(&self) -> String {
@@ -217,7 +221,10 @@ impl AddressResolver {
     }
 
     pub fn set_raw_outer_bank_number(&mut self, number: u16) {
-        self.raw_outer_bank_number = number;
+        let last_segment = self.bit_template.segment_count() - 1;
+        if self.bit_template.label_at(last_segment) == Some(Label::OuterBank) {
+            self.bit_template.set_raw_value_at(last_segment, number);
+        }
     }
 
     pub fn update_inner_bank_number(&mut self, regs: &PrgBankRegisters) {
@@ -249,7 +256,8 @@ mod test {
 
         let bank_sizes = BankSizes::new(512 * KIBIBYTE, 32 * KIBIBYTE, 32 * KIBIBYTE);
         let mut reduced_resolver = original_resolver.reduced(&bank_sizes);
-        reduced_resolver.raw_outer_bank_number = 0b1111_1111_1111_1111;
+        // Set raw outer bank number
+        reduced_resolver.bit_template.set_raw_value_at(1, 0b1111_1111_1111_1111);
         reduced_resolver.raw_inner_bank_number = 0b1111_1111_1111_1111;
         assert_eq!(reduced_resolver.total_width(), 19);
         assert_eq!(reduced_resolver.resolve_inner_bank_number(), 0);

@@ -7,6 +7,8 @@ pub struct Segment {
     constant_mask: u16,
     magnitude: u8,
     ignored_low_count: u8,
+
+    raw_value: u16,
 }
 
 impl Segment {
@@ -20,6 +22,8 @@ impl Segment {
             constant_mask: 0b0000_0000_0000_0000,
             magnitude,
             ignored_low_count: 0,
+
+            raw_value: 0,
         }
     }
 
@@ -30,6 +34,8 @@ impl Segment {
             constant_mask: 0b1111_1111_1111_1111,
             magnitude,
             ignored_low_count: 0,
+
+            raw_value: 0,
         }
     }
 
@@ -92,8 +98,16 @@ impl Segment {
             assert!(label.is_some(), "How is there an incomplete constant mask, but no label to fill in the blanks?");
         }
 
-        let segment = Self { label, raw_constant, constant_mask, magnitude, ignored_low_count };
+        let segment = Self { label, raw_constant, constant_mask, magnitude, ignored_low_count, raw_value: 0 };
         Ok((segment, bytes))
+    }
+
+    pub fn raw_value(&self) -> u16 {
+        self.raw_value
+    }
+
+    pub fn set_raw_value(&mut self, value: u16) {
+        self.raw_value = value;
     }
 
     const fn atom_from_bytes(bytes: &[u8]) -> Result<(LabelParse, u8), &'static str> {

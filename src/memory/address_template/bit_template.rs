@@ -186,6 +186,14 @@ impl BitTemplate {
             .join("")
     }
 
+    pub fn raw_value_at(&self, segment_index: u8) -> u16 {
+        self.segments.get(segment_index).raw_value()
+    }
+
+    pub fn set_raw_value_at(&mut self, segment_index: u8, raw_value: u16) {
+        self.segments.get_mut(segment_index).set_raw_value(raw_value);
+    }
+
     const fn segment_with_label(&self, label: char) -> Option<&Segment> {
         let mut i = 0;
         while i < self.segment_count() {
