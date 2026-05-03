@@ -142,6 +142,10 @@ impl BitTemplate {
         None
     }
 
+    pub const fn has_inner_bank(&self) -> bool {
+        self.segment_count() > 1 && !matches!(self.segments.get(1).label(), Some(Label::OuterBank))
+    }
+
     pub fn resolve(&self, raw_values: &[u16]) -> u32 {
         assert_eq!(raw_values.len(), self.segments.len() as usize);
 

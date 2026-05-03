@@ -111,6 +111,7 @@ impl <T: Clone + Copy, const CAPACITY: usize> ConstVec<T, CAPACITY> {
         assert!(new_len <= self.len);
         self.len = new_len;
     }
+
     pub const fn pop(&mut self) {
         self.len = self.len.strict_sub(1);
     }

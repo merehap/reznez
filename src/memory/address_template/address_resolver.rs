@@ -73,8 +73,6 @@ pub struct AddressResolver {
 
     // TODO: This should only be present for RAM resolvers.
     work_ram_start_inner_bank_number: u16,
-
-    has_inner_bank: bool,
 }
 
 impl AddressResolver {
@@ -128,7 +126,6 @@ impl AddressResolver {
             raw_outer_bank_number: 0,
             raw_inner_bank_number: 0,
             work_ram_start_inner_bank_number,
-            has_inner_bank: true,
         };
         assert!(address_template.total_width() <= MAX_WIDTH);
 
@@ -169,23 +166,12 @@ impl AddressResolver {
             i += 1;
         }
 
-        // FIXME: Bad hack.
-        let mut has_inner_bank = true;
-        if let Some(label) = bit_template.label_at(1) && label.to_char() == 'o' {
-            has_inner_bank = false;
-        }
-
-        if bit_template.segment_count() < 2 {
-            has_inner_bank = false;
-        }
-
         Ok(Self {
             bit_template,
             inner_bank_width: base_address_width + inner_bank_ignored_low_count,
             raw_outer_bank_number: 0,
             raw_inner_bank_number: 0,
             work_ram_start_inner_bank_number,
-            has_inner_bank,
         })
     }
 
@@ -211,7 +197,7 @@ impl AddressResolver {
     }
 
     pub fn resolve_inner_bank_number(&self) -> u16 {
-        if self.has_inner_bank {
+        if self.bit_template.has_inner_bank() {
             self.bit_template.resolve_segment(INNER_BANK_SEGMENT, self.raw_inner_bank_number)
         } else {
             0
