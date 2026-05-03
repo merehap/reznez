@@ -71,7 +71,6 @@ pub struct AddressResolver {
     raw_outer_bank_number: u16,
     raw_inner_bank_number: u16,
 
-    reg_id: Option<PrgBankRegisterId>,
     // TODO: This should only be present for RAM resolvers.
     work_ram_start_inner_bank_number: u16,
 
@@ -128,7 +127,6 @@ impl AddressResolver {
             inner_bank_width,
             raw_outer_bank_number: 0,
             raw_inner_bank_number: 0,
-            reg_id: window.register_id(),
             work_ram_start_inner_bank_number,
             has_inner_bank: true,
         };
@@ -186,7 +184,6 @@ impl AddressResolver {
             inner_bank_width: base_address_width + inner_bank_ignored_low_count,
             raw_outer_bank_number: 0,
             raw_inner_bank_number: 0,
-            reg_id,
             work_ram_start_inner_bank_number,
             has_inner_bank,
         })
@@ -238,7 +235,7 @@ impl AddressResolver {
     }
 
     pub fn update_inner_bank_number(&mut self, regs: &PrgBankRegisters) {
-        if let Some(reg_id) = self.reg_id {
+        if let Some(reg_id) = self.bit_template.inner_bank_register_id() {
             self.raw_inner_bank_number = regs.get(reg_id).index().unwrap().to_raw();
         }
     }

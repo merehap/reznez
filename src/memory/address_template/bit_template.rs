@@ -1,5 +1,6 @@
 use itertools::Itertools;
 
+use crate::mapper::PrgBankRegisterId;
 use crate::memory::address_template::segment::{Label, LabelOrConstant, Segment};
 use crate::util::const_vec::ConstVec;
 
@@ -120,6 +121,19 @@ impl BitTemplate {
         while i < self.segments.len() {
             if let Some(label) = self.segments.get(i).label() && label.to_char() == target {
                 return Some(i);
+            }
+
+            i += 1;
+        }
+
+        None
+    }
+
+    pub const fn inner_bank_register_id(&self) -> Option<PrgBankRegisterId> {
+        let mut i = 0;
+        while i < self.segments.len() {
+            if let Some(Label::InnerBankSegment(reg_id)) = self.segments.get(i).label() {
+                return Some(reg_id);
             }
 
             i += 1;
