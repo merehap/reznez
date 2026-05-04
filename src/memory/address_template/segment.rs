@@ -2,7 +2,7 @@ use crate::mapper::PrgBankRegisterId;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct Segment {
-    label: Option<Label>,
+    label: Label,
     raw_constant: u16,
     constant_mask: u16,
     magnitude: u8,
@@ -12,12 +12,12 @@ pub struct Segment {
 }
 
 impl Segment {
-    pub const EMPTY_UNLABELED: Self = Self::unlabeled(0, 0);
+    pub const EMPTY_UNLABELED: Self = Self::unlabeled_inner_bank(0, 0);
     const SEGMENT_ATOM_LENGTH: usize = 7;
 
     pub const fn labeled(label: Label, magnitude: u8) -> Self {
         Self {
-            label: Some(label),
+            label,
             raw_constant: 0,
             constant_mask: 0b0000_0000_0000_0000,
             magnitude,
@@ -27,9 +27,9 @@ impl Segment {
         }
     }
 
-    pub const fn unlabeled(raw_constant: u16, magnitude: u8) -> Self {
+    pub const fn unlabeled_inner_bank(raw_constant: u16, magnitude: u8) -> Self {
         Self {
-            label: None,
+            label: Label::InnerBankSegment(None),
             raw_constant,
             constant_mask: 0b1111_1111_1111_1111,
             magnitude,
@@ -53,9 +53,11 @@ impl Segment {
         let magnitude = subscript + 1;
         bytes = &bytes[Self::SEGMENT_ATOM_LENGTH..];
 
-        let (mut label, mut raw_constant, mut constant_mask) = match label_parse {
-            LabelParse::Label(label) => (Some(label), 0, 0),
-            LabelParse::Constant { raw_constant } => (None, raw_constant << subscript, 1 << subscript),
+        let mut label = label_parse.label;
+        let (mut raw_constant, mut constant_mask) = if let Some(raw_constant) = label_parse.raw_constant {
+            (raw_constant << subscript, 1 << subscript)
+        } else {
+            (0, 0)
         };
 
         let mut expected_subscript = subscript;
@@ -63,9 +65,9 @@ impl Segment {
             expected_subscript -= 1;
 
             let (new_label_parse, new_subscript) = Self::atom_from_bytes(&bytes[0..Self::SEGMENT_ATOM_LENGTH])?;
-            let new_label = new_label_parse.to_label();
+            let new_label = new_label_parse.label;
             if new_subscript != expected_subscript {
-                if let (Some(new), Some(old)) = (new_label, label) && new.to_char() == old.to_char() {
+                if let (Some(new), Some(old)) = (new_label.to_char(), label.to_char()) && new == old {
                     return Err("Contiguous segment elements must have decrementing subscripts.");
                 }
 
@@ -73,7 +75,7 @@ impl Segment {
                 break;
             }
 
-            if let (Some(new), Some(old)) = (new_label, label) && new.to_char() != old.to_char() {
+            if let (Some(new), Some(old)) = (new_label.to_char(), label.to_char()) && new != old {
                 // If we switched labels, then the new segment is about to start, so wrap up the current segment.
                 break;
             }
@@ -81,11 +83,11 @@ impl Segment {
             // We're still on the same label, so we can update all the state.
             subscript = new_subscript;
             bytes = &bytes[Self::SEGMENT_ATOM_LENGTH..];
-            if label.is_none() {
+            if matches!(label, Label::InnerBankSegment(None)) {
                 label = new_label;
             }
 
-            if let LabelParse::Constant { raw_constant: new_raw_constant } = new_label_parse {
+            if let Some(new_raw_constant) = new_label_parse.raw_constant {
                 raw_constant |= new_raw_constant << subscript;
                 constant_mask |= 1 << subscript;
             }
@@ -95,7 +97,7 @@ impl Segment {
         let full_mask: u32 = ((1u32 << magnitude) - 1) & !((1 << ignored_low_count) - 1);
         assert!(full_mask <= u16::MAX as u32);
         if constant_mask != full_mask as u16 {
-            assert!(label.is_some(), "How is there an incomplete constant mask, but no label to fill in the blanks?");
+            assert!(label.to_char().is_some(), "How is there an incomplete constant mask, but no label to fill in the blanks?");
         }
 
         let segment = Self { label, raw_constant, constant_mask, magnitude, ignored_low_count, raw_value: 0 };
@@ -116,13 +118,13 @@ impl Segment {
         Ok((label_parse, subscript))
     }
 
-    pub const fn label(&self) -> Option<Label> {
+    pub const fn label(&self) -> Label {
         self.label
     }
 
     pub fn label_at(&self, index: u8) -> LabelOrConstant {
-        if let Some(label) = self.label {
-            LabelOrConstant::Label(label)
+        if let Some(c) = self.label.to_char() {
+            LabelOrConstant::Label(c)
         } else if (self.constant() >> index) & 1 == 1 {
             LabelOrConstant::One
         } else {
@@ -162,7 +164,7 @@ impl Segment {
         let mask = max_value & !ignored_low;
 
         let mut value = self.raw_constant & self.constant_mask;
-        if self.label().is_some() {
+        if self.label().to_char().is_some() {
             value |= raw_value & !self.constant_mask;
         }
 
@@ -206,36 +208,34 @@ impl Segment {
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum LabelOrConstant {
-    Label(Label),
+    Label(char),
     Zero,
     One,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-enum LabelParse {
-    Label(Label),
-    Constant { raw_constant: u16 },
+struct LabelParse {
+    label: Label,
+    raw_constant: Option<u16>,
 }
 
 impl LabelParse {
     const fn from_char(c: char) -> Self {
         match c {
-            '0' => Self::Constant { raw_constant: 0 },
-            '1' => Self::Constant { raw_constant: 1 },
+            '0' => Self {
+                label: Label::InnerBankSegment(None),
+                raw_constant: Some(0),
+            },
+            '1' => Self {
+                label: Label::InnerBankSegment(None),
+                raw_constant: Some(1),
+            },
             c => {
                 match Label::new(c) {
-                    Ok(label) => Self::Label(label),
+                    Ok(label) => Self { label, raw_constant: None },
                     Err(err) => const_panic::concat_panic!("Bad label char: ", c, ". ", err),
                 }
             }
-        }
-    }
-
-    const fn to_label(self) -> Option<Label> {
-        if let Self::Label(l) = self {
-            Some(l)
-        } else {
-            None
         }
     }
 }
@@ -243,7 +243,7 @@ impl LabelParse {
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum Label {
     OuterBank,
-    InnerBankSegment(PrgBankRegisterId),
+    InnerBankSegment(Option<PrgBankRegisterId>),
     AddressBus,
 }
 
@@ -253,6 +253,7 @@ impl Label {
             'o' => Ok(Self::OuterBank),
             'a' => Ok(Self::AddressBus),
             'p'..='z' => PrgBankRegisterId::from_char(c)
+                .map(Some)
                 .map(Label::InnerBankSegment)
                 .ok_or("Bad label char"),
             'A' | 'O'..='Z' => Err("Template labels must be lower-case."),
@@ -260,11 +261,12 @@ impl Label {
         }
     }
 
-    pub const fn to_char(self) -> char {
+    pub const fn to_char(self) -> Option<char> {
         match self {
-            Self::OuterBank => 'o',
-            Self::InnerBankSegment(reg_id) => reg_id.to_char(),
-            Self::AddressBus => 'a',
+            Self::OuterBank => Some('o'),
+            Self::InnerBankSegment(None) => None,
+            Self::InnerBankSegment(Some(reg_id)) => Some(reg_id.to_char()),
+            Self::AddressBus => Some('a'),
         }
     }
 }
@@ -298,7 +300,7 @@ mod test {
     #[test]
     fn segment_atom_from_bytes() {
         let (label, subscript) = Segment::atom_from_bytes(&[0x61, 0xE2, 0x82, 0x81, 0xE2, 0x82, 0x82]).unwrap();
-        assert_eq!(label, LabelParse::Label(Label::new('a').unwrap()));
+        assert_eq!(label, LabelParse { label: Label::new('a').unwrap(), raw_constant: None });
         assert_eq!(subscript, 12);
     }
 }

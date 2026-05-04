@@ -108,8 +108,8 @@ impl BitTemplate {
         }
     }
 
-    pub const fn label_at(&self, segment_index: u8) -> Option<Label> {
-        self.segments.maybe_get(segment_index)?.label()
+    pub const fn label_at(&self, segment_index: u8) -> Label {
+        self.segments.get(segment_index).label()
     }
 
     pub fn constant_at(&self, segment_index: u8) -> Option<u16> {
@@ -119,7 +119,7 @@ impl BitTemplate {
     pub const fn index_of_label(&self, target: char) -> Option<u8> {
         let mut i = 0;
         while i < self.segments.len() {
-            if let Some(label) = self.segments.get(i).label() && label.to_char() == target {
+            if self.segments.get(i).label().to_char() == Some(target) {
                 return Some(i);
             }
 
@@ -132,7 +132,7 @@ impl BitTemplate {
     pub const fn inner_bank_register_id(&self) -> Option<PrgBankRegisterId> {
         let mut i = 0;
         while i < self.segments.len() {
-            if let Some(Label::InnerBankSegment(reg_id)) = self.segments.get(i).label() {
+            if let Label::InnerBankSegment(Some(reg_id)) = self.segments.get(i).label() {
                 return Some(reg_id);
             }
 
@@ -143,7 +143,7 @@ impl BitTemplate {
     }
 
     pub const fn has_inner_bank(&self) -> bool {
-        self.segment_count() > 1 && !matches!(self.segments.get(1).label(), Some(Label::OuterBank))
+        self.segment_count() > 1 && !matches!(self.segments.get(1).label(), Label::OuterBank)
     }
 
     pub fn resolve(&self, address_bus_value: u16) -> u32 {
@@ -173,7 +173,7 @@ impl BitTemplate {
             for (si, subscript) in segment.subscripts().iter().enumerate() {
                 let i: u8 = atoms.len().try_into().unwrap();
                 let atom = match segment.label_at(si as u8) {
-                    LabelOrConstant::Label(label) => (label.to_char(), *subscript),
+                    LabelOrConstant::Label(c) => (c, *subscript),
                     LabelOrConstant::Zero => ('0', i),
                     LabelOrConstant::One => ('1', i),
                 };
@@ -194,7 +194,7 @@ impl BitTemplate {
     const fn segment_with_label(&self, label: char) -> Option<&Segment> {
         let mut i = 0;
         while i < self.segment_count() {
-            if let Some(segment_label) = self.segments.get_ref(i).label() && segment_label.to_char() == label {
+            if self.segments.get_ref(i).label().to_char() == Some(label) {
                 return Some(self.segments.get_ref(i));
             }
 
@@ -237,9 +237,9 @@ mod test {
         let text = "o₀₀p₀₀a₀₀";
         let bit_template = BitTemplate::from_formatted(text).unwrap();
         let segments: Vec<Segment> = bit_template.segments.as_iter().collect();
-        assert_eq!(segments[0].label(), Label::new('a').ok());
-        assert_eq!(segments[1].label(), Label::new('p').ok());
-        assert_eq!(segments[2].label(), Label::new('o').ok());
+        assert_eq!(segments[0].label(), Label::new('a').unwrap());
+        assert_eq!(segments[1].label(), Label::new('p').unwrap());
+        assert_eq!(segments[2].label(), Label::new('o').unwrap());
         assert_eq!(bit_template.formatted(), text);
     }
 
@@ -248,11 +248,11 @@ mod test {
         let text = "p₀₃p₀₂p₀₁a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀";
         let bit_template = BitTemplate::from_formatted(text).unwrap();
         let segments: Vec<Segment> = bit_template.segments.as_iter().collect();
-        assert_eq!(segments[0].label(), Label::new('a').ok());
+        assert_eq!(segments[0].label(), Label::new('a').unwrap());
         assert_eq!(segments[0].magnitude(), 15);
         assert_eq!(segments[0].ignored_low_count(), 0);
 
-        assert_eq!(segments[1].label(), Label::new('p').ok());
+        assert_eq!(segments[1].label(), Label::new('p').unwrap());
         assert_eq!(segments[1].magnitude(), 4);
         assert_eq!(segments[1].ignored_low_count(), 1);
 

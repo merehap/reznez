@@ -87,11 +87,11 @@ impl AddressResolver {
         let inner_bank_segment = match window.bank().prg_bank_number_provider() {
             PrgBankNumberProvider::Fixed(bank_number) => {
                 // o₀₁o₀₀1₁₆1₁₅1₁₄1₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
-                Segment::unlabeled(bank_number.to_raw(), bank_sizes.inner_bank_number_width())
+                Segment::unlabeled_inner_bank(bank_number.to_raw(), bank_sizes.inner_bank_number_width())
             }
             PrgBankNumberProvider::Switchable(reg_id) => {
                 // o₀₁o₀₀p₀₃p₀₂p₀₁p₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
-                Segment::labeled(Label::InnerBankSegment(reg_id), bank_sizes.inner_bank_number_width())
+                Segment::labeled(Label::InnerBankSegment(Some(reg_id)), bank_sizes.inner_bank_number_width())
             }
         };
 
@@ -152,7 +152,7 @@ impl AddressResolver {
         let mut reg_id = None;
         let mut i = 0;
         while i < bit_template.segment_count() {
-            if let Some(c@'p'..='y') = bit_template.label_at(i).map(Label::to_char) {
+            if let Some(c@'p'..='y') = bit_template.label_at(i).to_char() {
                 assert!(reg_id.is_none(), "Multiple inner bank segments not allowed in a single template.");
                 reg_id = Some(PrgBankRegisterId::from_char(c).expect("Bad inner bank label letter."));
                 inner_bank_ignored_low_count = bit_template.ignored_low_count_of(c);
@@ -211,7 +211,7 @@ impl AddressResolver {
 
     pub fn set_raw_outer_bank_number(&mut self, number: u16) {
         let last_segment = self.bit_template.segment_count() - 1;
-        if self.bit_template.label_at(last_segment) == Some(Label::OuterBank) {
+        if self.bit_template.label_at(last_segment) == Label::OuterBank {
             self.bit_template.set_raw_value_at(last_segment, number);
         }
     }
