@@ -1,5 +1,3 @@
-use splitbits::splitbits_named_into;
-
 use crate::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
@@ -31,8 +29,8 @@ impl Mapper for Mapper226 {
     fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr & 0x8001 {
             0x8000 => {
-                let (prg_low_bits, mirroring, layout) = splitbits_named_into!(value, "pmlp pppp");
-                bus.set_prg_bank_register_bits(P, prg_low_bits, 0b0011_1111);
+                let (prg_bank, mirroring, layout) = splitbits_named!(min=u8, value, "pmlp pppp");
+                bus.set_prg_register(P, prg_bank);
                 bus.set_name_table_mirroring(mirroring);
                 bus.set_prg_layout(layout);
             }

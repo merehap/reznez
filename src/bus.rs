@@ -499,10 +499,6 @@ impl Bus {
         self.prg_memory.set_bank_register(id, value.into());
     }
 
-    pub fn set_prg_bank_register_bits(&mut self, id: PrgBankRegisterId, new_value: u16, mask: u16) {
-        self.prg_memory.set_bank_register_bits(id, new_value, mask);
-    }
-
     pub fn update_prg_register(&mut self, id: PrgBankRegisterId, updater: &dyn Fn(u16) -> u16) {
         self.prg_memory.update_bank_register(id, updater);
     }
