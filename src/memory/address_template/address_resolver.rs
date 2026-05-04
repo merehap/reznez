@@ -85,7 +85,7 @@ impl AddressResolver {
         let inner_bank_segment = match window.bank().prg_bank_number_provider() {
             PrgBankNumberProvider::Fixed(bank_number) => {
                 // o₀₁o₀₀1₁₆1₁₅1₁₄1₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
-                Segment::unlabeled_inner_bank(bank_number.to_raw(), bank_sizes.inner_bank_number_width())
+                Segment::constant_inner_bank(bank_number.to_raw(), bank_sizes.inner_bank_number_width())
             }
             PrgBankNumberProvider::Switchable(reg_id) => {
                 // o₀₁o₀₀p₀₃p₀₂p₀₁p₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀

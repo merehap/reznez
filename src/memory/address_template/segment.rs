@@ -12,7 +12,7 @@ pub struct Segment {
 }
 
 impl Segment {
-    pub const EMPTY_UNLABELED: Self = Self::unlabeled_inner_bank(0, 0);
+    pub const EMPTY_UNLABELED: Self = Self::constant_inner_bank(0, 0);
     const SEGMENT_ATOM_LENGTH: usize = 7;
 
     pub const fn labeled(label: Label, magnitude: u8) -> Self {
@@ -27,7 +27,7 @@ impl Segment {
         }
     }
 
-    pub const fn unlabeled_inner_bank(raw_constant: u16, magnitude: u8) -> Self {
+    pub const fn constant_inner_bank(raw_constant: u16, magnitude: u8) -> Self {
         Self {
             label: Label::InnerBankSegment(None),
             raw_constant,
@@ -53,12 +53,12 @@ impl Segment {
         let magnitude = subscript + 1;
         bytes = &bytes[Self::SEGMENT_ATOM_LENGTH..];
 
-        let mut label = label_parse.label;
         let (mut raw_constant, mut constant_mask) = if let Some(raw_constant) = label_parse.raw_constant {
-            (raw_constant << subscript, 1 << subscript)
+            ((raw_constant as u16) << subscript, 1 << subscript)
         } else {
             (0, 0)
         };
+        let mut label = label_parse.label;
 
         let mut expected_subscript = subscript;
         while !bytes.is_empty() && subscript > 0 {
@@ -88,7 +88,7 @@ impl Segment {
             }
 
             if let Some(new_raw_constant) = new_label_parse.raw_constant {
-                raw_constant |= new_raw_constant << subscript;
+                raw_constant |= (new_raw_constant as u16) << subscript;
                 constant_mask |= 1 << subscript;
             }
         }
@@ -217,10 +217,19 @@ pub enum LabelOrConstant {
     One,
 }
 
+/*
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+struct Atom {
+    label: Label,
+    raw_constant: Option<u16>,
+    subscript: u8,
+}
+*/
+
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 struct LabelParse {
     label: Label,
-    raw_constant: Option<u16>,
+    raw_constant: Option<bool>,
 }
 
 impl LabelParse {
@@ -228,11 +237,11 @@ impl LabelParse {
         match c {
             '0' => Self {
                 label: Label::InnerBankSegment(None),
-                raw_constant: Some(0),
+                raw_constant: Some(false),
             },
             '1' => Self {
                 label: Label::InnerBankSegment(None),
-                raw_constant: Some(1),
+                raw_constant: Some(true),
             },
             c => {
                 match Label::new(c) {
