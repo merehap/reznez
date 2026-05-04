@@ -146,23 +146,24 @@ impl BitTemplate {
         self.segment_count() > 1 && !matches!(self.segments.get(1).label(), Some(Label::OuterBank))
     }
 
-    pub fn resolve(&self, raw_values: &[u16]) -> u32 {
-        assert_eq!(raw_values.len(), self.segments.len() as usize);
+    pub fn resolve(&self, address_bus_value: u16) -> u32 {
+        let mut segments = self.segments.as_iter();
+        let address_bus_segment = segments.next().unwrap();
 
-        let mut result = 0;
-        let mut offset = 0;
-        for (segment, &raw_value) in self.segments.as_iter().zip(raw_values) {
-            result += segment.resolve_shifted(raw_value, offset);
+        let mut result: u32 = address_bus_segment.resolve_with(address_bus_value).into();
+        let mut offset = address_bus_segment.width();
+        for segment in segments {
+            result += segment.resolve_shifted(offset);
             offset += segment.width();
         }
 
         result
     }
 
-    pub fn resolve_segment(&self, segment_index: u8, raw_value: u16) -> u16 {
+    pub fn resolve_segment(&self, segment_index: u8) -> u16 {
         match self.segments.maybe_get(segment_index) {
             None => 0,
-            Some(segment) => segment.resolve(raw_value),
+            Some(segment) => segment.resolve(),
         }
     }
 
@@ -184,10 +185,6 @@ impl BitTemplate {
             .rev()
             .map(|(label, subscript)| [ label.to_string(), subscript_byte_to_string(subscript)].concat())
             .join("")
-    }
-
-    pub fn raw_value_at(&self, segment_index: u8) -> u16 {
-        self.segments.get(segment_index).raw_value()
     }
 
     pub fn set_raw_value_at(&mut self, segment_index: u8, raw_value: u16) {
@@ -280,7 +277,7 @@ mod test {
     fn constant() {
         let text = "o₀₀1₀₃1₀₂0₀₁1₀₀a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀";
         let bit_template = BitTemplate::from_formatted(text).unwrap();
-        let value = bit_template.segments.get(1).resolve(0);
+        let value = bit_template.segments.get(1).resolve();
         assert_eq!(value, 0b1101);
     }
 
@@ -289,7 +286,7 @@ mod test {
         let text = "o₀₀1₁₃1₁₂0₁₁1₁₀a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀";
         let bit_template = BitTemplate::from_formatted(text).unwrap();
         assert_eq!(bit_template.segments.len(), 3);
-        let value = bit_template.segments.get(1).resolve(0);
+        let value = bit_template.segments.get(1).resolve();
         assert_eq!(value, 0b1101_0000000000);
     }
 
@@ -297,7 +294,7 @@ mod test {
     fn embedded_constant() {
         let text = "o₀₀p₀₃1₀₂p₀₁a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀";
         let bit_template = BitTemplate::from_formatted(text).unwrap();
-        let value = bit_template.segments.get(1).resolve(0);
+        let value = bit_template.segments.get(1).resolve();
         assert_eq!(value, 0b0100);
     }
 }

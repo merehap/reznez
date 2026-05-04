@@ -102,10 +102,6 @@ impl Segment {
         Ok((segment, bytes))
     }
 
-    pub fn raw_value(&self) -> u16 {
-        self.raw_value
-    }
-
     pub fn set_raw_value(&mut self, value: u16) {
         self.raw_value = value;
     }
@@ -151,22 +147,26 @@ impl Segment {
         self.ignored_low_count
     }
 
+    pub fn resolve_shifted(&self, shift: u8) -> u32 {
+        u32::from(self.resolve() >> self.ignored_low_count) << shift
+    }
+
+    pub fn resolve(&self) -> u16 {
+        self.resolve_with(self.raw_value)
+    }
+
     // TODO: Cache mask.
-    pub fn resolve(&self, raw_label_value: u16) -> u16 {
+    pub fn resolve_with(&self, raw_value: u16) -> u16 {
         let max_value = (1 << self.magnitude) - 1;
         let ignored_low = (1 << self.ignored_low_count) - 1;
         let mask = max_value & !ignored_low;
 
-        let mut raw_value = self.raw_constant & self.constant_mask;
+        let mut value = self.raw_constant & self.constant_mask;
         if self.label().is_some() {
-            raw_value |= raw_label_value & !self.constant_mask;
+            value |= raw_value & !self.constant_mask;
         }
 
-        raw_value & mask
-    }
-
-    pub fn resolve_shifted(&self, raw_value: u16, shift: u8) -> u32 {
-        u32::from(self.resolve(raw_value) >> self.ignored_low_count) << shift
+        value & mask
     }
 
     pub fn subscripts(&self) -> Vec<u8> {
@@ -269,11 +269,7 @@ impl Label {
     }
 }
 
-const fn subscript_utf8_bytes_to_digit(
-    top: u8,
-    mid: u8,
-    bot: u8,
-) -> Result<u8, &'static str> {
+const fn subscript_utf8_bytes_to_digit(top: u8, mid: u8, bot: u8) -> Result<u8, &'static str> {
     // Standard library UTF8 decoding isn't available in const contexts, so re-implement a little bit here.
     Ok(match (top, mid, bot) {
         (0xE2, 0x82, 0x80) => 0, // '₀'

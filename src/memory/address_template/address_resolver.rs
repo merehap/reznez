@@ -68,8 +68,6 @@ pub struct AddressResolver {
     // Never changed after initialization.
     inner_bank_width: u8,
 
-    raw_inner_bank_number: u16,
-
     // TODO: This should only be present for RAM resolvers.
     work_ram_start_inner_bank_number: u16,
 }
@@ -122,7 +120,6 @@ impl AddressResolver {
         let address_template = Self {
             bit_template,
             inner_bank_width,
-            raw_inner_bank_number: 0,
             work_ram_start_inner_bank_number,
         };
         assert!(address_template.total_width() <= MAX_WIDTH);
@@ -167,7 +164,6 @@ impl AddressResolver {
         Ok(Self {
             bit_template,
             inner_bank_width: base_address_width + inner_bank_ignored_low_count,
-            raw_inner_bank_number: 0,
             work_ram_start_inner_bank_number,
         })
     }
@@ -195,21 +191,14 @@ impl AddressResolver {
 
     pub fn resolve_inner_bank_number(&self) -> u16 {
         if self.bit_template.has_inner_bank() {
-            self.bit_template.resolve_segment(INNER_BANK_SEGMENT, self.raw_inner_bank_number)
+            self.bit_template.resolve_segment(INNER_BANK_SEGMENT)
         } else {
             0
         }
     }
 
     pub fn resolve_index(&self, addr: CpuAddress) -> u32 {
-        let last_segment = self.bit_template.segment_count() - 1;
-        let outer_bank_number = if self.bit_template.label_at(last_segment) == Some(Label::OuterBank) {
-            self.bit_template.raw_value_at(last_segment)
-        } else {
-            0
-        };
-
-        self.bit_template.resolve(&[*addr, self.raw_inner_bank_number, outer_bank_number])
+        self.bit_template.resolve(*addr)
     }
 
     pub fn formatted(&self) -> String {
@@ -229,7 +218,8 @@ impl AddressResolver {
 
     pub fn update_inner_bank_number(&mut self, regs: &PrgBankRegisters) {
         if let Some(reg_id) = self.bit_template.inner_bank_register_id() {
-            self.raw_inner_bank_number = regs.get(reg_id).index().unwrap().to_raw();
+            let raw_inner_bank_number = regs.get(reg_id).index().unwrap().to_raw();
+            self.bit_template.set_raw_value_at(INNER_BANK_SEGMENT, raw_inner_bank_number);
         }
     }
 }
@@ -258,7 +248,6 @@ mod test {
         let mut reduced_resolver = original_resolver.reduced(&bank_sizes);
         // Set raw outer bank number
         reduced_resolver.bit_template.set_raw_value_at(1, 0b1111_1111_1111_1111);
-        reduced_resolver.raw_inner_bank_number = 0b1111_1111_1111_1111;
         assert_eq!(reduced_resolver.total_width(), 19);
         assert_eq!(reduced_resolver.resolve_inner_bank_number(), 0);
         assert_eq!(reduced_resolver.formatted(), "o₀₃o₀₂o₀₁o₀₀a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀");
