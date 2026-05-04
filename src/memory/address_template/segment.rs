@@ -71,6 +71,16 @@ impl Segment {
                     return Err("Contiguous segment elements must have decrementing subscripts.");
                 }
 
+                if next_atom.label.register_id().is_some() && label.register_id().is_some() {
+                    return Err("Contiguous inner bank segments must have decrementing subscripts.");
+                }
+
+                match (next_atom.label, label) {
+                    (               _, Label::AddressBus) => return Err("The address bus segment must the be last segment."),
+                    (Label::OuterBank,                 _) => return Err("If present, an outer bank segment must be the first segment."),
+                    _ => { /* The next segment is in a valid relative location. */ }
+                }
+
                 // The subscript isn't one less than the previous subscript, so we've found the end of the segment.
                 break;
             }
