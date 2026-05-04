@@ -1,7 +1,4 @@
-#![feature(if_let_guard)]
-#![feature(type_ascription)]
 #![feature(const_cmp)]
-#![feature(const_for)]
 #![feature(const_index)]
 #![feature(const_option_ops)]
 #![feature(const_trait_impl)]

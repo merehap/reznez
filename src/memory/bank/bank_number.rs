@@ -264,8 +264,8 @@ pub enum PrgBankRegisterId {
     Z,
 }
 
-impl PrgBankRegisterId {
-    pub const fn from_char(c: char) -> Option<Self> {
+impl const FromChar for PrgBankRegisterId {
+    fn from_char(c: char) -> Option<Self> {
         use PrgBankRegisterId::*;
         Some(match c {
             'p' => P,
@@ -284,7 +284,7 @@ impl PrgBankRegisterId {
         })
     }
 
-    pub const fn to_char(self) -> char {
+    fn to_char(self) -> char {
         use PrgBankRegisterId::*;
         match self {
             P => 'p',
@@ -329,6 +329,11 @@ impl ChrBankRegisterId {
     pub fn to_raw_chr_id(self) -> u8 {
         self as u8
     }
+}
+
+pub const trait FromChar: Sized + Copy {
+    fn from_char(c: char) -> Option<Self>;
+    fn to_char(self) -> char;
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]

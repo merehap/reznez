@@ -1,8 +1,9 @@
-use crate::mapper::PrgBankRegisterId;
+use crate::memory::bank::bank_number::PrgBankRegisterId;
+use crate::memory::bank::bank_number::FromChar;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct Segment {
-    label: Label,
+    label: Label<PrgBankRegisterId>,
     raw_constant: u16,
     constant_mask: u16,
     magnitude: u8,
@@ -15,7 +16,7 @@ impl Segment {
     pub const EMPTY_UNLABELED: Self = Self::constant_inner_bank(0, 0);
     const SEGMENT_ATOM_LENGTH: usize = 7;
 
-    pub const fn labeled(label: Label, magnitude: u8) -> Self {
+    pub const fn labeled(label: Label<PrgBankRegisterId>, magnitude: u8) -> Self {
         Self {
             label,
             raw_constant: 0,
@@ -118,7 +119,7 @@ impl Segment {
         self.raw_value = value;
     }
 
-    pub const fn label(&self) -> Label {
+    pub const fn label(&self) -> Label<PrgBankRegisterId> {
         self.label
     }
 
@@ -219,7 +220,7 @@ pub enum LabelOrConstant {
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 struct Atom {
-    label: Label,
+    label: Label<PrgBankRegisterId>,
     raw_constant: Option<bool>,
     subscript: u8,
 }
@@ -254,18 +255,18 @@ impl Atom {
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum Label {
+pub enum Label<RegisterId: Copy + FromChar> {
     OuterBank,
-    InnerBankSegment(Option<PrgBankRegisterId>),
+    InnerBankSegment(Option<RegisterId>),
     AddressBus,
 }
 
-impl Label {
+impl <RegisterId: Copy + const FromChar> Label<RegisterId> {
     pub const fn new(c: char) -> Result<Self, &'static str> {
         match c {
             'o' => Ok(Self::OuterBank),
             'a' => Ok(Self::AddressBus),
-            'p'..='z' => PrgBankRegisterId::from_char(c)
+            'p'..='z' => FromChar::from_char(c)
                 .map(Some)
                 .map(Label::InnerBankSegment)
                 .ok_or("Bad label char"),
@@ -283,7 +284,7 @@ impl Label {
         }
     }
 
-    pub const fn register_id(self) -> Option<PrgBankRegisterId> {
+    pub const fn register_id(self) -> Option<RegisterId> {
         if let Self::InnerBankSegment(reg_id) = self {
             reg_id
         } else {

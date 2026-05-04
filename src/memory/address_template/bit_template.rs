@@ -1,5 +1,6 @@
 use itertools::Itertools;
 
+use crate::mapper::PrgBankRegisterId;
 use crate::memory::address_template::segment::{Label, LabelOrConstant, Segment};
 use crate::util::const_vec::ConstVec;
 
@@ -91,7 +92,7 @@ impl BitTemplate {
         width
     }
 
-    pub const fn label_at(&self, segment_index: u8) -> Label {
+    pub const fn label_at(&self, segment_index: u8) -> Label<PrgBankRegisterId> {
         self.segments.get(segment_index).label()
     }
 
