@@ -1,6 +1,5 @@
 use itertools::Itertools;
 
-use crate::mapper::PrgBankRegisterId;
 use crate::memory::address_template::segment::{Label, LabelOrConstant, Segment};
 use crate::util::const_vec::ConstVec;
 
@@ -129,6 +128,7 @@ impl BitTemplate {
         None
     }
 
+    /*
     pub const fn inner_bank_register_id(&self) -> Option<PrgBankRegisterId> {
         let mut i = 0;
         while i < self.segments.len() {
@@ -141,6 +141,7 @@ impl BitTemplate {
 
         None
     }
+    */
 
     pub const fn has_inner_bank(&self) -> bool {
         self.segment_count() > 1 && !matches!(self.segments.get(1).label(), Label::OuterBank)
@@ -160,6 +161,7 @@ impl BitTemplate {
         result
     }
 
+    // TODO: Change this to be resolve_inner_bank_number
     pub fn resolve_segment(&self, segment_index: u8) -> u16 {
         match self.segments.maybe_get(segment_index) {
             None => 0,
@@ -189,6 +191,10 @@ impl BitTemplate {
 
     pub fn set_raw_value_at(&mut self, segment_index: u8, raw_value: u16) {
         self.segments.get_mut(segment_index).set_raw_value(raw_value);
+    }
+
+    pub fn segments_mut(&mut self) -> impl DoubleEndedIterator<Item = &mut Segment> {
+        self.segments.iter_mut()
     }
 
     const fn segment_with_label(&self, label: char) -> Option<&Segment> {

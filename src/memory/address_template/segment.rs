@@ -122,6 +122,10 @@ impl Segment {
         self.label
     }
 
+    pub const fn register_id(&self) -> Option<PrgBankRegisterId> {
+        self.label().register_id()
+    }
+
     pub fn label_at(&self, index: u8) -> LabelOrConstant {
         if let Some(c) = self.label.to_char() {
             LabelOrConstant::Label(c)
@@ -267,6 +271,14 @@ impl Label {
             Self::InnerBankSegment(None) => None,
             Self::InnerBankSegment(Some(reg_id)) => Some(reg_id.to_char()),
             Self::AddressBus => Some('a'),
+        }
+    }
+
+    pub const fn register_id(self) -> Option<PrgBankRegisterId> {
+        if let Self::InnerBankSegment(reg_id) = self {
+            reg_id
+        } else {
+            None
         }
     }
 }

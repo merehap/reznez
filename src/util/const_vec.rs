@@ -123,6 +123,14 @@ impl <T: Clone + Copy, const CAPACITY: usize> ConstVec<T, CAPACITY> {
             // TODO: Remove unsafe by implementing Default or similar.
             .map(|value| unsafe { value.assume_init() })
     }
+
+    pub fn iter_mut(&mut self) -> impl DoubleEndedIterator<Item = &mut T> {
+        self.backing.iter_mut()
+            .take(self.len as usize)
+            // SAFETY: Values before the len have already been set.
+            // TODO: Remove unsafe by implementing Default or similar.
+            .map(|value| unsafe { value.assume_init_mut() })
+    }
 }
 
 impl <T: PartialEq + Clone + Copy, const CAPACITY: usize> PartialEq for ConstVec<T, CAPACITY> {

@@ -217,9 +217,12 @@ impl AddressResolver {
     }
 
     pub fn update_inner_bank_number(&mut self, regs: &PrgBankRegisters) {
-        if let Some(reg_id) = self.bit_template.inner_bank_register_id() {
-            let raw_inner_bank_number = regs.get(reg_id).index().unwrap().to_raw();
-            self.bit_template.set_raw_value_at(INNER_BANK_SEGMENT, raw_inner_bank_number);
+        let mut segments: Vec<_> = self.bit_template.segments_mut().collect();
+        for index in 0..segments.len() {
+            if let Some(reg_id) = segments[index].register_id() {
+            let raw_value = regs.get(reg_id).index().unwrap().to_raw();
+                segments[index].set_raw_value(raw_value);
+            }
         }
     }
 }
