@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::mapper::{CpuAddress, PrgBankRegisterId};
+use crate::mapper::CpuAddress;
 use crate::memory::address_template::bank_sizes::BankSizes;
 use crate::memory::address_template::bit_template::BitTemplate;
 use crate::memory::address_template::segment::{Label, Segment};
@@ -143,21 +143,7 @@ impl AddressResolver {
             return Err("AddressTemplate must not be longer than 32 bits.");
         }
 
-        let mut reg_id = None;
-        let mut i = 0;
-        while i < bit_template.segment_count() {
-            if let Some(c@'p'..='y') = bit_template.label_at(i).to_char() {
-                assert!(reg_id.is_none(), "Multiple inner bank segments not allowed in a single template.");
-                reg_id = Some(PrgBankRegisterId::from_char(c).expect("Bad inner bank label letter."));
-            }
-
-            i += 1;
-        }
-
-        Ok(Self {
-            bit_template,
-            work_ram_start_inner_bank_number,
-        })
+        Ok(Self { bit_template, work_ram_start_inner_bank_number })
     }
 
     pub fn segment_constants(&self) -> Vec<u16> {

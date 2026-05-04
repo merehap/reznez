@@ -8,15 +8,16 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(256 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(R)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(S)),
-        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)), // P0 can only ever be 15 or 31
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("q₀₀x₀₃x₀₂x₀₁x₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("r₀₀y₀₃y₀₂y₀₁y₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("s₀₀z₀₃z₀₂z₀₁z₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        // This bank can only be 15 or 31, and starts as 31.
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("p₀₀1₀₃1₀₂1₀₁1₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
     ])
-    .override_prg_bank_register(Q, 0b0001_0000)
-    .override_prg_bank_register(R, 0b0001_0000)
-    .override_prg_bank_register(S, 0b0001_0000)
-    .override_prg_bank_register(P, 0b0001_1111) // The last bank
+    .override_prg_bank_register(Q, 1)
+    .override_prg_bank_register(R, 1)
+    .override_prg_bank_register(S, 1)
+    .override_prg_bank_register(P, 1)
     .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(&[
         ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
@@ -34,6 +35,7 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .build();
 
+// Unlicensed reproduction of Super Mario Bros. 3
 pub struct Mapper056 {
     irq_counter: ReloadDrivenCounter,
     selected_prg_bank: Option<PrgBankRegisterId>,
@@ -63,16 +65,16 @@ impl Mapper for Mapper056 {
             0xE000..=0xEFFF => {
                 match value & 0b111 {
                     0 | 5 | 7 => info!("Unknown bank select occurred: {}", value & 0b111),
-                    1 => self.selected_prg_bank = Some(Q), // 0x8000
-                    2 => self.selected_prg_bank = Some(R), // 0xA000
-                    3 => self.selected_prg_bank = Some(S), // 0xC000
+                    1 => self.selected_prg_bank = Some(X), // 0x8000
+                    2 => self.selected_prg_bank = Some(Y), // 0xA000
+                    3 => self.selected_prg_bank = Some(Z), // 0xC000
                     4 | 6 => self.selected_prg_bank = None,
                     _ => unreachable!(),
                 }
             }
             0xF000..=0xFFFF => {
-                if let Some(select_prg_bank) = self.selected_prg_bank {
-                    bus.set_prg_bank_register_bits(select_prg_bank, value.into(), 0b0000_1111);
+                if let Some(selected_prg_bank) = self.selected_prg_bank {
+                    bus.set_prg_register(selected_prg_bank, value & 0b1111);
                 }
             }
         }
@@ -83,7 +85,7 @@ impl Mapper for Mapper056 {
 
         // Overlapping registers in the 0xFXXX range.
         if matches!(addr & 0xFC03, 0xF000..=0xF003) && self.selected_prg_bank.is_some() {
-            bus.set_prg_bank_register_bits(prg_id, u16::from(value & 0b0001_0000), 0b1111_0000);
+            bus.set_prg_register(prg_id, value >> 4);
         } else if addr & 0xFC00 == 0xF800 {
             bus.set_name_table_mirroring(value & 1);
         } else if matches!(addr & 0xFC07, 0xFC00..=0xFC07) {

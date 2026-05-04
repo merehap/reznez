@@ -232,6 +232,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (51..=54, _) => TodoMapper,
         // BTL-MARIO1-MALEE2
         (55, None) => m::mapper055::Mapper055.supported(),
+        // Unlicensed reproduction of Super Mario Bros. 3
         (56, None) => m::mapper056::Mapper056::new().supported(),
         (57, _) => TodoMapper,
         // NROM/CNROM-based multicarts
