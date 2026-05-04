@@ -4,9 +4,10 @@ use crate::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(2048 * KIBIBYTE)
+    .prg_rom_outer_bank_size(1024 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P))
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P)),
     ])
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
@@ -36,10 +37,9 @@ impl Mapper for Mapper226 {
                 bus.set_prg_layout(layout);
             }
             0x8001 => {
-                let fields = splitbits!(value, ".... ..dp");
+                let fields = splitbits!(value, ".... ..do");
                 bus.set_writes_enabled(WS0, !fields.d);
-                let prg_high_bit = u16::from(fields.p) << 6;
-                bus.set_prg_bank_register_bits(P, prg_high_bit, 0b0100_0000);
+                bus.set_prg_rom_outer_bank_number(fields.o as u8);
             }
             _ => { /* No regs here. */ }
         }
