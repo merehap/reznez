@@ -45,7 +45,8 @@ impl Segment {
         }
 
         // TODO: Move this case into the loop. Just have to extract the magnitude before the loop.
-        let (label_parse, mut subscript) = Self::atom_from_bytes(&bytes[0..Self::SEGMENT_ATOM_LENGTH])?;
+        let atom = Atom::from_bytes(&bytes[0..Self::SEGMENT_ATOM_LENGTH])?;
+        let Atom { mut label, raw_constant, mut subscript } = atom;
         if subscript >= 16 {
             return Err("The maximum allowed value for a subscript is 15.");
         }
@@ -53,19 +54,18 @@ impl Segment {
         let magnitude = subscript + 1;
         bytes = &bytes[Self::SEGMENT_ATOM_LENGTH..];
 
-        let (mut raw_constant, mut constant_mask) = if let Some(raw_constant) = label_parse.raw_constant {
+        let (mut raw_constant, mut constant_mask) = if let Some(raw_constant) = raw_constant {
             ((raw_constant as u16) << subscript, 1 << subscript)
         } else {
             (0, 0)
         };
-        let mut label = label_parse.label;
 
         let mut expected_subscript = subscript;
         while !bytes.is_empty() && subscript > 0 {
             expected_subscript -= 1;
 
-            let (new_label_parse, new_subscript) = Self::atom_from_bytes(&bytes[0..Self::SEGMENT_ATOM_LENGTH])?;
-            let new_label = new_label_parse.label;
+            let atom = Atom::from_bytes(&bytes[0..Self::SEGMENT_ATOM_LENGTH])?;
+            let Atom { label: new_label, raw_constant: new_raw_constant, subscript: new_subscript } = atom;
             if new_subscript != expected_subscript {
                 if let (Some(new), Some(old)) = (new_label.to_char(), label.to_char()) && new == old {
                     return Err("Contiguous segment elements must have decrementing subscripts.");
@@ -87,7 +87,7 @@ impl Segment {
                 label = new_label;
             }
 
-            if let Some(new_raw_constant) = new_label_parse.raw_constant {
+            if let Some(new_raw_constant) = new_raw_constant {
                 raw_constant |= (new_raw_constant as u16) << subscript;
                 constant_mask |= 1 << subscript;
             }
@@ -106,16 +106,6 @@ impl Segment {
 
     pub fn set_raw_value(&mut self, value: u16) {
         self.raw_value = value;
-    }
-
-    const fn atom_from_bytes(bytes: &[u8]) -> Result<(LabelParse, u8), &'static str> {
-        assert!(bytes.len() == 7);
-
-        let label_parse = LabelParse::from_char(bytes[0] as char);
-        let tens_digit = subscript_utf8_bytes_to_digit(bytes[1], bytes[2], bytes[3])?;
-        let ones_digit = subscript_utf8_bytes_to_digit(bytes[4], bytes[5], bytes[6])?;
-        let subscript = 10 * tens_digit + ones_digit;
-        Ok((label_parse, subscript))
     }
 
     pub const fn label(&self) -> Label {
@@ -217,35 +207,35 @@ pub enum LabelOrConstant {
     One,
 }
 
-/*
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 struct Atom {
     label: Label,
-    raw_constant: Option<u16>,
+    raw_constant: Option<bool>,
     subscript: u8,
 }
-*/
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-struct LabelParse {
-    label: Label,
-    raw_constant: Option<bool>,
-}
+impl Atom {
+    const fn from_bytes(bytes: &[u8]) -> Result<Self, &'static str> {
+        assert!(bytes.len() == 7);
+        let c = bytes[0] as char;
+        let tens_digit = subscript_utf8_bytes_to_digit(bytes[1], bytes[2], bytes[3])?;
+        let ones_digit = subscript_utf8_bytes_to_digit(bytes[4], bytes[5], bytes[6])?;
+        let subscript = 10 * tens_digit + ones_digit;
 
-impl LabelParse {
-    const fn from_char(c: char) -> Self {
         match c {
-            '0' => Self {
+            '0' => Ok(Self {
                 label: Label::InnerBankSegment(None),
                 raw_constant: Some(false),
-            },
-            '1' => Self {
+                subscript,
+            }),
+            '1' => Ok(Self {
                 label: Label::InnerBankSegment(None),
                 raw_constant: Some(true),
-            },
+                subscript,
+            }),
             c => {
                 match Label::new(c) {
-                    Ok(label) => Self { label, raw_constant: None },
+                    Ok(label) => Ok(Self { label, raw_constant: None, subscript }),
                     Err(err) => const_panic::concat_panic!("Bad label char: ", c, ". ", err),
                 }
             }
@@ -320,8 +310,9 @@ mod test {
 
     #[test]
     fn segment_atom_from_bytes() {
-        let (label, subscript) = Segment::atom_from_bytes(&[0x61, 0xE2, 0x82, 0x81, 0xE2, 0x82, 0x82]).unwrap();
-        assert_eq!(label, LabelParse { label: Label::new('a').unwrap(), raw_constant: None });
+        let Atom { label, raw_constant, subscript } = Atom::from_bytes(&[0x61, 0xE2, 0x82, 0x81, 0xE2, 0x82, 0x82]).unwrap();
+        assert_eq!(label, Label::new('a').unwrap());
+        assert_eq!(raw_constant, None);
         assert_eq!(subscript, 12);
     }
 }
