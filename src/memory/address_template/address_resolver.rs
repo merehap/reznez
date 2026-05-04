@@ -65,8 +65,6 @@ const INNER_BANK_SEGMENT: u8 = 1;
 pub struct AddressResolver {
     // Never changed after initialization.
     bit_template: BitTemplate,
-    // Never changed after initialization.
-    inner_bank_width: u8,
 
     // TODO: This should only be present for RAM resolvers.
     work_ram_start_inner_bank_number: u16,
@@ -119,7 +117,6 @@ impl AddressResolver {
         let bit_template = BitTemplate::right_to_left(segments, Some(bank_sizes.full_width()));
         let address_template = Self {
             bit_template,
-            inner_bank_width,
             work_ram_start_inner_bank_number,
         };
         assert!(address_template.total_width() <= MAX_WIDTH);
@@ -146,16 +143,12 @@ impl AddressResolver {
             return Err("AddressTemplate must not be longer than 32 bits.");
         }
 
-        let base_address_width = bit_template.width_of('a');
-        let mut inner_bank_ignored_low_count = 0;
-
         let mut reg_id = None;
         let mut i = 0;
         while i < bit_template.segment_count() {
             if let Some(c@'p'..='y') = bit_template.label_at(i).to_char() {
                 assert!(reg_id.is_none(), "Multiple inner bank segments not allowed in a single template.");
                 reg_id = Some(PrgBankRegisterId::from_char(c).expect("Bad inner bank label letter."));
-                inner_bank_ignored_low_count = bit_template.ignored_low_count_of(c);
             }
 
             i += 1;
@@ -163,7 +156,6 @@ impl AddressResolver {
 
         Ok(Self {
             bit_template,
-            inner_bank_width: base_address_width + inner_bank_ignored_low_count,
             work_ram_start_inner_bank_number,
         })
     }
@@ -177,7 +169,6 @@ impl AddressResolver {
     pub fn reduced(&self, bank_sizes: &BankSizes) -> Self {
         let mut result = *self;
         result.bit_template = result.bit_template.shortened(bank_sizes.full_width());
-        result.inner_bank_width = bank_sizes.inner_bank_width();
         result
     }
 

@@ -91,22 +91,6 @@ impl BitTemplate {
         width
     }
 
-    pub const fn width_of(&self, label: char) -> u8 {
-        if let Some(segment) = self.segment_with_label(label) {
-            segment.width()
-        } else {
-            0
-        }
-    }
-
-    pub const fn ignored_low_count_of(&self, label: char) -> u8 {
-        if let Some(segment) = self.segment_with_label(label) {
-            segment.ignored_low_count()
-        } else {
-            0
-        }
-    }
-
     pub const fn label_at(&self, segment_index: u8) -> Label {
         self.segments.get(segment_index).label()
     }
@@ -127,21 +111,6 @@ impl BitTemplate {
 
         None
     }
-
-    /*
-    pub const fn inner_bank_register_id(&self) -> Option<PrgBankRegisterId> {
-        let mut i = 0;
-        while i < self.segments.len() {
-            if let Label::InnerBankSegment(Some(reg_id)) = self.segments.get(i).label() {
-                return Some(reg_id);
-            }
-
-            i += 1;
-        }
-
-        None
-    }
-    */
 
     pub const fn has_inner_bank(&self) -> bool {
         self.segment_count() > 1 && !matches!(self.segments.get(1).label(), Label::OuterBank)
@@ -195,19 +164,6 @@ impl BitTemplate {
 
     pub fn segments_mut(&mut self) -> impl DoubleEndedIterator<Item = &mut Segment> {
         self.segments.iter_mut()
-    }
-
-    const fn segment_with_label(&self, label: char) -> Option<&Segment> {
-        let mut i = 0;
-        while i < self.segment_count() {
-            if self.segments.get_ref(i).label().to_char() == Some(label) {
-                return Some(self.segments.get_ref(i));
-            }
-
-            i += 1;
-        }
-
-        None
     }
 }
 
