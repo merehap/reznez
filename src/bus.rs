@@ -499,10 +499,6 @@ impl Bus {
         self.prg_memory.set_bank_register(id, value.into());
     }
 
-    pub fn update_prg_register(&mut self, id: PrgBankRegisterId, updater: &dyn Fn(u16) -> u16) {
-        self.prg_memory.update_bank_register(id, updater);
-    }
-
     pub fn set_chr_register<INDEX: Into<u16>>(&mut self, id: ChrBankRegisterId, value: INDEX) {
         self.chr_memory.set_bank_register(id, value);
     }

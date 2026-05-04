@@ -525,12 +525,13 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (230, _) => TodoMapper,
         // 20-in-1
         (231, None) => m::mapper231::Mapper231.supported(),
+
         // Quattro submappers
-        (232, None) => UnspecifiedSubmapper,
         // Normal behavior
-        (232, Some(0)) => m::mapper232::Mapper232.supported(),
+        (232, None | Some(0)) => m::mapper232::Mapper232.supported(),
         // Aladdin Deck Enhancer
         (232, Some(1)) => TodoSubmapper,
+
         // Weird Super 42-in-1
         (233, None) => m::mapper233::Mapper233.supported(),
         // Maxi 15 multicart

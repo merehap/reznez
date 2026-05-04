@@ -132,25 +132,6 @@ impl PrgMemory {
         self.update_page_ids();
     }
 
-    pub fn set_bank_register_bits(
-        &mut self,
-        id: PrgBankRegisterId,
-        new_value: u16,
-        mask: u16,
-    ) {
-        self.regs.set_bits(id, new_value, mask);
-        self.update_page_ids();
-    }
-
-    pub fn update_bank_register(
-        &mut self,
-        id: PrgBankRegisterId,
-        updater: &dyn Fn(u16) -> u16,
-    ) {
-        self.regs.update(id, updater);
-        self.update_page_ids();
-    }
-
     pub fn set_read_status(&mut self, id: ReadStatusRegisterId, read_status: ReadStatus) {
         self.regs.set_read_status(id, read_status);
         self.update_page_ids();
