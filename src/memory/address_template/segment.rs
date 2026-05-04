@@ -46,28 +46,28 @@ impl Segment {
 
         // TODO: Move this case into the loop. Just have to extract the magnitude before the loop.
         let atom = Atom::from_bytes(&bytes[0..Self::SEGMENT_ATOM_LENGTH])?;
-        let Atom { mut label, raw_constant, mut subscript } = atom;
-        if subscript >= 16 {
+        if atom.subscript >= 16 {
             return Err("The maximum allowed value for a subscript is 15.");
         }
 
-        let magnitude = subscript + 1;
+        let magnitude = atom.subscript + 1;
         bytes = &bytes[Self::SEGMENT_ATOM_LENGTH..];
 
-        let (mut raw_constant, mut constant_mask) = if let Some(raw_constant) = raw_constant {
-            ((raw_constant as u16) << subscript, 1 << subscript)
+        let (mut raw_constant, mut constant_mask) = if let Some(raw_constant) = atom.raw_constant {
+            ((raw_constant as u16) << atom.subscript, 1 << atom.subscript)
         } else {
             (0, 0)
         };
 
-        let mut expected_subscript = subscript;
+        let mut subscript = atom.subscript;
+        let mut label = atom.label;
+        let mut expected_subscript = atom.subscript;
         while !bytes.is_empty() && subscript > 0 {
             expected_subscript -= 1;
 
-            let atom = Atom::from_bytes(&bytes[0..Self::SEGMENT_ATOM_LENGTH])?;
-            let Atom { label: new_label, raw_constant: new_raw_constant, subscript: new_subscript } = atom;
-            if new_subscript != expected_subscript {
-                if let (Some(new), Some(old)) = (new_label.to_char(), label.to_char()) && new == old {
+            let next_atom = Atom::from_bytes(&bytes[0..Self::SEGMENT_ATOM_LENGTH])?;
+            if next_atom.subscript != expected_subscript {
+                if let (Some(new), Some(old)) = (next_atom.label.to_char(), label.to_char()) && new == old {
                     return Err("Contiguous segment elements must have decrementing subscripts.");
                 }
 
@@ -75,19 +75,19 @@ impl Segment {
                 break;
             }
 
-            if let (Some(new), Some(old)) = (new_label.to_char(), label.to_char()) && new != old {
+            if let (Some(new), Some(old)) = (next_atom.label.to_char(), label.to_char()) && new != old {
                 // If we switched labels, then the new segment is about to start, so wrap up the current segment.
                 break;
             }
 
             // We're still on the same label, so we can update all the state.
-            subscript = new_subscript;
+            subscript = next_atom.subscript;
             bytes = &bytes[Self::SEGMENT_ATOM_LENGTH..];
             if matches!(label, Label::InnerBankSegment(None)) {
-                label = new_label;
+                label = next_atom.label;
             }
 
-            if let Some(new_raw_constant) = new_raw_constant {
+            if let Some(new_raw_constant) = next_atom.raw_constant {
                 raw_constant |= (new_raw_constant as u16) << subscript;
                 constant_mask |= 1 << subscript;
             }
