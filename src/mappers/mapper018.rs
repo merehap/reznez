@@ -5,9 +5,10 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(R)),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("p₀₁p₀₀x₀₃x₀₂x₀₁x₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("q₀₁q₀₀y₀₃y₀₂y₀₁y₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("r₀₁r₀₀z₀₃z₀₂z₀₁z₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        //PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("p₀₁p₀₀x₀₃x₀₂x₀₁x₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
         PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
@@ -65,12 +66,12 @@ impl Mapper for Mapper018 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => { /* Do nothing. */ }
             0x6000..=0x7FFF => unreachable!(),
-            0x8000 => bus.set_prg_bank_register_bits(P, value     , 0b0000_1111),
-            0x8001 => bus.set_prg_bank_register_bits(P, value << 4, 0b0011_0000),
-            0x8002 => bus.set_prg_bank_register_bits(Q, value     , 0b0000_1111),
-            0x8003 => bus.set_prg_bank_register_bits(Q, value << 4, 0b0011_0000),
-            0x9000 => bus.set_prg_bank_register_bits(R, value     , 0b0000_1111),
-            0x9001 => bus.set_prg_bank_register_bits(R, value << 4, 0b0011_0000),
+            0x8000 => bus.set_prg_register(X, value & 0b1111),
+            0x8002 => bus.set_prg_register(Y, value & 0b1111),
+            0x9000 => bus.set_prg_register(Z, value & 0b1111),
+            0x8001 => bus.set_prg_register(P, value & 0b0011),
+            0x8003 => bus.set_prg_register(Q, value & 0b0011),
+            0x9001 => bus.set_prg_register(R, value & 0b0011),
             0x9002 => self.work_ram_write_enabled = value & 0b0000_0010 != 0,
             0x9003 => { /* Do nothing */ }
             0xA000 => bus.set_chr_bank_register_bits(C, value     , 0b0000_1111),

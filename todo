@@ -93,6 +93,9 @@ Daikoukai Jidai - Game attempts to write to ROM(?) when pressing SELECT at the b
 MAPPER 15
 Crazy Climber: Blank screen
 
+MAPPER 18
+Magic John: IRQ is slightly off
+
 VRC
 Ganbare Goemon Gaiden 2: Bottom half of splash screen is CHR corrupted. Mesen apparently has an APU Frame IRQ triggering at Cycle:235856 but REZNEZ doesn't (who is right is not confirmed).
 Shui Guan Pipe: Corrupted status bar. Possibly same issue as Ganbare, but this one is on VRC4
