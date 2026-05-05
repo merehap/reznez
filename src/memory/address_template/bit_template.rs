@@ -9,11 +9,11 @@ const MAX_SEGMENT_COUNT: usize = 3;
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct BitTemplate {
     // Segments are stored right-to-left, the reverse of how they are rendered.
-    segments: ConstVec<Segment, MAX_SEGMENT_COUNT>,
+    segments: ConstVec<Segment<PrgBankRegisterId>, MAX_SEGMENT_COUNT>,
 }
 
 impl BitTemplate {
-    pub const fn right_to_left(mut segments: ConstVec<Segment, MAX_SEGMENT_COUNT>, forced_width: Option<u8>) -> Self {
+    pub const fn right_to_left(mut segments: ConstVec<Segment<PrgBankRegisterId>, MAX_SEGMENT_COUNT>, forced_width: Option<u8>) -> Self {
         // Chop high template bits off if width exceeds forced width.
         if let Some(forced_width) = forced_width {
             let mut width_accum = 0;
@@ -47,9 +47,9 @@ impl BitTemplate {
             return Err("BitTemplate must have at least one segment (minimally a label and two subscript chars).");
         }
 
-        let mut segments: ConstVec<Segment, MAX_SEGMENT_COUNT> = ConstVec::new();
+        let mut segments: ConstVec<Segment<PrgBankRegisterId>, MAX_SEGMENT_COUNT> = ConstVec::new();
         while !bytes.is_empty() {
-            let segment;
+            let segment: Segment<PrgBankRegisterId>;
             (segment, bytes) = Segment::parse(bytes)?;
             segments.push_front(segment);
         }
@@ -163,7 +163,7 @@ impl BitTemplate {
         self.segments.get_mut(segment_index).set_raw_value(raw_value);
     }
 
-    pub fn segments_mut(&mut self) -> impl DoubleEndedIterator<Item = &mut Segment> {
+    pub fn segments_mut(&mut self) -> impl DoubleEndedIterator<Item = &mut Segment<PrgBankRegisterId>> {
         self.segments.iter_mut()
     }
 }
@@ -199,7 +199,7 @@ mod test {
     fn template_from_formatted() {
         let text = "o₀₀p₀₀a₀₀";
         let bit_template = BitTemplate::from_formatted(text).unwrap();
-        let segments: Vec<Segment> = bit_template.segments.as_iter().collect();
+        let segments: Vec<Segment<PrgBankRegisterId>> = bit_template.segments.as_iter().collect();
         assert_eq!(segments[0].label(), Label::new('a').unwrap());
         assert_eq!(segments[1].label(), Label::new('p').unwrap());
         assert_eq!(segments[2].label(), Label::new('o').unwrap());
@@ -210,7 +210,7 @@ mod test {
     fn ignored_low_bits_from_formatted() {
         let text = "p₀₃p₀₂p₀₁a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀";
         let bit_template = BitTemplate::from_formatted(text).unwrap();
-        let segments: Vec<Segment> = bit_template.segments.as_iter().collect();
+        let segments: Vec<Segment<PrgBankRegisterId>> = bit_template.segments.as_iter().collect();
         assert_eq!(segments[0].label(), Label::new('a').unwrap());
         assert_eq!(segments[0].magnitude(), 15);
         assert_eq!(segments[0].ignored_low_count(), 0);

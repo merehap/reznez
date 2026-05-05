@@ -1,9 +1,8 @@
-use crate::memory::bank::bank_number::PrgBankRegisterId;
 use crate::memory::bank::bank_number::FromChar;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub struct Segment {
-    label: Label<PrgBankRegisterId>,
+pub struct Segment<RegisterId: const FromChar> {
+    label: Label<RegisterId>,
     raw_constant: u16,
     constant_mask: u16,
     magnitude: u8,
@@ -12,11 +11,11 @@ pub struct Segment {
     raw_value: u16,
 }
 
-impl Segment {
+impl <RegisterId: const FromChar> Segment<RegisterId> {
     pub const EMPTY_UNLABELED: Self = Self::constant_inner_bank(0, 0);
     const SEGMENT_ATOM_LENGTH: usize = 7;
 
-    pub const fn labeled(label: Label<PrgBankRegisterId>, magnitude: u8) -> Self {
+    pub const fn labeled(label: Label<RegisterId>, magnitude: u8) -> Self {
         Self {
             label,
             raw_constant: 0,
@@ -40,7 +39,7 @@ impl Segment {
         }
     }
 
-    pub const fn parse(mut bytes: &[u8]) -> Result<(Segment, &[u8]), &'static str> {
+    pub const fn parse(mut bytes: &[u8]) -> Result<(Segment<RegisterId>, &[u8]), &'static str> {
         if bytes.len() < Self::SEGMENT_ATOM_LENGTH {
             return Err("A segment must have at least one atom in it.");
         }
@@ -119,11 +118,11 @@ impl Segment {
         self.raw_value = value;
     }
 
-    pub const fn label(&self) -> Label<PrgBankRegisterId> {
+    pub const fn label(&self) -> Label<RegisterId> {
         self.label
     }
 
-    pub const fn register_id(&self) -> Option<PrgBankRegisterId> {
+    pub const fn register_id(&self) -> Option<RegisterId> {
         self.label().register_id()
     }
 
@@ -219,13 +218,13 @@ pub enum LabelOrConstant {
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-struct Atom {
-    label: Label<PrgBankRegisterId>,
+struct Atom<RegisterId: const FromChar> {
+    label: Label<RegisterId>,
     raw_constant: Option<bool>,
     subscript: u8,
 }
 
-impl Atom {
+impl <RegisterId: const FromChar> Atom<RegisterId> {
     const fn from_bytes(bytes: &[u8]) -> Result<Self, &'static str> {
         assert!(bytes.len() == 7);
         let c = bytes[0] as char;
@@ -255,7 +254,7 @@ impl Atom {
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum Label<RegisterId: Copy + FromChar> {
+pub enum Label<RegisterId: Copy + const FromChar> {
     OuterBank,
     InnerBankSegment(Option<RegisterId>),
     AddressBus,
@@ -313,6 +312,7 @@ const fn subscript_utf8_bytes_to_digit(top: u8, mid: u8, bot: u8) -> Result<u8, 
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::memory::bank::bank_number::PrgBankRegisterId;
 
     #[test]
     fn subscript_digit() {
@@ -321,7 +321,7 @@ mod test {
 
     #[test]
     fn segment_atom_from_bytes() {
-        let Atom { label, raw_constant, subscript } = Atom::from_bytes(&[0x61, 0xE2, 0x82, 0x81, 0xE2, 0x82, 0x82]).unwrap();
+        let Atom { label, raw_constant, subscript } = Atom::<PrgBankRegisterId>::from_bytes(&[0x61, 0xE2, 0x82, 0x81, 0xE2, 0x82, 0x82]).unwrap();
         assert_eq!(label, Label::new('a').unwrap());
         assert_eq!(raw_constant, None);
         assert_eq!(subscript, 12);
