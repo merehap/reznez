@@ -331,7 +331,7 @@ impl ChrBankRegisterId {
     }
 }
 
-pub const trait RegisterId: Sized + Copy {
+pub const trait RegisterId: Sized + PartialEq + Eq + Copy {
     fn from_char(c: char) -> Option<Self>;
     fn to_char(self) -> char;
 }

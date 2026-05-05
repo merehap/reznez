@@ -55,12 +55,12 @@ impl PrgWindow {
         }
     }
 
-    pub fn rom_address_template(&self, bank_sizes: &BankSizes) -> AddressResolver {
+    pub fn rom_address_template(&self, bank_sizes: &BankSizes) -> AddressResolver<PrgBankRegisterId> {
         self.bank().rom_address_template_override()
             .map_or(AddressResolver::prg(self, bank_sizes, 0), |template| template.reduced(bank_sizes))
     }
 
-    pub fn ram_address_template(&self, bank_sizes: &BankSizes, work_ram_start_inner_bank_number: u16) -> AddressResolver {
+    pub fn ram_address_template(&self, bank_sizes: &BankSizes, work_ram_start_inner_bank_number: u16) -> AddressResolver<PrgBankRegisterId> {
         AddressResolver::prg(self, bank_sizes, work_ram_start_inner_bank_number)
     }
 

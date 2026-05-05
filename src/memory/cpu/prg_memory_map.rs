@@ -1,3 +1,4 @@
+use crate::mapper::PrgBankRegisterId;
 use crate::memory::window::PrgWindow;
 use crate::memory::bank::bank_number::ReadStatus;
 use crate::memory::address_template::address_resolver::AddressResolver;
@@ -24,7 +25,7 @@ impl PrgMemoryMap {
         ram_bank_sizes: &BankSizes,
         regs: &PrgBankRegisters,
     ) -> Self {
-        let mut ram_pages_per_inner_bank = u8::try_from(ram_bank_sizes.inner_bank_size() / u32::from(AddressResolver::PRG_PAGE_SIZE)).unwrap();
+        let mut ram_pages_per_inner_bank = u8::try_from(ram_bank_sizes.inner_bank_size() / u32::from(AddressResolver::<PrgBankRegisterId>::PRG_PAGE_SIZE)).unwrap();
         ram_pages_per_inner_bank = std::cmp::max(ram_pages_per_inner_bank, 1);
         let work_ram_start_inner_bank_number = regs.work_ram_start_page_number() / u16::from(ram_pages_per_inner_bank);
         let sub_page_mappings: Vec<_> = initial_layout
@@ -136,8 +137,8 @@ impl PrgMappingSlot {
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct PrgMapping {
     bank: PrgBank,
-    rom_address_resolver: AddressResolver,
-    ram_address_resolver: AddressResolver,
+    rom_address_resolver: AddressResolver<PrgBankRegisterId>,
+    ram_address_resolver: AddressResolver<PrgBankRegisterId>,
     selected_mem_type_status: PrgMemTypeStatus,
 }
 
@@ -158,7 +159,7 @@ impl PrgMapping {
         Some((self.selected_mem_type_status, self.address_resolver().resolve_inner_bank_number()))
     }
 
-    pub fn maybe_address_resolver(&self) -> Option<&AddressResolver> {
+    pub fn maybe_address_resolver(&self) -> Option<&AddressResolver<PrgBankRegisterId>> {
         if self.bank.is_absent() {
             return None;
         }
@@ -166,7 +167,7 @@ impl PrgMapping {
         Some(self.address_resolver())
     }
 
-    fn address_resolver(&self) -> &AddressResolver {
+    fn address_resolver(&self) -> &AddressResolver<PrgBankRegisterId> {
         match self.selected_mem_type_status {
             PrgMemTypeStatus::Rom(..) => &self.rom_address_resolver,
             PrgMemTypeStatus::WorkRam(..) | PrgMemTypeStatus::SaveRam(..) => &self.ram_address_resolver,

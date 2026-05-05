@@ -1,19 +1,19 @@
 use itertools::Itertools;
 
-use crate::mapper::PrgBankRegisterId;
 use crate::memory::address_template::segment::{Label, LabelOrConstant, Segment};
+use crate::memory::bank::bank_number::RegisterId;
 use crate::util::const_vec::ConstVec;
 
 const MAX_SEGMENT_COUNT: usize = 3;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub struct BitTemplate {
+pub struct BitTemplate<ID: const RegisterId> {
     // Segments are stored right-to-left, the reverse of how they are rendered.
-    segments: ConstVec<Segment<PrgBankRegisterId>, MAX_SEGMENT_COUNT>,
+    segments: ConstVec<Segment<ID>, MAX_SEGMENT_COUNT>,
 }
 
-impl BitTemplate {
-    pub const fn right_to_left(mut segments: ConstVec<Segment<PrgBankRegisterId>, MAX_SEGMENT_COUNT>, forced_width: Option<u8>) -> Self {
+impl <ID: const RegisterId> BitTemplate<ID> {
+    pub const fn right_to_left(mut segments: ConstVec<Segment<ID>, MAX_SEGMENT_COUNT>, forced_width: Option<u8>) -> Self {
         // Chop high template bits off if width exceeds forced width.
         if let Some(forced_width) = forced_width {
             let mut width_accum = 0;
@@ -47,9 +47,9 @@ impl BitTemplate {
             return Err("BitTemplate must have at least one segment (minimally a label and two subscript chars).");
         }
 
-        let mut segments: ConstVec<Segment<PrgBankRegisterId>, MAX_SEGMENT_COUNT> = ConstVec::new();
+        let mut segments: ConstVec<Segment<ID>, MAX_SEGMENT_COUNT> = ConstVec::new();
         while !bytes.is_empty() {
-            let segment: Segment<PrgBankRegisterId>;
+            let segment;
             (segment, bytes) = Segment::parse(bytes)?;
             segments.push_front(segment);
         }
@@ -92,7 +92,7 @@ impl BitTemplate {
         width
     }
 
-    pub const fn label_at(&self, segment_index: u8) -> Label<PrgBankRegisterId> {
+    pub const fn label_at(&self, segment_index: u8) -> Label<ID> {
         self.segments.get(segment_index).label()
     }
 
@@ -163,7 +163,7 @@ impl BitTemplate {
         self.segments.get_mut(segment_index).set_raw_value(raw_value);
     }
 
-    pub fn segments_mut(&mut self) -> impl DoubleEndedIterator<Item = &mut Segment<PrgBankRegisterId>> {
+    pub fn segments_mut(&mut self) -> impl DoubleEndedIterator<Item = &mut Segment<ID>> {
         self.segments.iter_mut()
     }
 }
@@ -194,6 +194,7 @@ fn subscript_byte_to_string(value: u8) -> String {
 mod test {
     use super::*;
     use crate::memory::address_template::segment::{Segment, Label};
+    use crate::memory::bank::bank_number::PrgBankRegisterId;
 
     #[test]
     fn template_from_formatted() {
@@ -225,21 +226,21 @@ mod test {
     #[test]
     fn contiguous_constants_are_part_of_segment() {
         let text = "o₀₀p₀₃1₀₂p₀₁a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀";
-        let bit_template = BitTemplate::from_formatted(text).unwrap();
+        let bit_template = BitTemplate::<PrgBankRegisterId>::from_formatted(text).unwrap();
         assert_eq!(bit_template.segments.len(), 3);
     }
 
     #[test]
     fn discontiguous_constants_are_separate_segments() {
         let text = "1₀₂p₀₃p₀₂p₀₁a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀";
-        let bit_template = BitTemplate::from_formatted(text).unwrap();
+        let bit_template = BitTemplate::<PrgBankRegisterId>::from_formatted(text).unwrap();
         assert_eq!(bit_template.segments.len(), 3);
     }
 
     #[test]
     fn constant() {
         let text = "o₀₀1₀₃1₀₂0₀₁1₀₀a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀";
-        let bit_template = BitTemplate::from_formatted(text).unwrap();
+        let bit_template = BitTemplate::<PrgBankRegisterId>::from_formatted(text).unwrap();
         let value = bit_template.segments.get(1).resolve();
         assert_eq!(value, 0b1101);
     }
@@ -247,7 +248,7 @@ mod test {
     #[test]
     fn shifted_constant() {
         let text = "o₀₀1₁₃1₁₂0₁₁1₁₀a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀";
-        let bit_template = BitTemplate::from_formatted(text).unwrap();
+        let bit_template = BitTemplate::<PrgBankRegisterId>::from_formatted(text).unwrap();
         assert_eq!(bit_template.segments.len(), 3);
         let value = bit_template.segments.get(1).resolve();
         assert_eq!(value, 0b1101_0000000000);
@@ -256,7 +257,7 @@ mod test {
     #[test]
     fn embedded_constant() {
         let text = "o₀₀p₀₃1₀₂p₀₁a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀";
-        let bit_template = BitTemplate::from_formatted(text).unwrap();
+        let bit_template = BitTemplate::<PrgBankRegisterId>::from_formatted(text).unwrap();
         let value = bit_template.segments.get(1).resolve();
         assert_eq!(value, 0b0100);
     }

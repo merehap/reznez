@@ -75,7 +75,7 @@ pub struct PrgBank {
     prg_source_provider: PrgSourceProvider,
     read_status_register_id: Option<ReadStatusRegisterId>,
     write_status_register_id: Option<WriteStatusRegisterId>,
-    rom_address_template: Option<AddressResolver>,
+    rom_address_template: Option<AddressResolver<PrgBankRegisterId>>,
 }
 
 impl PrgBank {
@@ -231,7 +231,7 @@ impl PrgBank {
         }
     }
 
-    pub const fn rom_address_template_override(self) -> Option<AddressResolver> {
+    pub const fn rom_address_template_override(self) -> Option<AddressResolver<PrgBankRegisterId>> {
         self.rom_address_template
     }
 

@@ -1,9 +1,10 @@
 use std::fmt;
 
-use crate::mapper::CpuAddress;
+use crate::mapper::{CpuAddress, PrgBankRegisterId};
 use crate::memory::address_template::bank_sizes::BankSizes;
 use crate::memory::address_template::bit_template::BitTemplate;
 use crate::memory::address_template::segment::{Label, Segment};
+use crate::memory::bank::bank_number::RegisterId;
 use crate::memory::bank::bank::PrgBankNumberProvider;
 use crate::memory::bank::bank_number::PrgBankRegisters;
 use crate::memory::window::PrgWindow;
@@ -62,18 +63,15 @@ const INNER_BANK_SEGMENT: u8 = 1;
  * ```
 **/
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub struct AddressResolver {
+pub struct AddressResolver<ID: const RegisterId> {
     // Never changed after initialization.
-    bit_template: BitTemplate,
+    bit_template: BitTemplate<ID>,
 
     // TODO: This should only be present for RAM resolvers.
     work_ram_start_inner_bank_number: u16,
 }
 
-impl AddressResolver {
-    pub const PRG_PAGE_NUMBER_WIDTH: u8 = 13;
-    pub const PRG_PAGE_SIZE: u16 = 2u16.pow(Self::PRG_PAGE_NUMBER_WIDTH as u32);
-
+impl AddressResolver<PrgBankRegisterId> {
     /**
      * PRG Address                           a₁₇a₁₆a₁₅a₁₄ a₁₃ a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
      * Components Before (8 KiB inner banks) o₀₁o₀₀p₀₂p₀₁ p₀₀ a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
@@ -124,6 +122,21 @@ impl AddressResolver {
         address_template
     }
 
+    pub fn update_inner_bank_number(&mut self, regs: &PrgBankRegisters) {
+        let mut segments: Vec<_> = self.bit_template.segments_mut().collect();
+        for index in 0..segments.len() {
+            if let Some(reg_id) = segments[index].register_id() {
+            let raw_value = regs.get(reg_id).index().unwrap().to_raw();
+                segments[index].set_raw_value(raw_value);
+            }
+        }
+    }
+}
+
+impl <ID: const RegisterId> AddressResolver<ID> {
+    pub const PRG_PAGE_NUMBER_WIDTH: u8 = 13;
+    pub const PRG_PAGE_SIZE: u16 = 2u16.pow(Self::PRG_PAGE_NUMBER_WIDTH as u32);
+
     pub const fn from_formatted(text: &'static str, work_ram_start_inner_bank_number: u16) -> Result<Self, &'static str> {
         let mut bit_template = BitTemplate::from_formatted(text)?;
         let base_address_index = bit_template.index_of_label('a').expect("Base Address Segment");
@@ -138,7 +151,7 @@ impl AddressResolver {
         Self::from_bit_template(bit_template, work_ram_start_inner_bank_number)
     }
 
-    const fn from_bit_template(bit_template: BitTemplate, work_ram_start_inner_bank_number: u16) -> Result<Self, &'static str> {
+    const fn from_bit_template(bit_template: BitTemplate<ID>, work_ram_start_inner_bank_number: u16) -> Result<Self, &'static str> {
         if bit_template.width() > 32 {
             return Err("AddressTemplate must not be longer than 32 bits.");
         }
@@ -192,19 +205,9 @@ impl AddressResolver {
             self.bit_template.set_raw_value_at(last_segment, number);
         }
     }
-
-    pub fn update_inner_bank_number(&mut self, regs: &PrgBankRegisters) {
-        let mut segments: Vec<_> = self.bit_template.segments_mut().collect();
-        for index in 0..segments.len() {
-            if let Some(reg_id) = segments[index].register_id() {
-            let raw_value = regs.get(reg_id).index().unwrap().to_raw();
-                segments[index].set_raw_value(raw_value);
-            }
-        }
-    }
 }
 
-impl fmt::Display for AddressResolver {
+impl <ID: const RegisterId> fmt::Display for AddressResolver<ID> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.formatted())
     }
@@ -219,7 +222,7 @@ mod test {
     #[test]
     fn no_inner_bank() {
         let text = "o₀₇o₀₆o₀₅o₀₄o₀₃o₀₂o₀₁o₀₀a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀";
-        let original_resolver = AddressResolver::from_formatted(text, 0).unwrap();
+        let original_resolver = AddressResolver::<PrgBankRegisterId>::from_formatted(text, 0).unwrap();
         assert_eq!(original_resolver.total_width(), 23);
         assert_eq!(original_resolver.resolve_inner_bank_number(), 0);
         assert_eq!(original_resolver.formatted(), "o₀₇o₀₆o₀₅o₀₄o₀₃o₀₂o₀₁o₀₀a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀");
