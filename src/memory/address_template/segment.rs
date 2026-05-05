@@ -1,8 +1,8 @@
-use crate::memory::bank::bank_number::FromChar;
+use crate::memory::bank::bank_number::RegisterId;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub struct Segment<RegisterId: const FromChar> {
-    label: Label<RegisterId>,
+pub struct Segment<ID: const RegisterId> {
+    label: Label<ID>,
     raw_constant: u16,
     constant_mask: u16,
     magnitude: u8,
@@ -11,11 +11,11 @@ pub struct Segment<RegisterId: const FromChar> {
     raw_value: u16,
 }
 
-impl <RegisterId: const FromChar> Segment<RegisterId> {
+impl <ID: const RegisterId> Segment<ID> {
     pub const EMPTY_UNLABELED: Self = Self::constant_inner_bank(0, 0);
     const SEGMENT_ATOM_LENGTH: usize = 7;
 
-    pub const fn labeled(label: Label<RegisterId>, magnitude: u8) -> Self {
+    pub const fn labeled(label: Label<ID>, magnitude: u8) -> Self {
         Self {
             label,
             raw_constant: 0,
@@ -39,7 +39,7 @@ impl <RegisterId: const FromChar> Segment<RegisterId> {
         }
     }
 
-    pub const fn parse(mut bytes: &[u8]) -> Result<(Segment<RegisterId>, &[u8]), &'static str> {
+    pub const fn parse(mut bytes: &[u8]) -> Result<(Segment<ID>, &[u8]), &'static str> {
         if bytes.len() < Self::SEGMENT_ATOM_LENGTH {
             return Err("A segment must have at least one atom in it.");
         }
@@ -118,11 +118,11 @@ impl <RegisterId: const FromChar> Segment<RegisterId> {
         self.raw_value = value;
     }
 
-    pub const fn label(&self) -> Label<RegisterId> {
+    pub const fn label(&self) -> Label<ID> {
         self.label
     }
 
-    pub const fn register_id(&self) -> Option<RegisterId> {
+    pub const fn register_id(&self) -> Option<ID> {
         self.label().register_id()
     }
 
@@ -218,13 +218,13 @@ pub enum LabelOrConstant {
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-struct Atom<RegisterId: const FromChar> {
-    label: Label<RegisterId>,
+struct Atom<ID: const RegisterId> {
+    label: Label<ID>,
     raw_constant: Option<bool>,
     subscript: u8,
 }
 
-impl <RegisterId: const FromChar> Atom<RegisterId> {
+impl <ID: const RegisterId> Atom<ID> {
     const fn from_bytes(bytes: &[u8]) -> Result<Self, &'static str> {
         assert!(bytes.len() == 7);
         let c = bytes[0] as char;
@@ -254,18 +254,18 @@ impl <RegisterId: const FromChar> Atom<RegisterId> {
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum Label<RegisterId: Copy + const FromChar> {
+pub enum Label<Id: Copy + const RegisterId> {
     OuterBank,
-    InnerBankSegment(Option<RegisterId>),
+    InnerBankSegment(Option<Id>),
     AddressBus,
 }
 
-impl <RegisterId: Copy + const FromChar> Label<RegisterId> {
+impl <Id: Copy + const RegisterId> Label<Id> {
     pub const fn new(c: char) -> Result<Self, &'static str> {
         match c {
             'o' => Ok(Self::OuterBank),
             'a' => Ok(Self::AddressBus),
-            'p'..='z' => FromChar::from_char(c)
+            'p'..='z' => RegisterId::from_char(c)
                 .map(Some)
                 .map(Label::InnerBankSegment)
                 .ok_or("Bad label char"),
@@ -283,7 +283,7 @@ impl <RegisterId: Copy + const FromChar> Label<RegisterId> {
         }
     }
 
-    pub const fn register_id(self) -> Option<RegisterId> {
+    pub const fn register_id(self) -> Option<Id> {
         if let Self::InnerBankSegment(reg_id) = self {
             reg_id
         } else {
