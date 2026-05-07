@@ -1,4 +1,6 @@
-use crate::mapper::{BankNumber, ChrBank, NameTableMirroring, NameTableQuadrant, NameTableSource};
+use crate::mapper::{BankNumber, ChrBank, ChrBankRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource};
+use crate::memory::address_template::address_resolver::AddressResolver;
+use crate::memory::address_template::bank_sizes::BankSizes;
 use crate::memory::bank::bank::{ChrBankNumberProvider, ChrSource, ChrSourceRegisterId};
 use crate::memory::bank::bank_number::{ChrBankRegisters, ReadStatus, WriteStatus};
 use crate::memory::ppu::chr_layout::ChrLayout;
@@ -20,6 +22,8 @@ pub struct ChrMemoryMap {
 impl ChrMemoryMap {
     pub fn new(
         initial_layout: ChrLayout,
+        rom_bank_sizes: &BankSizes,
+        ram_bank_sizes: &BankSizes,
         cartridge_name_table_mirroring: Option<NameTableMirroring>,
         name_table_mirroring_fixed: bool,
         bank_size: ChrWindowSize,
@@ -37,6 +41,8 @@ impl ChrMemoryMap {
             for page_offset in 0..pages_per_window {
                 page_mappings.push(ChrMapping {
                     bank: window.bank(),
+                    rom_address_resolver: AddressResolver::chr(window.bank().chr_bank_number_provider(), window.size(), rom_bank_sizes, 0),
+                    ram_address_resolver: AddressResolver::chr(window.bank().chr_bank_number_provider(), window.size(), ram_bank_sizes, 0),
                     pages_per_bank: bank_size.page_multiple(),
                     page_number_mask,
                     page_offset,
@@ -54,15 +60,24 @@ impl ChrMemoryMap {
         if page_mappings.len() == 8 {
             let cartridge_name_table_mirroring = cartridge_name_table_mirroring
                 .expect("The mapper must specify mappings from 0x2000 to 0x2FFF when four screen mirroring is specified.");
+            let address_template = AddressResolver::chr(
+                ChrBankNumberProvider::Fixed(BankNumber::ZERO),
+                ChrWindowSize::NAME_TABLE_WINDOW_SIZE,
+                rom_bank_sizes,
+                0,
+            );
             if name_table_mirroring_fixed {
                 for quadrant in cartridge_name_table_mirroring.quadrants() {
-                    page_mappings.push(ChrMapping::from_name_table_source(quadrant));
+                    assert!(matches!(quadrant, NameTableSource::Ciram(_)), "Configure non-CIRAM mirrorings using chr_layouts instead.");
+                    page_mappings.push(ChrMapping::from_name_table_source(quadrant, address_template, address_template));
                 }
             } else {
                 let quadrants_with_source_reg_ids = cartridge_name_table_mirroring.quadrants().into_iter()
                     .zip(ChrSourceRegisterId::ALL_NAME_TABLE_SOURCE_IDS);
                 for (quadrant, reg_id) in quadrants_with_source_reg_ids {
-                    page_mappings.push(ChrMapping::from_name_table_source_with_register(quadrant, reg_id, regs));
+                    assert!(matches!(quadrant, NameTableSource::Ciram(_)), "Configure non-CIRAM mirrorings using chr_layouts instead.");
+                    page_mappings.push(ChrMapping::from_name_table_source_with_register(
+                        quadrant, address_template, address_template, reg_id, regs));
                 }
             }
         }
@@ -185,6 +200,8 @@ impl ChrMemoryIndex {
 #[derive(Clone, Copy, Debug)]
 pub struct ChrMapping {
     bank: ChrBank,
+    rom_address_resolver: AddressResolver<ChrBankRegisterId>,
+    ram_address_resolver: AddressResolver<ChrBankRegisterId>,
     pages_per_bank: u16,
     page_offset: u16,
     page_number_mask: u16,
@@ -194,9 +211,15 @@ pub struct ChrMapping {
 }
 
 impl ChrMapping {
-    pub fn from_name_table_source(name_table_source: NameTableSource) -> Self {
+    pub fn from_name_table_source(
+        name_table_source: NameTableSource,
+        rom_address_resolver: AddressResolver<ChrBankRegisterId>,
+        ram_address_resolver: AddressResolver<ChrBankRegisterId>,
+    ) -> Self {
         let mut mapping = Self {
             bank: ChrBank::ROM,
+            rom_address_resolver,
+            ram_address_resolver,
             pages_per_bank: 1,
             page_offset: 0,
             page_number_mask: 0b1111_1111_1111_1111,
@@ -216,11 +239,15 @@ impl ChrMapping {
 
     pub fn from_name_table_source_with_register(
         name_table_source: NameTableSource,
+        rom_address_resolver: AddressResolver<ChrBankRegisterId>,
+        ram_address_resolver: AddressResolver<ChrBankRegisterId>,
         source_id: ChrSourceRegisterId,
         regs: &mut ChrBankRegisters,
     ) -> Self {
         let mapping = Self {
             bank: ChrBank::with_switchable_source(source_id),
+            rom_address_resolver,
+            ram_address_resolver,
             pages_per_bank: 1,
             page_offset: 0,
             page_number_mask: 0b1111_1111_1111_1111,

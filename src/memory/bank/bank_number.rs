@@ -331,6 +331,58 @@ impl ChrBankRegisterId {
     }
 }
 
+impl const RegisterId for ChrBankRegisterId {
+    fn from_char(c: char) -> Option<Self> {
+        use ChrBankRegisterId::*;
+        Some(match c {
+            'c' => C,
+            'd' => D,
+            'e' => E,
+            'f' => F,
+            'g' => G,
+            'h' => H,
+            'i' => I,
+            'j' => J,
+            'k' => K,
+            'l' => L,
+            'm' => M,
+            'n' => N,
+
+            // Gotta give them something...
+            'α' => NT0,
+            'β' => NT1,
+            'γ' => NT2,
+            'δ' => NT3,
+
+            _ => return None,
+        })
+    }
+
+    fn to_char(self) -> char {
+        use ChrBankRegisterId::*;
+        match self {
+            C => 'c',
+            D => 'd',
+            E => 'e',
+            F => 'f',
+            G => 'g',
+            H => 'h',
+            I => 'i',
+            J => 'j',
+            K => 'k',
+            L => 'l',
+            M => 'm',
+            N => 'n',
+
+            // Gotta give them something...
+            NT0 => 'α',
+            NT1 => 'β',
+            NT2 => 'γ',
+            NT3 => 'δ',
+        }
+    }
+}
+
 pub const trait RegisterId: Sized + PartialEq + Eq + Copy {
     fn from_char(c: char) -> Option<Self>;
     fn to_char(self) -> char;

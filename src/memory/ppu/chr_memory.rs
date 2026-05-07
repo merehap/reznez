@@ -3,6 +3,7 @@ use std::num::NonZeroU16;
 use log::{info, warn};
 
 use crate::mapper::{BankNumber, ChrBankRegisterId, ChrWindow, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource};
+use crate::memory::address_template::bank_sizes::BankSizes;
 use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId, ReadStatusRegisterId, WriteStatusRegisterId};
 use crate::memory::bank::bank_number::{ChrBankRegisters, ReadStatus, WriteStatus};
 use crate::memory::ppu::chr_layout::{ChrLayouts, ChrLayout};
@@ -87,18 +88,23 @@ impl ChrMemory {
                 "The max CHR window index must be the same between all layouts.");
         }
 
+        let rom_outer_bank_size = rom.size() / u32::from(rom_outer_bank_count.get());
+        assert_eq!(rom.size() % u32::from(rom_outer_bank_count.get()), 0);
+
+        let rom_bank_sizes = BankSizes::new(rom.size(), rom_outer_bank_size, bank_size.to_raw().into());
+        let ram_bank_sizes = BankSizes::new(ram.size(), ram.size(), bank_size.to_raw().into());
+
         let memory_maps = layouts.iter().map(|layout|
             ChrMemoryMap::new(
                 layout,
+                &rom_bank_sizes,
+                &ram_bank_sizes,
                 cartridge_name_table_mirroring,
                 name_table_mirroring_fixed,
                 bank_size,
                 align_large_chr_banks,
                 &mut regs,
         )).collect();
-
-        let rom_outer_bank_size = rom.size() / u32::from(rom_outer_bank_count.get());
-        assert_eq!(rom.size() % u32::from(rom_outer_bank_count.get()), 0);
 
         ChrMemory {
             layouts,

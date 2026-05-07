@@ -513,6 +513,10 @@ impl ChrBank {
         }
     }
 
+    pub const fn chr_bank_number_provider(self) -> ChrBankNumberProvider {
+        self.bank_number_provider
+    }
+
     pub fn bank_location(self, regs: &ChrBankRegisters) -> Option<BankLocation> {
         self.location()
             .ok()

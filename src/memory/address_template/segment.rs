@@ -1,4 +1,4 @@
-use crate::memory::bank::bank_number::RegisterId;
+use crate::{mapper::MetaRegisterId, memory::bank::bank_number::RegisterId};
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct Segment<ID: const RegisterId> {
@@ -257,6 +257,7 @@ impl <ID: const RegisterId> Atom<ID> {
 pub enum Label<Id: Copy + const RegisterId> {
     OuterBank,
     InnerBankSegment(Option<Id>),
+    MetaInnerBankSegment(MetaRegisterId),
     AddressBus,
 }
 
@@ -279,6 +280,10 @@ impl <Id: Copy + const RegisterId> Label<Id> {
             Self::OuterBank => Some('o'),
             Self::InnerBankSegment(None) => None,
             Self::InnerBankSegment(Some(reg_id)) => Some(reg_id.to_char()),
+            Self::MetaInnerBankSegment(MetaRegisterId::MR0) => Some('φ'),
+            Self::MetaInnerBankSegment(MetaRegisterId::MR1) => Some('χ'),
+            Self::MetaInnerBankSegment(MetaRegisterId::MR2) => Some('ψ'),
+            Self::MetaInnerBankSegment(MetaRegisterId::MR3) => Some('ω'),
             Self::AddressBus => Some('a'),
         }
     }

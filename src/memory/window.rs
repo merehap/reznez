@@ -1,5 +1,6 @@
 use std::num::NonZeroU16;
 
+use crate::mapper::KIBIBYTE_U16;
 use crate::memory::address_template::address_resolver::AddressResolver;
 use crate::memory::address_template::bank_sizes::BankSizes;
 use crate::memory::bank::bank::PrgBank;
@@ -265,6 +266,8 @@ impl ChrWindowEnd {
 pub struct ChrWindowSize(u16);
 
 impl ChrWindowSize {
+    pub const NAME_TABLE_WINDOW_SIZE: Self = Self(1 * KIBIBYTE_U16);
+
     const fn new(size: u32, start: ChrWindowStart, end: ChrWindowEnd) -> Self {
         assert!(
             size >= KIBIBYTE,
@@ -290,6 +293,11 @@ impl ChrWindowSize {
 
     pub fn page_multiple(self) -> u16 {
         self.0 / CHR_PAGE_SIZE
+    }
+
+    pub const fn bit_count(self) -> u8 {
+        assert!(self.0.is_power_of_two());
+        (self.0 - 1).count_ones() as u8
     }
 
     pub const fn to_raw(self) -> u16 {

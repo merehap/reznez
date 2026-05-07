@@ -1,13 +1,13 @@
 use std::fmt;
 
-use crate::mapper::{CpuAddress, PrgBankRegisterId};
+use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::address_template::bank_sizes::BankSizes;
 use crate::memory::address_template::bit_template::BitTemplate;
 use crate::memory::address_template::segment::{Label, Segment};
 use crate::memory::bank::bank_number::RegisterId;
-use crate::memory::bank::bank::PrgBankNumberProvider;
-use crate::memory::bank::bank_number::PrgBankRegisters;
-use crate::memory::window::PrgWindow;
+use crate::memory::bank::bank::{PrgBankNumberProvider, ChrBankNumberProvider};
+use crate::memory::bank::bank_number::{PrgBankRegisters, PrgBankRegisterId, ChrBankRegisters, ChrBankRegisterId};
+use crate::memory::window::{ChrWindowSize, PrgWindow};
 use crate::util::const_vec::ConstVec;
 
 const MAX_WIDTH: u8 = 32;
@@ -122,11 +122,82 @@ impl AddressResolver<PrgBankRegisterId> {
         address_template
     }
 
-    pub fn update_inner_bank_number(&mut self, regs: &PrgBankRegisters) {
+    pub fn update_prg_inner_bank_number(&mut self, regs: &PrgBankRegisters) {
         let mut segments: Vec<_> = self.bit_template.segments_mut().collect();
         for index in 0..segments.len() {
             if let Some(reg_id) = segments[index].register_id() {
             let raw_value = regs.get(reg_id).index().unwrap().to_raw();
+                segments[index].set_raw_value(raw_value);
+            }
+        }
+    }
+}
+
+impl AddressResolver<ChrBankRegisterId> {
+    /**
+     * PRG Address                           a₁₇a₁₆a₁₅a₁₄ a₁₃ a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
+     * Components Before (8 KiB inner banks) o₀₁o₀₀p₀₂p₀₁ p₀₀ a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
+     * Components After (16 KiB inner banks) o₀₁o₀₀p₀₂p₀₁ a₁₃ a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
+     */
+    pub const fn chr(
+        chr_bank_number_provider: ChrBankNumberProvider,
+        window_size: ChrWindowSize,
+        bank_sizes: &BankSizes,
+        work_ram_start_inner_bank_number: u16
+    ) -> Self {
+        let inner_bank_width = bank_sizes.inner_bank_width();
+        let address_bus_segment = Segment::labeled(Label::AddressBus, inner_bank_width);
+        let inner_bank_segment = match chr_bank_number_provider {
+            ChrBankNumberProvider::Fixed(bank_number) => {
+                // o₀₁o₀₀1₁₆1₁₅1₁₄1₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
+                Segment::constant_inner_bank(bank_number.to_raw(), bank_sizes.inner_bank_number_width())
+            }
+            ChrBankNumberProvider::Switchable(reg_id) => {
+                // o₀₁o₀₀p₀₃p₀₂p₀₁p₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
+                Segment::labeled(Label::InnerBankSegment(Some(reg_id)), bank_sizes.inner_bank_number_width())
+            }
+            ChrBankNumberProvider::MetaSwitchable(meta_id) => {
+                // o₀₁o₀₀p₀₃p₀₂p₀₁p₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
+                Segment::labeled(Label::MetaInnerBankSegment(meta_id), bank_sizes.inner_bank_number_width())
+            }
+        };
+
+        let outer_bank_segment = Segment::labeled(Label::OuterBank, bank_sizes.outer_bank_number_width());
+
+        let mut segments = ConstVec::new();
+        segments.push(address_bus_segment);
+        segments.push(inner_bank_segment);
+        segments.push(outer_bank_segment);
+
+        // Don't expand the bank size larger than the total memory size.
+        let new_base_address_bit_count = std::cmp::min(window_size.bit_count(), bank_sizes.full_width());
+        if new_base_address_bit_count > segments.get_mut(BASE_ADDRESS_SEGMENT).magnitude() {
+            let mut ignored_low_count = segments.get_mut(BASE_ADDRESS_SEGMENT).increase_magnitude_to(new_base_address_bit_count);
+            ignored_low_count = match segments.maybe_get_mut(INNER_BANK_SEGMENT) {
+                None => ignored_low_count,
+                Some(segment) => segment.increase_ignored_low_count(ignored_low_count),
+            };
+            assert!(
+                ignored_low_count == 0,
+                "Overshift occurred. Outer bank bits shouldn't be lost to large inner bank sizes."
+            );
+        }
+
+        let bit_template = BitTemplate::right_to_left(segments, Some(bank_sizes.full_width()));
+        let address_template = Self {
+            bit_template,
+            work_ram_start_inner_bank_number,
+        };
+        assert!(address_template.total_width() <= MAX_WIDTH);
+
+        address_template
+    }
+
+    pub fn update_chr_inner_bank_number(&mut self, regs: &ChrBankRegisters) {
+        let mut segments: Vec<_> = self.bit_template.segments_mut().collect();
+        for index in 0..segments.len() {
+            if let Some(reg_id) = segments[index].register_id() {
+                let raw_value = regs.get(reg_id).to_raw();
                 segments[index].set_raw_value(raw_value);
             }
         }

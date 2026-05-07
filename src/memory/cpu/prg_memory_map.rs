@@ -190,8 +190,8 @@ impl PrgMapping {
             }
         };
 
-        self.rom_address_resolver.update_inner_bank_number(regs);
-        self.ram_address_resolver.update_inner_bank_number(regs);
+        self.rom_address_resolver.update_prg_inner_bank_number(regs);
+        self.ram_address_resolver.update_prg_inner_bank_number(regs);
     }
 
     pub fn same_templates_as(&self, other: &Self) -> bool {
