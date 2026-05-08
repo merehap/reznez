@@ -1,6 +1,5 @@
 use std::fmt;
 
-use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::address_template::bank_sizes::BankSizes;
 use crate::memory::address_template::bit_template::BitTemplate;
 use crate::memory::address_template::segment::{Label, Segment};
@@ -125,7 +124,8 @@ impl AddressResolver<PrgBankRegisterId> {
     pub fn update_prg_inner_bank_number(&mut self, regs: &PrgBankRegisters) {
         let mut segments: Vec<_> = self.bit_template.segments_mut().collect();
         for index in 0..segments.len() {
-            if let Some(reg_id) = segments[index].register_id() {
+            let p = PrgBankRegisterId::P; // Dummy value since PRG doesn't support meta IDs yet.
+            if let Some(reg_id) = segments[index].register_id([p, p, p, p]) {
             let raw_value = regs.get(reg_id).index().unwrap().to_raw();
                 segments[index].set_raw_value(raw_value);
             }
@@ -134,11 +134,6 @@ impl AddressResolver<PrgBankRegisterId> {
 }
 
 impl AddressResolver<ChrBankRegisterId> {
-    /**
-     * PRG Address                           a₁₇a₁₆a₁₅a₁₄ a₁₃ a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
-     * Components Before (8 KiB inner banks) o₀₁o₀₀p₀₂p₀₁ p₀₀ a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
-     * Components After (16 KiB inner banks) o₀₁o₀₀p₀₂p₀₁ a₁₃ a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
-     */
     pub const fn chr(
         chr_bank_number_provider: ChrBankNumberProvider,
         window_size: ChrWindowSize,
@@ -149,15 +144,12 @@ impl AddressResolver<ChrBankRegisterId> {
         let address_bus_segment = Segment::labeled(Label::AddressBus, inner_bank_width);
         let inner_bank_segment = match chr_bank_number_provider {
             ChrBankNumberProvider::Fixed(bank_number) => {
-                // o₀₁o₀₀1₁₆1₁₅1₁₄1₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
                 Segment::constant_inner_bank(bank_number.to_raw(), bank_sizes.inner_bank_number_width())
             }
             ChrBankNumberProvider::Switchable(reg_id) => {
-                // o₀₁o₀₀p₀₃p₀₂p₀₁p₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
                 Segment::labeled(Label::InnerBankSegment(Some(reg_id)), bank_sizes.inner_bank_number_width())
             }
             ChrBankNumberProvider::MetaSwitchable(meta_id) => {
-                // o₀₁o₀₀p₀₃p₀₂p₀₁p₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
                 Segment::labeled(Label::MetaInnerBankSegment(meta_id), bank_sizes.inner_bank_number_width())
             }
         };
@@ -196,7 +188,7 @@ impl AddressResolver<ChrBankRegisterId> {
     pub fn update_chr_inner_bank_number(&mut self, regs: &ChrBankRegisters) {
         let mut segments: Vec<_> = self.bit_template.segments_mut().collect();
         for index in 0..segments.len() {
-            if let Some(reg_id) = segments[index].register_id() {
+            if let Some(reg_id) = segments[index].register_id(*regs.meta_registers()) {
                 let raw_value = regs.get(reg_id).to_raw();
                 segments[index].set_raw_value(raw_value);
             }
@@ -258,8 +250,8 @@ impl <ID: const RegisterId> AddressResolver<ID> {
         }
     }
 
-    pub fn resolve_index(&self, addr: CpuAddress) -> u32 {
-        self.bit_template.resolve(*addr)
+    pub fn resolve_index(&self, addr: u16) -> u32 {
+        self.bit_template.resolve(addr)
     }
 
     pub fn formatted(&self) -> String {

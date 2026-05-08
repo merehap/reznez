@@ -588,8 +588,7 @@ impl Nes {
             if &latest.meta_registers != meta_registers {
                 for (i, latest_bank_register_id) in latest.meta_registers.iter_mut().enumerate() {
                     if *latest_bank_register_id != meta_registers[i] {
-                        let id: PrgBankRegisterId = FromPrimitive::from_usize(i).unwrap();
-                        info!("MetaRegister {id:?} changed to {:?}. Previously: {latest_bank_register_id:?}.", meta_registers[i]);
+                        info!("MetaRegister {i} changed to {:?}. Previously: {latest_bank_register_id:?}.", meta_registers[i]);
                         *latest_bank_register_id = meta_registers[i];
                     }
                 }

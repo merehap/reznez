@@ -71,7 +71,7 @@ impl <ID: const RegisterId> Segment<ID> {
                     return Err("Contiguous segment elements must have decrementing subscripts.");
                 }
 
-                if next_atom.label.register_id().is_some() && label.register_id().is_some() {
+                if next_atom.label.has_register_id() && label.has_register_id() {
                     return Err("Contiguous inner bank segments must have decrementing subscripts.");
                 }
 
@@ -122,8 +122,8 @@ impl <ID: const RegisterId> Segment<ID> {
         self.label
     }
 
-    pub const fn register_id(&self) -> Option<ID> {
-        self.label().register_id()
+    pub const fn register_id(&self, metas: [ID; 4]) -> Option<ID> {
+        self.label().register_id(metas)
     }
 
     pub fn label_at(&self, index: u8) -> LabelOrConstant {
@@ -288,11 +288,19 @@ impl <Id: Copy + const RegisterId> Label<Id> {
         }
     }
 
-    pub const fn register_id(self) -> Option<Id> {
-        if let Self::InnerBankSegment(reg_id) = self {
-            reg_id
-        } else {
-            None
+    pub const fn register_id(self, metas: [Id; 4]) -> Option<Id> {
+        match self {
+            Self::AddressBus | Self::OuterBank => None,
+            Self::InnerBankSegment(reg_id) => reg_id,
+            Self::MetaInnerBankSegment(meta_id) => Some(metas[meta_id as usize]),
+        }
+    }
+
+    pub const fn has_register_id(self) -> bool {
+        match self {
+            Self::AddressBus | Self::OuterBank => false,
+            Self::InnerBankSegment(reg_id) => reg_id.is_some(),
+            Self::MetaInnerBankSegment(_) => true,
         }
     }
 }

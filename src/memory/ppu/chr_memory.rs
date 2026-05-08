@@ -128,7 +128,7 @@ impl ChrMemory {
         assert_eq!(index.read_status(), ReadStatus::Enabled, "Disabling reading CHR RAM isn't supported yet.");
         let value = match index {
             ChrMemoryIndex::Rom(index, ..) => {
-                self.rom[(self.rom_outer_bank_number as u32 * self.rom_outer_bank_size) | (index & (self.rom_outer_bank_size - 1))]
+                self.rom[index]
             },
             ChrMemoryIndex::Ram(index, ..) => {
                 self.ram[index % self.ram.size()]
@@ -235,8 +235,12 @@ impl ChrMemory {
         self.layout_index = index;
     }
 
-    pub fn set_chr_rom_outer_bank_number(&mut self, index: u8) {
-        self.rom_outer_bank_number = index;
+    pub fn set_chr_rom_outer_bank_number(&mut self, number: u8) {
+        self.rom_outer_bank_number = number;
+
+        for memory_map in &mut self.memory_maps {
+            memory_map.set_rom_outer_bank_number(&self.regs, number.into());
+        }
     }
 
     pub fn set_bank_register<INDEX: Into<u16>>(&mut self, id: ChrBankRegisterId, value: INDEX) {

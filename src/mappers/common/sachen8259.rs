@@ -11,7 +11,7 @@ pub const NORMAL_CHR_LAYOUT: &[ChrWindow] = &[
     ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(E)),
     ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(F)),
 ];
-// C4, C5, and C6 are the same as C0, except for their low bits.
+// G, H, and I are the same as C, except for their low bits.
 pub const SIMPLE_CHR_LAYOUT: &[ChrWindow] = &[
     ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
     ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(G)),
@@ -86,7 +86,6 @@ impl Mapper for Sachen8259 {
         self.layout.clone()
     }
 }
-
 
 impl Sachen8259 {
     pub const fn new(layout: Layout, board: Sachen8259Board) -> Self {

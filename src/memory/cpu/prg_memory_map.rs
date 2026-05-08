@@ -148,7 +148,7 @@ impl PrgMapping {
             return None;
         }
 
-        Some((self.address_resolver().resolve_index(addr), self.selected_mem_type_status))
+        Some((self.address_resolver().resolve_index(*addr), self.selected_mem_type_status))
     }
 
     pub fn inner_bank_number(&self) -> Option<(PrgMemTypeStatus, u16)> {

@@ -112,7 +112,8 @@ impl ChrMemoryMap {
         let bank_number = page_mapping.bank_number;
         let (chr_memory_index, peek_source) = match page_mapping.mem_type_status() {
             ChrMemTypeStatus::Rom(read_status) => {
-                (ChrMemoryIndex::Rom(u32::from(page_number) * KIBIBYTE + u32::from(offset), read_status), PeekSource::Rom(bank_number))
+                let index = page_mapping.rom_address_resolver.resolve_index(address);
+                (ChrMemoryIndex::Rom(index, read_status), PeekSource::Rom(bank_number))
             }
             ChrMemTypeStatus::Ram(read_status, write_status) => {
                 (ChrMemoryIndex::Ram(u32::from(page_number) * KIBIBYTE + u32::from(offset), read_status, write_status), PeekSource::Ram(bank_number))
@@ -162,6 +163,14 @@ impl ChrMemoryMap {
         }
     }
 
+    pub fn set_rom_outer_bank_number(&mut self, regs: &ChrBankRegisters, raw_outer_bank_number: u16) {
+        for i in 0..CHR_SLOT_COUNT {
+            self.page_mappings[i].rom_address_resolver.set_raw_outer_bank_number(raw_outer_bank_number);
+        }
+
+        self.update_page_ids(regs);
+    }
+
     pub fn page_start_index(&self, mapping_index: u8) -> ChrMemoryIndex {
         let mapping = self.page_mappings[mapping_index as usize];
         let page_number = mapping.page_number;
@@ -200,7 +209,7 @@ impl ChrMemoryIndex {
 #[derive(Clone, Copy, Debug)]
 pub struct ChrMapping {
     bank: ChrBank,
-    rom_address_resolver: AddressResolver<ChrBankRegisterId>,
+    pub rom_address_resolver: AddressResolver<ChrBankRegisterId>,
     ram_address_resolver: AddressResolver<ChrBankRegisterId>,
     pages_per_bank: u16,
     page_offset: u16,
@@ -344,6 +353,9 @@ impl ChrMapping {
                 self.mem_type_status = ChrMemTypeStatus::MapperCustom { page_id };
             }
         }
+
+        self.rom_address_resolver.update_chr_inner_bank_number(regs);
+        self.ram_address_resolver.update_chr_inner_bank_number(regs);
     }
 }
 
