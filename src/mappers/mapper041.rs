@@ -19,10 +19,7 @@ const LAYOUT: Layout = Layout::builder()
 
 // Caltron 6-in-1
 // TODO: Properly model bus conflicts.
-#[derive(Default)]
-pub struct Mapper041 {
-    inner_bank_select_enabled: bool,
-}
+pub struct Mapper041;
 
 impl Mapper for Mapper041 {
     fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
@@ -34,11 +31,10 @@ impl Mapper for Mapper041 {
                 bus.set_name_table_mirroring(fields.m as u8);
                 bus.set_chr_rom_outer_bank_number(fields.c);
                 bus.set_prg_register(P, fields.p);
-                self.inner_bank_select_enabled = fields.p & 0b100 != 0;
             }
             0x6800..=0x7FFF => { /* No regs here. */ }
             0x8000..=0xFFFF => {
-                if self.inner_bank_select_enabled {
+                if bus.prg_memory.bank_registers().get(P).to_raw() >= 4 {
                     bus.set_chr_register(C, value & 0b11);
                 }
             }

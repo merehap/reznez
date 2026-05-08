@@ -209,7 +209,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         // NTDEC 2722 and NTDEC 2752 PCB and imitations
         (40, None) => m::mapper040::Mapper040::new().supported(),
         // Caltron 6-in-1
-        (41, None) => m::mapper041::Mapper041::default().supported(),
+        (41, None) => m::mapper041::Mapper041.supported(),
         // FDS games hacked into cartridge form
         (42, None) => match m::mapper042::chr_board(metadata) {
             m::mapper042::ChrBoard::SwitchableRom => m::mapper042::MAPPER042_WITH_SWITCHABLE_CHR_ROM.supported(),
