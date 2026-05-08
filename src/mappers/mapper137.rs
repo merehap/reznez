@@ -8,15 +8,11 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(32 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C)),
-        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(D)),
-        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(E)),
-        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(F)),
-        // TODO: Compress into just one.
-        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM.fixed_index(-4)),
-        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM.fixed_index(-3)),
-        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM.fixed_index(-2)),
-        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM.fixed_index(-1)),
+        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM.rom_address_template("0₀₀0₀₀c₀₂c₀₁c₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM.rom_address_template("i₀₀0₀₀d₀₂d₀₁d₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM.rom_address_template("j₀₀0₀₀e₀₂e₀₁e₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM.rom_address_template("k₀₀m₀₀f₀₂f₀₁f₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::ROM.rom_address_template("1₀₀1₀₀1₀₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::HORIZONTAL,
@@ -64,19 +60,19 @@ impl Mapper for Mapper137 {
             0x4101 => {
                 match self.selected_reg {
                     Register::ChrLow(reg_id) => {
-                        bus.set_chr_bank_register_bits(reg_id, value.into(), 0b0000_0111);
+                        bus.set_chr_register(reg_id, value & 0b111);
                     }
                     Register::ChrHigh => {
-                        let high_bits = splitbits!(min=u8, value, ".... .fed");
-                        bus.set_chr_bank_register_bits(D, (high_bits.d << 4).into(), 0b0001_0000);
-                        bus.set_chr_bank_register_bits(E, (high_bits.e << 4).into(), 0b0001_0000);
-                        bus.set_chr_bank_register_bits(F, (high_bits.f << 4).into(), 0b0001_0000);
+                        let high_bits = splitbits!(min=u8, value, ".... .kji");
+                        bus.set_chr_register(I, high_bits.i);
+                        bus.set_chr_register(J, high_bits.j);
+                        bus.set_chr_register(K, high_bits.k);
                     }
                     Register::Prg => {
                         bus.set_prg_register(P, value & 0b111);
                     }
                     Register::ChrFMid => {
-                        bus.set_chr_bank_register_bits(F, ((value & 1) << 3).into(), 0b0000_1000);
+                        bus.set_chr_register(M, value & 1);
                     }
                     Register::ModeAndMirroring => {
                         let (mirroring, simple_mode) = splitbits_named!(value, ".... .mms");
