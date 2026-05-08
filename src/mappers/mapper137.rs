@@ -31,8 +31,16 @@ const LAYOUT: Layout = Layout::builder()
         ),
         NameTableMirroring::ONE_SCREEN_LEFT_BANK,
     ])
+    // Some ROMs incorrectly set 4-screen mirroring, so force horizontal. Or maybe nes20db.xml is wrong, too?
+    .cartridge_selection_name_table_mirrorings([
+        Some(NameTableMirroring::HORIZONTAL),
+        Some(NameTableMirroring::HORIZONTAL),
+        Some(NameTableMirroring::HORIZONTAL),
+        Some(NameTableMirroring::HORIZONTAL),
+    ])
     .build();
 
+// Sachen 8259D
 pub struct Mapper137 {
     selected_reg: Register,
 }

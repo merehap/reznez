@@ -388,6 +388,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         // Sachen 3009
         (133, None) => m::mapper133::Mapper133.supported(),
         (134..=136, _) => TodoMapper,
+        // Sachen 8259 D
         (137, None) => m::mapper137::Mapper137::new().supported(),
         // Sachen 8259 B (UNL-Sachen-8259B)
         (138, None) => m::mapper138::MAPPER138.supported(),
