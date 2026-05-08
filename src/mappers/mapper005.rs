@@ -90,6 +90,7 @@ const LAYOUT: Layout = Layout::builder()
         ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(M)),
         ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(N)),
     ])
+    // FIXME: This isn't respected anymore
     .do_not_align_large_chr_windows()
     .complicated_name_table_mirroring()
     .build();

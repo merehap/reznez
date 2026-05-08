@@ -27,27 +27,20 @@ impl ChrMemoryMap {
         cartridge_name_table_mirroring: Option<NameTableMirroring>,
         name_table_mirroring_fixed: bool,
         bank_size: ChrWindowSize,
-        align_large_windows: bool,
+        _align_large_windows: bool,
         regs: &mut ChrBankRegisters,
     ) -> Self {
         let mut page_mappings = Vec::with_capacity(CHR_SLOT_COUNT);
         for window in initial_layout.windows() {
             let pages_per_window = window.size().page_multiple();
-            let mut page_number_mask = 0b1111_1111_1111_1111;
-            if align_large_windows {
-                page_number_mask &= !(pages_per_window - 1);
-            }
-
             for page_offset in 0..pages_per_window {
                 page_mappings.push(ChrMapping {
                     bank: window.bank(),
                     rom_address_resolver: AddressResolver::chr(window.bank().chr_bank_number_provider(), window.size(), rom_bank_sizes, 0),
                     ram_address_resolver: AddressResolver::chr(window.bank().chr_bank_number_provider(), window.size(), ram_bank_sizes, 0),
                     pages_per_bank: bank_size.page_multiple(),
-                    page_number_mask,
                     page_offset,
-                    page_number: 0,
-                    bank_number: BankNumber::from_u8(0),
+                    ciram_side: CiramSide::Left,
                     mem_type_status: ChrMemTypeStatus::Rom(ReadStatus::Enabled),
                 });
             }
@@ -108,23 +101,23 @@ impl ChrMemoryMap {
         let offset = address % (KIBIBYTE as u16);
 
         let page_mapping = self.page_mappings[mapping_index as usize];
-        let page_number = page_mapping.page_number;
-        let bank_number = page_mapping.bank_number;
         let (chr_memory_index, peek_source) = match page_mapping.mem_type_status() {
             ChrMemTypeStatus::Rom(read_status) => {
                 let index = page_mapping.rom_address_resolver.resolve_index(address);
-                (ChrMemoryIndex::Rom(index, read_status), PeekSource::Rom(bank_number))
+                let bank_number = page_mapping.rom_address_resolver.resolve_inner_bank_number();
+                (ChrMemoryIndex::Rom(index, read_status), PeekSource::Rom(BankNumber::from_u16(bank_number)))
             }
             ChrMemTypeStatus::Ram(read_status, write_status) => {
                 let index = page_mapping.ram_address_resolver.resolve_index(address);
-                (ChrMemoryIndex::Ram(index, read_status, write_status), PeekSource::Ram(bank_number))
+                let bank_number = page_mapping.rom_address_resolver.resolve_inner_bank_number();
+                (ChrMemoryIndex::Ram(index, read_status, write_status), PeekSource::Ram(BankNumber::from_u16(bank_number)))
             }
             ChrMemTypeStatus::Ciram => {
-                let side = CiramSide::from_page_number(page_number);
-                (ChrMemoryIndex::Ciram(side, offset.into()), PeekSource::Ciram(side))
+                (ChrMemoryIndex::Ciram(page_mapping.ciram_side, offset.into()), PeekSource::Ciram(page_mapping.ciram_side))
             }
-            ChrMemTypeStatus::MapperCustom { page_id } =>
-                (ChrMemoryIndex::MapperCustom { page_id, index: offset.into() }, PeekSource::MapperCustom { page_id }),
+            ChrMemTypeStatus::MapperCustom { page_id } => {
+                (ChrMemoryIndex::MapperCustom { page_id, index: offset.into() }, PeekSource::MapperCustom { page_id })
+            }
         };
 
         (chr_memory_index, peek_source)
@@ -174,14 +167,17 @@ impl ChrMemoryMap {
 
     pub fn page_start_index(&self, mapping_index: u8) -> ChrMemoryIndex {
         let mapping = self.page_mappings[mapping_index as usize];
-        let page_number = mapping.page_number;
         match mapping.mem_type_status {
-            ChrMemTypeStatus::Rom(read_status) =>
-                ChrMemoryIndex::Rom(u32::from(page_number) * KIBIBYTE, read_status),
-            ChrMemTypeStatus::Ram(read_status, write_status) =>
-                ChrMemoryIndex::Ram(u32::from(page_number) * KIBIBYTE, read_status, write_status),
+            ChrMemTypeStatus::Rom(read_status) => {
+                let page_number = mapping.rom_address_resolver.resolve_inner_bank_number() * mapping.pages_per_bank + mapping.page_offset;
+                ChrMemoryIndex::Rom(u32::from(page_number) * KIBIBYTE, read_status)
+            }
+            ChrMemTypeStatus::Ram(read_status, write_status) => {
+                let page_number = mapping.ram_address_resolver.resolve_inner_bank_number() * mapping.pages_per_bank + mapping.page_offset;
+                ChrMemoryIndex::Ram(u32::from(page_number) * KIBIBYTE, read_status, write_status)
+            }
             ChrMemTypeStatus::Ciram =>
-                ChrMemoryIndex::Ciram(CiramSide::from_page_number(page_number), 0),
+                ChrMemoryIndex::Ciram(mapping.ciram_side, 0),
             ChrMemTypeStatus::MapperCustom { page_id } =>
                 ChrMemoryIndex::MapperCustom { page_id, index: 0 },
         }
@@ -212,11 +208,11 @@ pub struct ChrMapping {
     bank: ChrBank,
     rom_address_resolver: AddressResolver<ChrBankRegisterId>,
     ram_address_resolver: AddressResolver<ChrBankRegisterId>,
+    // TODO: Figure out how to get rid of this field. It's only used for the PatternTable debug screen.
     pages_per_bank: u16,
+    // TODO: Figure out how to get rid of this field. It's only used for the PatternTable debug screen.
     page_offset: u16,
-    page_number_mask: u16,
-    page_number: u16,
-    bank_number: BankNumber,
+    ciram_side: CiramSide,
     mem_type_status: ChrMemTypeStatus,
 }
 
@@ -232,9 +228,7 @@ impl ChrMapping {
             ram_address_resolver,
             pages_per_bank: 1,
             page_offset: 0,
-            page_number_mask: 0b1111_1111_1111_1111,
-            page_number: 0,
-            bank_number: BankNumber::from_u8(0),
+            ciram_side: CiramSide::Left,
             mem_type_status: ChrMemTypeStatus::Rom(ReadStatus::Enabled),
         };
         mapping.bank = match name_table_source {
@@ -260,9 +254,7 @@ impl ChrMapping {
             ram_address_resolver,
             pages_per_bank: 1,
             page_offset: 0,
-            page_number_mask: 0b1111_1111_1111_1111,
-            page_number: 0,
-            bank_number: BankNumber::from_u8(0),
+            ciram_side: CiramSide::Left,
             mem_type_status: ChrMemTypeStatus::Rom(ReadStatus::Enabled),
         };
 
@@ -277,8 +269,16 @@ impl ChrMapping {
         mapping
     }
 
-    pub fn page_number(self) -> u16 {
-        self.page_number
+    pub fn rom_page_number(self) -> u16 {
+        self.rom_address_resolver.resolve_inner_bank_number() * self.pages_per_bank + self.page_offset
+    }
+
+    pub fn ram_page_number(self) -> u16 {
+        self.ram_address_resolver.resolve_inner_bank_number() * self.pages_per_bank + self.page_offset
+    }
+
+    pub fn ciram_side(&self) -> CiramSide {
+        self.ciram_side
     }
 
     pub fn mem_type_status(self) -> ChrMemTypeStatus {
@@ -307,17 +307,7 @@ impl ChrMapping {
     }
 
     pub fn update_page_id(&mut self, regs: &ChrBankRegisters) {
-        let Self { bank, pages_per_bank: bank_multiple, page_offset, page_number_mask, .. } = self;
-        let location = bank.location().expect("Location to be present in bank.");
-        let bank_number = match location {
-            ChrBankNumberProvider::Fixed(bank_number) => bank_number,
-            ChrBankNumberProvider::Switchable(register_id) => regs.get(register_id),
-            ChrBankNumberProvider::MetaSwitchable(meta_id) => regs.get_from_meta(meta_id),
-        };
-
-        let page_number = ((*bank_multiple * bank_number.to_raw()) & *page_number_mask) + *page_offset;
-        self.page_number = page_number;
-        self.bank_number = bank_number;
+        let Self { bank, .. } = self;
 
         let read_status = bank.read_status_register_id().map_or(ReadStatus::Enabled, |id| regs.read_status(id));
         let write_status = bank.write_status_register_id().map_or(WriteStatus::Enabled, |id| regs.write_status(id));
@@ -344,13 +334,10 @@ impl ChrMapping {
                 self.mem_type_status = ChrMemTypeStatus::Ram(read_status, write_status);
             }
             Some(ChrSource::Ciram(ciram_side)) => {
-                self.page_number = ciram_side.to_page_number();
-                self.bank_number = BankNumber::from_u16(ciram_side.to_page_number());
-                assert!(self.page_number < 2);
+                self.ciram_side = ciram_side;
                 self.mem_type_status = ChrMemTypeStatus::Ciram;
             },
             Some(ChrSource::MapperCustom { page_id }) => {
-                assert_eq!(self.page_number, 0);
                 self.mem_type_status = ChrMemTypeStatus::MapperCustom { page_id };
             }
         }

@@ -377,11 +377,10 @@ impl ChrMemory {
     pub fn chr_rom_bank_string(&self) -> String {
         let mut result = String::new();
         for mapping in self.current_memory_map().pattern_table_page_mappings() {
-            let page_number = mapping.page_number();
             let bank_string = match mapping.mem_type_status() {
-                ChrMemTypeStatus::Rom(..) => page_number.to_string(),
-                ChrMemTypeStatus::Ram(..) => format!("W{page_number}"),
-                ChrMemTypeStatus::Ciram => format!("C{page_number}"),
+                ChrMemTypeStatus::Rom(..) => mapping.rom_page_number().to_string(),
+                ChrMemTypeStatus::Ram(..) => format!("W{}", mapping.rom_page_number()),
+                ChrMemTypeStatus::Ciram => format!("C{:?}", mapping.ciram_side()),
                 ChrMemTypeStatus::MapperCustom { page_id } => format!("M{page_id}"),
             };
 

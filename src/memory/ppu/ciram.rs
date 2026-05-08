@@ -60,11 +60,4 @@ impl CiramSide {
             _ => panic!("Bad page_number for CIRAM side. Must be 0 or 1, but was {page_number}.")
         }
     }
-
-    pub fn to_page_number(self) -> u16 {
-        match self {
-            Self::Left => 0,
-            Self::Right => 1,
-        }
-    }
 }
