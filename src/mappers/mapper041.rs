@@ -17,7 +17,7 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 // Caltron 6-in-1
-// FIXME: Doesn't work. CHR bank switching may be broken.
+// TODO: Properly model bus conflicts.
 #[derive(Default)]
 pub struct Mapper041 {
     inner_bank_select_enabled: bool,
@@ -27,15 +27,15 @@ impl Mapper for Mapper041 {
     fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
-            0x4020..=0x5FFF => { /* Do nothing. */ }
+            0x4020..=0x5FFF => { /* No regs here. */ }
             0x6000..=0x67FF => {
-                let fields = splitbits!(value, "........ ..mccppp");
+                let fields = splitbits!(*addr, "........ ..mccppp");
                 bus.set_name_table_mirroring(fields.m as u8);
                 bus.set_chr_bank_register_bits(C, (fields.c << 2).into(), 0b0000_1100);
                 self.inner_bank_select_enabled = fields.p & 0b100 != 0;
                 bus.set_prg_register(P, fields.p);
             }
-            0x6800..=0x7FFF => { /* Do nothing. */ }
+            0x6800..=0x7FFF => { /* No regs here. */ }
             0x8000..=0xFFFF => {
                 if self.inner_bank_select_enabled {
                     bus.set_chr_bank_register_bits(C, value.into(), 0b0000_0011);
