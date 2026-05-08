@@ -119,7 +119,7 @@ impl Sequencer {
     }
 
     pub fn on_duty(&self) -> bool {
-        self.duty as u8 >> (7 - self.index) == 1
+        self.duty as u8 & (0b1000_0000 >> self.index) != 0
     }
 
     pub fn set_duty(&mut self, duty: Duty) {

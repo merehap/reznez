@@ -56,8 +56,9 @@ impl<'a> PatternTable<'a> {
         let low_byte = self.read(low_index);
         let high_byte = self.read(high_index);
 
-        let low_bit = low_byte >> (7 - column_in_tile as u32) == 1;
-        let high_bit = high_byte >> (7 - column_in_tile as u32) == 1;
+        let mask = 0b1000_0000 >> (column_in_tile as u32);
+        let low_bit = low_byte & mask != 0;
+        let high_bit = high_byte & mask != 0;
         *pixel = palette.rgbt_from_low_high(low_bit, high_bit);
     }
 
@@ -103,8 +104,9 @@ impl<'a> PatternTable<'a> {
         let high_byte = self.read(high_index);
 
         for (column_in_tile, pixel) in tile_sliver.iter_mut().enumerate() {
-            let low_bit = low_byte >> (7 - column_in_tile as u32) == 1;
-            let high_bit = high_byte >> (7 - column_in_tile as u32) == 1;
+            let mask = 0b1000_0000 >> (column_in_tile as u32);
+            let low_bit = low_byte & mask != 0;
+            let high_bit = high_byte & mask != 0;
             *pixel = palette.rgbt_from_low_high(low_bit, high_bit);
         }
     }
