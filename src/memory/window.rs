@@ -128,6 +128,15 @@ impl ChrWindow {
             None
         }
     }
+
+    pub fn rom_address_template(&self, bank_sizes: &BankSizes) -> AddressResolver<ChrBankRegisterId> {
+        self.bank().rom_address_template_override()
+            .map_or(AddressResolver::chr(self.bank.chr_bank_number_provider(), self.size, bank_sizes, 0), |template| template.reduced(bank_sizes))
+    }
+
+    pub fn ram_address_template(&self, bank_sizes: &BankSizes, work_ram_start_inner_bank_number: u16) -> AddressResolver<ChrBankRegisterId> {
+        AddressResolver::chr(self.bank.chr_bank_number_provider(), self.size, bank_sizes, work_ram_start_inner_bank_number)
+    }
 }
 
 const PRG_PAGE_SIZE: u16 = 8 * KIBIBYTE as u16;

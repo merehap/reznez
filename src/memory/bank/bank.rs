@@ -383,6 +383,7 @@ pub struct ChrBank {
     chr_source_provider: ChrSourceProvider,
     read_status_register_id: Option<ReadStatusRegisterId>,
     write_status_register_id: Option<WriteStatusRegisterId>,
+    rom_address_template: Option<AddressResolver<ChrBankRegisterId>>,
 }
 
 impl ChrBank {
@@ -391,30 +392,35 @@ impl ChrBank {
         chr_source_provider: ChrSourceProvider::Fixed(None),
         read_status_register_id: None,
         write_status_register_id: None,
+        rom_address_template: None,
     };
     pub const ROM_OR_RAM: Self = Self {
         bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
         chr_source_provider: ChrSourceProvider::Fixed(Some(ChrSource::RomOrRam)),
         read_status_register_id: None,
         write_status_register_id: None,
+        rom_address_template: None,
     };
     pub const ROM: Self = Self {
         bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
         chr_source_provider: ChrSourceProvider::Fixed(Some(ChrSource::Rom)),
         read_status_register_id: None,
         write_status_register_id: None,
+        rom_address_template: None,
     };
     pub const RAM: Self = Self {
         bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
         chr_source_provider: ChrSourceProvider::Fixed(Some(ChrSource::WorkRam)),
         read_status_register_id: None,
         write_status_register_id: None,
+        rom_address_template: None,
     };
     pub const SWITCHABLE_SOURCE: Self = Self {
         bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
         chr_source_provider: ChrSourceProvider::Switchable(CS0),
         read_status_register_id: None,
         write_status_register_id: None,
+        rom_address_template: None,
     };
 
     pub const fn ciram(ciram_side: CiramSide) -> Self {
@@ -425,6 +431,7 @@ impl ChrBank {
             ))),
             read_status_register_id: None,
             write_status_register_id: None,
+            rom_address_template: None,
         }
     }
 
@@ -434,6 +441,7 @@ impl ChrBank {
             chr_source_provider: ChrSourceProvider::Switchable(source_reg_id),
             read_status_register_id: None,
             write_status_register_id: None,
+            rom_address_template: None,
         }
     }
 
@@ -445,6 +453,7 @@ impl ChrBank {
             )),
             read_status_register_id: None,
             write_status_register_id: None,
+            rom_address_template: None,
         }
     }
 
@@ -458,6 +467,19 @@ impl ChrBank {
 
     pub const fn meta_switchable(self, meta_id: MetaRegisterId) -> Self {
         self.set_location(ChrBankNumberProvider::MetaSwitchable(meta_id))
+    }
+
+    pub const fn rom_address_template(mut self, template: &'static str) -> Self {
+        assert!(
+            self.chr_source_provider.is_mapped(),
+            "An ABSENT bank can't have an override ROM address template."
+        );
+        match AddressResolver::from_formatted(template, 0) {
+            Ok(template) => self.rom_address_template = Some(template),
+            Err(err) => panic!("{}", err),
+        }
+
+        self
     }
 
     pub fn current_chr_source(self, regs: &ChrBankRegisters) -> Option<ChrSource> {
@@ -503,6 +525,10 @@ impl ChrBank {
 
     pub const fn write_status_register_id(&self) -> Option<WriteStatusRegisterId> {
         self.write_status_register_id
+    }
+
+    pub const fn rom_address_template_override(self) -> Option<AddressResolver<ChrBankRegisterId>> {
+        self.rom_address_template
     }
 
     pub fn location(self) -> Result<ChrBankNumberProvider, String> {

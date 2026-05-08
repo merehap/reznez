@@ -36,8 +36,8 @@ impl ChrMemoryMap {
             for page_offset in 0..pages_per_window {
                 page_mappings.push(ChrMapping {
                     bank: window.bank(),
-                    rom_address_resolver: AddressResolver::chr(window.bank().chr_bank_number_provider(), window.size(), rom_bank_sizes, 0),
-                    ram_address_resolver: AddressResolver::chr(window.bank().chr_bank_number_provider(), window.size(), ram_bank_sizes, 0),
+                    rom_address_resolver: window.rom_address_template(rom_bank_sizes),
+                    ram_address_resolver: window.ram_address_template(ram_bank_sizes, 0),
                     pages_per_bank: bank_size.page_multiple(),
                     page_offset,
                     ciram_side: CiramSide::Left,
