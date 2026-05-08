@@ -7,6 +7,7 @@ const LAYOUT: Layout = Layout::builder()
         PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P)),
     ])
     .chr_rom_max_size(128 * KIBIBYTE)
+    .chr_rom_outer_bank_size(32 * KIBIBYTE)
     .chr_layout(&[
         ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM.switchable(C)),
     ])
@@ -31,14 +32,14 @@ impl Mapper for Mapper041 {
             0x6000..=0x67FF => {
                 let fields = splitbits!(*addr, "........ ..mccppp");
                 bus.set_name_table_mirroring(fields.m as u8);
-                bus.set_chr_bank_register_bits(C, (fields.c << 2).into(), 0b0000_1100);
-                self.inner_bank_select_enabled = fields.p & 0b100 != 0;
+                bus.set_chr_rom_outer_bank_number(fields.c);
                 bus.set_prg_register(P, fields.p);
+                self.inner_bank_select_enabled = fields.p & 0b100 != 0;
             }
             0x6800..=0x7FFF => { /* No regs here. */ }
             0x8000..=0xFFFF => {
                 if self.inner_bank_select_enabled {
-                    bus.set_chr_bank_register_bits(C, value.into(), 0b0000_0011);
+                    bus.set_chr_register(C, value & 0b11);
                 }
             }
         }
