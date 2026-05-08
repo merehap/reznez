@@ -129,9 +129,9 @@ impl ChrMemory {
         let value = match index {
             ChrMemoryIndex::Rom(index, ..) => {
                 self.rom[index]
-            },
+            }
             ChrMemoryIndex::Ram(index, ..) => {
-                self.ram[index % self.ram.size()]
+                self.ram[index]
             }
             ChrMemoryIndex::Ciram(side, index) => {
                 ciram.side(side)[index as usize]
@@ -149,10 +149,7 @@ impl ChrMemory {
         match (self.rom_present(), self.ram_present()) {
             (false, false) => panic!("CHR ROM or RAM must be present for peek_raw."),
             (true , true ) => panic!("CHR ROM and RAM must not both be present for peek_raw."),
-            (true , false) => {
-                let index = (self.rom_outer_bank_number as u32 * self.rom_outer_bank_size) | (index & (self.rom_outer_bank_size - 1));
-                PpuPeek::new(self.rom[index], PeekSource::Rom(0.into()))
-            }
+            (true , false) => PpuPeek::new(self.rom[index % self.rom.size()], PeekSource::Rom(0.into())),
             (false, true ) => PpuPeek::new(self.ram[index % self.ram.size()], PeekSource::Ram(0.into())),
         }
     }
@@ -167,7 +164,6 @@ impl ChrMemory {
         let (chr_memory_index, _) = self.current_memory_map().index_for_address(address);
         match chr_memory_index {
             ChrMemoryIndex::Ram(index, _, WriteStatus::Enabled) => {
-                let index = index % self.ram.size();
                 self.ram[index] = value;
                 info!(target: "mapperramwrites", "Setting CHR [${address}]=${value:02} (Work RAM @ ${index:X})");
             }

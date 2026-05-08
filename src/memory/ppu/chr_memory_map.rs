@@ -116,7 +116,8 @@ impl ChrMemoryMap {
                 (ChrMemoryIndex::Rom(index, read_status), PeekSource::Rom(bank_number))
             }
             ChrMemTypeStatus::Ram(read_status, write_status) => {
-                (ChrMemoryIndex::Ram(u32::from(page_number) * KIBIBYTE + u32::from(offset), read_status, write_status), PeekSource::Ram(bank_number))
+                let index = page_mapping.ram_address_resolver.resolve_index(address);
+                (ChrMemoryIndex::Ram(index, read_status, write_status), PeekSource::Ram(bank_number))
             }
             ChrMemTypeStatus::Ciram => {
                 let side = CiramSide::from_page_number(page_number);
@@ -209,7 +210,7 @@ impl ChrMemoryIndex {
 #[derive(Clone, Copy, Debug)]
 pub struct ChrMapping {
     bank: ChrBank,
-    pub rom_address_resolver: AddressResolver<ChrBankRegisterId>,
+    rom_address_resolver: AddressResolver<ChrBankRegisterId>,
     ram_address_resolver: AddressResolver<ChrBankRegisterId>,
     pages_per_bank: u16,
     page_offset: u16,
