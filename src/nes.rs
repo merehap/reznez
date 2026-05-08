@@ -29,7 +29,7 @@ use crate::mapper::{IrqCounterInfo, Mapper, NameTableMirroring, PrgBankRegisterI
 use crate::mapper_list;
 use crate::master_clock::{CycleType, MasterClock};
 use crate::memory::raw_memory::RawMemory;
-use crate::memory::bank::bank_number::{BankLocation, ChrBankRegisterId};
+use crate::memory::bank::bank_number::{BankNumber, ChrBankRegisterId};
 use crate::bus::Bus;
 use crate::memory::signal_level::SignalLevel;
 use crate::ppu::ppu_clock::PpuClock;
@@ -542,19 +542,10 @@ impl Nes {
 
             let prg_registers = prg_memory.bank_registers().registers();
             if &latest.prg_registers != prg_registers {
-                for (i, latest_bank_location) in latest.prg_registers.iter_mut().enumerate() {
-                    if *latest_bank_location != prg_registers[i] {
+                for (i, latest_bank_number) in latest.prg_registers.iter_mut().enumerate() {
+                    if *latest_bank_number != prg_registers[i] {
                         let id: PrgBankRegisterId = FromPrimitive::from_usize(i).unwrap();
-                        match (prg_registers[i], *latest_bank_location) {
-                            (BankLocation::Index(curr), BankLocation::Index(prev)) =>
-                                info!("BankRegister {id:?} changed to {}. Previously: {}", curr.to_raw(), prev.to_raw()),
-                            (BankLocation::Index(curr), BankLocation::Ciram(prev)) =>
-                                info!("BankRegister {id:?} changed to {}. Previously: {prev:?}", curr.to_raw()),
-                            (BankLocation::Ciram(curr), BankLocation::Index(prev)) =>
-                                info!("BankRegister {id:?} changed to {curr:?}. Previously: {}", prev.to_raw()),
-                            (BankLocation::Ciram(curr), BankLocation::Ciram(prev)) =>
-                                info!("BankRegister {id:?} changed to Ciram{curr:?}. Previously: Ciram{prev:?}"),
-                        }
+                        info!("BankRegister {id:?} changed to {}. Previously: {}", prg_registers[i].to_raw(), latest_bank_number.to_raw());
                     }
                 }
 
@@ -563,25 +554,15 @@ impl Nes {
 
             let chr_registers = chr_memory.bank_registers().registers();
             // FIXME
-            let new_regs = &chr_registers.map(BankLocation::Index);
-            if &latest.chr_registers != new_regs {
+            if &latest.chr_registers != chr_registers {
                 for (i, latest_bank_location) in latest.chr_registers.iter_mut().enumerate() {
-                    if *latest_bank_location != new_regs[i] {
+                    if *latest_bank_location != chr_registers[i] {
                         let id: ChrBankRegisterId = FromPrimitive::from_usize(i).unwrap();
-                        match (new_regs[i], *latest_bank_location) {
-                            (BankLocation::Index(curr), BankLocation::Index(prev)) =>
-                                info!("BankRegister {id:?} changed to {}. Previously: {}", curr.to_raw(), prev.to_raw()),
-                            (BankLocation::Index(curr), BankLocation::Ciram(prev)) =>
-                                info!("BankRegister {id:?} changed to {}. Previously: {prev:?}", curr.to_raw()),
-                            (BankLocation::Ciram(curr), BankLocation::Index(prev)) =>
-                                info!("BankRegister {id:?} changed to {curr:?}. Previously: {}", prev.to_raw()),
-                            (BankLocation::Ciram(curr), BankLocation::Ciram(prev)) =>
-                                info!("BankRegister {id:?} changed to Ciram{curr:?}. Previously: Ciram{prev:?}"),
-                        }
+                        info!("BankRegister {id:?} changed to {}. Previously: {}", chr_registers[i].to_raw(), latest_bank_location.to_raw());
                     }
                 }
 
-                latest.chr_registers = *new_regs;
+                latest.chr_registers = *chr_registers;
             }
 
             let meta_registers = chr_memory.bank_registers().meta_registers();
@@ -672,8 +653,8 @@ struct LatestValues {
 
     prg_layout_index_detector: EdgeDetector<u8>,
     chr_layout_index_detector: EdgeDetector<u8>,
-    prg_registers: [BankLocation; 11],
-    chr_registers: [BankLocation; 16],
+    prg_registers: [BankNumber; 11],
+    chr_registers: [BankNumber; 16],
     meta_registers: [ChrBankRegisterId; 4],
     name_table_mirroring: NameTableMirroring,
     read_statuses: [ReadStatus; 16],
@@ -716,7 +697,7 @@ impl LatestValues {
             prg_layout_index_detector: EdgeDetector::starting_value(initial_bus.prg_memory.layout_index()),
             chr_layout_index_detector: EdgeDetector::starting_value(initial_bus.chr_memory.layout_index()),
             prg_registers: *initial_bus.prg_memory().bank_registers().registers(),
-            chr_registers: initial_bus.chr_memory().bank_registers().registers().map(BankLocation::Index),
+            chr_registers: *initial_bus.chr_memory().bank_registers().registers(),
             meta_registers: *initial_bus.chr_memory().bank_registers().meta_registers(),
             name_table_mirroring: initial_bus.chr_memory().name_table_mirroring(),
             read_statuses: *initial_bus.prg_memory().bank_registers().read_statuses(),

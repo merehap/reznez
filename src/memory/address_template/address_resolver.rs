@@ -126,7 +126,7 @@ impl AddressResolver<PrgBankRegisterId> {
         for index in 0..segments.len() {
             let p = PrgBankRegisterId::P; // Dummy value since PRG doesn't support meta IDs yet.
             if let Some(reg_id) = segments[index].register_id([p, p, p, p]) {
-            let raw_value = regs.get(reg_id).index().unwrap().to_raw();
+            let raw_value = regs.get(reg_id).to_raw();
                 segments[index].set_raw_value(raw_value);
             }
         }

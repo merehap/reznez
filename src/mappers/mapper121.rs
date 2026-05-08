@@ -127,7 +127,7 @@ impl Mapper for Mapper121 {
         }
 
         if !self.prg_overrides_active {
-            bus.set_prg_register(X, bus.prg_memory.bank_registers().get(Q).index().unwrap().to_raw());
+            bus.set_prg_register(X, bus.prg_memory.bank_registers().get(Q).to_raw());
             bus.set_prg_register(Y, BankNumber::from_i16(-2).to_raw());
             bus.set_prg_register(Z, BankNumber::from_i16(-1).to_raw());
         }

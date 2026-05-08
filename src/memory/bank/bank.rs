@@ -5,7 +5,6 @@ use crate::mapper::WriteStatus;
 use crate::memory::address_template::address_resolver::AddressResolver;
 use crate::memory::bank::bank::ChrSourceRegisterId::*;
 use crate::memory::bank::bank::PrgSourceRegisterId::*;
-use crate::memory::bank::bank_number::BankLocation;
 use crate::memory::bank::bank_number::MemSpace;
 use crate::memory::bank::bank_number::{
     BankNumber, MetaRegisterId, PrgBankRegisterId, PrgBankRegisters,
@@ -286,7 +285,7 @@ impl PrgBankNumberProvider {
     fn bank_number(self, regs: &PrgBankRegisters) -> BankNumber {
         match self {
             Self::Fixed(bank_number) => bank_number,
-            Self::Switchable(register_id) => regs.get(register_id).index().unwrap(),
+            Self::Switchable(register_id) => regs.get(register_id),
         }
     }
 }
@@ -543,16 +542,16 @@ impl ChrBank {
         self.bank_number_provider
     }
 
-    pub fn bank_location(self, regs: &ChrBankRegisters) -> Option<BankLocation> {
+    pub fn bank_location(self, regs: &ChrBankRegisters) -> Option<BankNumber> {
         self.location()
             .ok()
-            .map(|provider| BankLocation::Index(provider.bank_location(regs)))
+            .map(|provider| provider.bank_number(regs))
     }
 
     pub fn bank_number(self, regs: &ChrBankRegisters) -> Option<BankNumber> {
         self.location()
             .ok()
-            .map(|provider| provider.bank_location(regs))
+            .map(|provider| provider.bank_number(regs))
     }
 
     pub const fn chr_source(mut self, id: ChrSourceRegisterId) -> Self {
@@ -612,7 +611,7 @@ pub enum ChrBankNumberProvider {
 impl ChrBankNumberProvider {
     const FIXED_ZERO: Self = Self::Fixed(BankNumber::ZERO);
 
-    pub fn bank_location(self, registers: &ChrBankRegisters) -> BankNumber {
+    pub fn bank_number(self, registers: &ChrBankRegisters) -> BankNumber {
         match self {
             Self::Fixed(bank_number) => bank_number,
             Self::Switchable(register_id) => registers.get(register_id),

@@ -34,7 +34,7 @@ impl From<u8> for BankNumber {
 
 #[derive(Debug)]
 pub struct PrgBankRegisters {
-    registers: [BankLocation; 11],
+    registers: [BankNumber; 11],
     read_statuses: [ReadStatus; 16],
     write_statuses: [WriteStatus; 16],
     rom_ram_modes: [PrgSource; 12],
@@ -45,7 +45,7 @@ pub struct PrgBankRegisters {
 impl PrgBankRegisters {
     pub fn new(cartridge_has_ram: bool, work_ram_start_page_number: u16) -> Self {
         Self {
-            registers: [BankLocation::Index(BankNumber(0)); 11],
+            registers: [BankNumber(0); 11],
             read_statuses: [ReadStatus::Enabled; 16],
             write_statuses: [WriteStatus::Enabled; 16],
             rom_ram_modes: [PrgSource::RamOrRom; 12],
@@ -54,7 +54,7 @@ impl PrgBankRegisters {
         }
     }
 
-    pub fn registers(&self) -> &[BankLocation; 11] {
+    pub fn registers(&self) -> &[BankNumber; 11] {
         &self.registers
     }
 
@@ -74,12 +74,12 @@ impl PrgBankRegisters {
         self.work_ram_start_page_number
     }
 
-    pub fn get(&self, id: PrgBankRegisterId) -> BankLocation {
+    pub fn get(&self, id: PrgBankRegisterId) -> BankNumber {
         self.registers[id as usize]
     }
 
     pub fn set(&mut self, id: PrgBankRegisterId, bank_number: BankNumber) {
-        self.registers[id as usize] = BankLocation::Index(bank_number);
+        self.registers[id as usize] = bank_number;
     }
 
     pub fn read_status(&self, id: ReadStatusRegisterId) -> ReadStatus {
@@ -213,22 +213,6 @@ impl ChrBankRegisters {
 
     pub fn set_chr_source(&mut self, id: ChrSourceRegisterId, chr_source: ChrSource) {
         self.chr_sources[id as usize] = chr_source;
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum BankLocation {
-    Index(BankNumber),
-    Ciram(CiramSide),
-}
-
-impl BankLocation {
-    pub fn index(self) -> Option<BankNumber> {
-        if let BankLocation::Index(index) = self {
-            Some(index)
-        } else {
-            None
-        }
     }
 }
 
