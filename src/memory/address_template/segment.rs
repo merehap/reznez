@@ -266,7 +266,7 @@ impl <Id: Copy + const RegisterId> Label<Id> {
         match c {
             'o' => Ok(Self::OuterBank),
             'a' => Ok(Self::AddressBus),
-            'p'..='z' => RegisterId::from_char(c)
+            'c'..='n' | 'p'..='z' => RegisterId::from_char(c)
                 .map(Some)
                 .map(Label::InnerBankSegment)
                 .ok_or("Bad label char"),

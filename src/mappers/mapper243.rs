@@ -8,7 +8,7 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.rom_address_template("c₀₁c₀₀d₀₀e₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::new(
@@ -49,11 +49,11 @@ impl Mapper for Mapper243 {
 
                 match self.reg_number {
                     0 | 1 | 3 => { /* These regs store values, but do nothing else. */ }
-                    2 => bus.set_chr_bank_register_bits(C, u16::from(value)     , 0b0000_0001),
-                    4 => bus.set_chr_bank_register_bits(C, u16::from(value << 1), 0b0000_0010),
-                    6 => bus.set_chr_bank_register_bits(C, u16::from(value << 2), 0b0000_1100),
+                    2 => bus.set_chr_register(E, value & 1),
+                    4 => bus.set_chr_register(D, value & 1),
                     5 => bus.set_prg_register(P, value & 0b11),
-                    7 => bus.set_name_table_mirroring(value >> 1),
+                    6 => bus.set_chr_register(C, value & 0b11),
+                    7 => bus.set_name_table_mirroring((value >> 1) & 0b11),
                     _ => unreachable!(),
                 }
             }

@@ -4,7 +4,7 @@ use crate::memory::address_template::segment::{Label, LabelOrConstant, Segment};
 use crate::memory::bank::bank_number::RegisterId;
 use crate::util::const_vec::ConstVec;
 
-const MAX_SEGMENT_COUNT: usize = 3;
+const MAX_SEGMENT_COUNT: usize = 4;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct BitTemplate<ID: const RegisterId> {
