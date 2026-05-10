@@ -9,7 +9,7 @@ const LAYOUT: Layout = Layout::builder()
         PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
-    .chr_rom_inner_bank_size(2 * KIBIBYTE)
+    .override_chr_rom_inner_bank_size(2 * KIBIBYTE)
     .chr_layout(&[
         ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C)),
         ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(D)),
