@@ -540,6 +540,16 @@ impl Nes {
                 info!("CHR layout changed to index {}. Previously: {}.", chr_memory.layout_index(), prev_chr_layout_index);
             }
 
+            let prev_prg_outer_bank_number = latest.prg_outer_bank_number_detector.current_value();
+            if latest.prg_outer_bank_number_detector.set_value_then_detect(prg_memory.rom_outer_bank_number()) {
+                info!("PRG outer bank number changed to {}. Previously: {prev_prg_outer_bank_number}.", prg_memory.rom_outer_bank_number());
+            }
+
+            let prev_chr_outer_bank_number = latest.chr_outer_bank_number_detector.current_value();
+            if latest.chr_outer_bank_number_detector.set_value_then_detect(chr_memory.rom_outer_bank_number()) {
+                info!("PRG outer bank number changed to {}. Previously: {prev_chr_outer_bank_number}.", chr_memory.rom_outer_bank_number());
+            }
+
             let prg_registers = prg_memory.bank_registers().registers();
             if &latest.prg_registers != prg_registers {
                 for (i, latest_bank_number) in latest.prg_registers.iter_mut().enumerate() {
@@ -553,7 +563,6 @@ impl Nes {
             }
 
             let chr_registers = chr_memory.bank_registers().registers();
-            // FIXME
             if &latest.chr_registers != chr_registers {
                 for (i, latest_bank_location) in latest.chr_registers.iter_mut().enumerate() {
                     if *latest_bank_location != chr_registers[i] {
@@ -653,6 +662,8 @@ struct LatestValues {
 
     prg_layout_index_detector: EdgeDetector<u8>,
     chr_layout_index_detector: EdgeDetector<u8>,
+    prg_outer_bank_number_detector: EdgeDetector<u8>,
+    chr_outer_bank_number_detector: EdgeDetector<u8>,
     prg_registers: [BankNumber; 11],
     chr_registers: [BankNumber; 16],
     meta_registers: [ChrBankRegisterId; 4],
@@ -696,6 +707,8 @@ impl LatestValues {
 
             prg_layout_index_detector: EdgeDetector::starting_value(initial_bus.prg_memory.layout_index()),
             chr_layout_index_detector: EdgeDetector::starting_value(initial_bus.chr_memory.layout_index()),
+            prg_outer_bank_number_detector: EdgeDetector::any_edge(),
+            chr_outer_bank_number_detector: EdgeDetector::any_edge(),
             prg_registers: *initial_bus.prg_memory().bank_registers().registers(),
             chr_registers: *initial_bus.chr_memory().bank_registers().registers(),
             meta_registers: *initial_bus.chr_memory().bank_registers().meta_registers(),

@@ -492,7 +492,7 @@ impl Bus {
     }
 
     pub fn set_chr_rom_outer_bank_number(&mut self, index: u8) {
-        self.chr_memory.set_chr_rom_outer_bank_number(index);
+        self.chr_memory.set_rom_outer_bank_number(index);
     }
 
     pub fn set_prg_register<INDEX: Into<u16>>(&mut self, id: PrgBankRegisterId, value: INDEX) {

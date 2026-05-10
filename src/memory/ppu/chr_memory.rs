@@ -231,7 +231,11 @@ impl ChrMemory {
         self.layout_index = index;
     }
 
-    pub fn set_chr_rom_outer_bank_number(&mut self, number: u8) {
+    pub fn rom_outer_bank_number(&self) -> u8 {
+        self.rom_outer_bank_number
+    }
+
+    pub fn set_rom_outer_bank_number(&mut self, number: u8) {
         self.rom_outer_bank_number = number;
 
         for memory_map in &mut self.memory_maps {

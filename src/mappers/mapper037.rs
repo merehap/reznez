@@ -55,7 +55,7 @@ impl Mapper for Mapper037 {
         // MMC3 is still setting W0 WriteStatus to Enabled/Disabled,
         // even though this mapper substitutes in a layout that doesn't use W0.
         if matches!(*addr, 0x6000..=0x7FFF) && bus.prg_memory.bank_registers().write_status(WS0) == WriteStatus::Enabled {
-            bus.chr_memory.set_chr_rom_outer_bank_number((value >> 2) & 1);
+            bus.chr_memory.set_rom_outer_bank_number((value >> 2) & 1);
 
             let outer_bank_numbers = [0, 0, 0, 1, 2, 2, 2, 3];
             let outer_bank_number = outer_bank_numbers[usize::from(value & 0b111)];
