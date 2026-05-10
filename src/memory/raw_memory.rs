@@ -33,7 +33,6 @@ impl RawMemory {
         let mirror_atom_size = len - mirror_start;
         assert!(mirror_start.is_multiple_of(mirror_atom_size), "Very weird mem size can't be mirrored properly.");
         let (multiple, remainder) = mirror_start.div_rem_euclid(&mirror_atom_size);
-        log::info!("Multiple: {multiple}. Size: {len:X}, Atom: {mirror_atom_size:X}");
         assert_eq!(remainder, 0);
 
         let mut result = self.0.clone();

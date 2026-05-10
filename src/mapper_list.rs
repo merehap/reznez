@@ -350,7 +350,10 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         // JF-10 misdump (only Urusei Yatsura - Lum no Wedding Bell)
         (101, None) => m::mapper101::MAPPER101.supported(),
         (102, _) => UnassignedMapper,
-        (103..=106, _) => TodoMapper,
+        (103, _) => TodoMapper,
+        // PEGASUS 5 IN 1 (Golden Five)
+        (104, None) => m::mapper104::Mapper104::default().supported(),
+        (105..=106, _) => TodoMapper,
         // Magic Dragon
         (107, None) => m::mapper107::Mapper107.supported(),
         (108, _) => TodoMapper,

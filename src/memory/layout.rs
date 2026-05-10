@@ -211,7 +211,7 @@ impl LayoutBuilder {
         self
     }
 
-    pub const fn prg_rom_inner_bank_size(&mut self, size: u32) -> &mut Self {
+    pub const fn override_prg_rom_inner_bank_size(&mut self, size: u32) -> &mut Self {
         self.prg_rom_inner_bank_size = Some(size);
         self
     }
