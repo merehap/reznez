@@ -13,7 +13,7 @@ use crate::memory::bank::bank_number::{
 use super::bank_number::{ChrBankRegisterId, ChrBankRegisters};
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-enum PrgSourceProvider {
+pub enum PrgSourceProvider {
     Fixed(Option<PrgSource>),
     Switchable(PrgSourceRegisterId),
 }
@@ -185,6 +185,10 @@ impl PrgBank {
         }
 
         self
+    }
+
+    pub const fn source_provider(&self) -> PrgSourceProvider {
+        self.prg_source_provider
     }
 
     pub const fn is_rom(self) -> bool {

@@ -1,9 +1,11 @@
+use std::fmt;
+
 use crate::mapper::PrgBankRegisterId;
 use crate::memory::window::PrgWindow;
 use crate::memory::bank::bank_number::ReadStatus;
 use crate::memory::address_template::address_resolver::AddressResolver;
 use crate::memory::address_template::bank_sizes::BankSizes;
-use crate::memory::bank::bank::PrgBank;
+use crate::memory::bank::bank::{PrgBank, PrgSource, PrgSourceProvider};
 use crate::memory::bank::bank_number::{PrgMemTypeStatus, MemSpace, PrgBankRegisters};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
@@ -110,6 +112,32 @@ impl PrgMemoryMap {
     }
 }
 
+impl fmt::Display for PrgMemoryMap {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (i, slot) in self.page_mappings.iter().enumerate() {
+            let i = i as u16;
+            match slot {
+                PrgMappingSlot::Normal(mapping) => {
+                    let start = 0x6000 + 0x2000 * i;
+                    let end = start + 0x1FFF;
+                    writeln!(f, "Mapping {start:#X}-{end:#X}")?;
+                    write!(f, "\t{mapping}")?;
+                }
+                PrgMappingSlot::Multi(mappings) => {
+                    for (si, mapping) in mappings.iter().enumerate() {
+                        let start = 0x6000 + 0x2000 * i + 0x80 * (si as u16);
+                        let end = start + 0x7F;
+                        writeln!(f, "Sub-mapping {start:#X}-{end:#X}")?;
+                        write!(f, "\t{mapping}")?;
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum PrgMappingSlot {
     // 8 KiB pages
@@ -198,5 +226,22 @@ impl PrgMapping {
         let rom_template_matches = self.rom_address_resolver == other.rom_address_resolver;
         let ram_template_matches = self.ram_address_resolver == other.ram_address_resolver;
         rom_template_matches || ram_template_matches
+    }
+}
+
+impl fmt::Display for PrgMapping {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.bank.source_provider() {
+            PrgSourceProvider::Fixed(None) =>
+                writeln!(f, "ABSENT"),
+            PrgSourceProvider::Fixed(Some(PrgSource::Rom)) =>
+                writeln!(f, "ROM: {}", self.rom_address_resolver.formatted()),
+            PrgSourceProvider::Fixed(Some(PrgSource::RamOrAbsent)) =>
+                writeln!(f, "RAM: {}", self.ram_address_resolver.formatted()),
+            PrgSourceProvider::Fixed(Some(PrgSource::RamOrRom)) | PrgSourceProvider::Switchable(_) => {
+                writeln!(f, "ROM: {}", self.rom_address_resolver.formatted())?;
+                writeln!(f, "RAM: {}", self.ram_address_resolver.formatted())
+            }
+        }
     }
 }
