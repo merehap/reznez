@@ -55,7 +55,6 @@ impl PrgMemoryMap {
         let raw_addr = *addr - 0x6000;
         let mapping_index = raw_addr / PAGE_SIZE;
         let offset_in_page = raw_addr % PAGE_SIZE;
-
         match &self.page_mappings[mapping_index as usize] {
             PrgMappingSlot::Normal(page_mapping) => page_mapping.index_for_address(addr),
             PrgMappingSlot::Multi(page_mappings) => {
@@ -121,14 +120,14 @@ impl fmt::Display for PrgMemoryMap {
                     let start = 0x6000 + 0x2000 * i;
                     let end = start + 0x1FFF;
                     writeln!(f, "Mapping {start:#X}-{end:#X}")?;
-                    write!(f, "\t{mapping}")?;
+                    write!(f, "{mapping}")?;
                 }
                 PrgMappingSlot::Multi(mappings) => {
                     for (si, mapping) in mappings.iter().enumerate() {
                         let start = 0x6000 + 0x2000 * i + 0x80 * (si as u16);
                         let end = start + 0x7F;
                         writeln!(f, "Sub-mapping {start:#X}-{end:#X}")?;
-                        write!(f, "\t{mapping}")?;
+                        write!(f, "{mapping}")?;
                     }
                 }
             }
@@ -233,14 +232,14 @@ impl fmt::Display for PrgMapping {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.bank.source_provider() {
             PrgSourceProvider::Fixed(None) =>
-                writeln!(f, "ABSENT"),
+                writeln!(f, "\tABSENT"),
             PrgSourceProvider::Fixed(Some(PrgSource::Rom)) =>
-                writeln!(f, "ROM: {}", self.rom_address_resolver.formatted()),
+                writeln!(f, "\tROM: {}", self.rom_address_resolver.formatted()),
             PrgSourceProvider::Fixed(Some(PrgSource::RamOrAbsent)) =>
-                writeln!(f, "RAM: {}", self.ram_address_resolver.formatted()),
+                writeln!(f, "\tRAM: {}", self.ram_address_resolver.formatted()),
             PrgSourceProvider::Fixed(Some(PrgSource::RamOrRom)) | PrgSourceProvider::Switchable(_) => {
-                writeln!(f, "ROM: {}", self.rom_address_resolver.formatted())?;
-                writeln!(f, "RAM: {}", self.ram_address_resolver.formatted())
+                writeln!(f, "\tROM: {}", self.rom_address_resolver.formatted())?;
+                writeln!(f, "\tRAM: {}", self.ram_address_resolver.formatted())
             }
         }
     }

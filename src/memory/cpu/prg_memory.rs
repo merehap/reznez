@@ -127,6 +127,11 @@ impl PrgMemory {
         }
     }
 
+    // Very few mappers should use this.
+    pub fn write_raw_work_ram(&mut self, index: u32, value: u8) {
+        self.work_ram[index] = value;
+    }
+
     pub fn set_bank_register<INDEX: Into<u16>>(&mut self, id: PrgBankRegisterId, value: INDEX) {
         self.regs.set(id, BankNumber::from_u16(value.into()));
         self.update_page_ids();

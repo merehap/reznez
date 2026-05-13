@@ -143,11 +143,10 @@ impl <ID: const RegisterId> BitTemplate<ID> {
         let mut atoms: Vec<(char, u8)> = Vec::new();
         for segment in self.segments.as_iter() {
             for (si, subscript) in segment.subscripts().iter().enumerate() {
-                let i: u8 = atoms.len().try_into().unwrap();
                 let atom = match segment.label_at(si as u8) {
                     LabelOrConstant::Label(c) => (c, *subscript),
-                    LabelOrConstant::Zero => ('0', i),
-                    LabelOrConstant::One => ('1', i),
+                    LabelOrConstant::Zero => ('0', *subscript),
+                    LabelOrConstant::One => ('1', *subscript),
                 };
                 atoms.push(atom);
             }
