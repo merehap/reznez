@@ -29,6 +29,7 @@ pub struct PpuRegisters {
 
     // PPUSTATUS (0x2002) sub-registers
     pub vblank_active: bool,
+    pub ppu_status_vblank_active: bool,
     pub sprite0_hit: bool,
     pub sprite_overflow: bool,
 
@@ -76,6 +77,7 @@ impl PpuRegisters {
 
             // PPUSTATUS (0x2002)
             vblank_active: false,
+            ppu_status_vblank_active: false,
             sprite0_hit: false,
             sprite_overflow: false,
 
@@ -155,7 +157,7 @@ impl PpuRegisters {
 
     // Peek 0x2002
     pub fn peek_status(&self) -> ReadResult {
-        let v = self.vblank_active;
+        let v = self.ppu_status_vblank_active;
         let h = self.sprite0_hit;
         let o = self.sprite_overflow;
         let b = self.ppu_io_bus.value() & 0b0001_1111;

@@ -163,6 +163,8 @@ impl Cpu {
             return;
         }
 
+        bus.ppu_regs.ppu_status_vblank_active = bus.ppu_regs.vblank_active;
+
         if bus.cpu.nmi_status == NmiStatus::Pending {
             bus.cpu.nmi_status = NmiStatus::Ready;
         } else if bus.cpu.irq_status == IrqStatus::Pending && !bus.cpu.status.interrupts_disabled {
