@@ -48,8 +48,6 @@ pub struct Cpu {
     address_carry: i8,
     operand: u8,
 
-    vblank_active_latch: bool,
-
     // TODO: Remove
     formatted_step: String,
     original_program_counter: CpuAddress,
@@ -88,8 +86,6 @@ impl Cpu {
             computed_address: CpuAddress::ZERO,
             address_carry: 0,
             operand: 0,
-
-            vblank_active_latch: false,
 
             formatted_step: "".to_owned(),
             original_program_counter: CpuAddress::ZERO,
@@ -172,8 +168,6 @@ impl Cpu {
         } else if bus.cpu.irq_status == IrqStatus::Pending && !bus.cpu.status.interrupts_disabled {
             bus.cpu.irq_status = IrqStatus::Ready;
         }
-
-        bus.cpu.vblank_active_latch = bus.ppu_regs.vblank_active;
 
         bus.cpu.step = bus.cpu.mode_state.current_step();
 
