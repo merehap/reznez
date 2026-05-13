@@ -89,7 +89,7 @@ impl SpriteEvaluator {
             }
 
             if self.secondary_oam.is_full() {
-                ppu_regs.sprite_overflow = true;
+                ppu_regs.sprite_overflow_pending = true;
             }
 
             self.secondary_oam.advance();

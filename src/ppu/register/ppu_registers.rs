@@ -32,7 +32,9 @@ pub struct PpuRegisters {
     pub ppu_status_vblank_active: bool,
     pub suppress_vblank_active: bool,
     pub sprite0_hit: bool,
+    pub sprite0_hit_pending: bool,
     pub sprite_overflow: bool,
+    pub sprite_overflow_pending: bool,
 
     // OAMADDR (0x2003) and OAMDATA (0x2004)
     pub oam_addr: OamAddress,
@@ -78,7 +80,9 @@ impl PpuRegisters {
             ppu_status_vblank_active: false,
             suppress_vblank_active: false,
             sprite0_hit: false,
+            sprite0_hit_pending: false,
             sprite_overflow: false,
+            sprite_overflow_pending: false,
 
             // OAMADDR (0x2003) and OAMDATA (0x2004)
             oam_addr: OamAddress::from_u8(0),
@@ -288,6 +292,16 @@ impl PpuRegisters {
     pub fn tick(&mut self, clock: &PpuClock) -> PpuRegistersTickResult {
         if clock.cycle() == 1 {
             self.ppu_io_bus.maybe_decay();
+        }
+
+        if self.sprite0_hit_pending {
+            self.sprite0_hit = true;
+            self.sprite0_hit_pending = false;
+        }
+
+        if self.sprite_overflow_pending {
+            self.sprite_overflow = true;
+            self.sprite_overflow_pending = false;
         }
 
         use RenderingToggleState::*;

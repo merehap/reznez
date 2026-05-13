@@ -213,7 +213,7 @@ impl Ppu {
                     bus.ppu.pattern_source_frame.set_sprite_pixel(pixel_column, pixel_row, bank_pixel, priority, false);
 
                     if frame.pixel(bus.ppu_regs.mask(), pixel_column, pixel_row).1.hit() {
-                        bus.ppu_regs.sprite0_hit = true;
+                        bus.ppu_regs.sprite0_hit_pending = true;
                     }
                 }
             }
