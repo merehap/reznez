@@ -425,6 +425,12 @@ impl Nes {
             if latest.oam_cpu_halt_detector.set_value_then_detect(self.bus.oam_dma.latest_action().cpu_should_be_halted()) {
                 info!("CPU halted for OAM DMA transfer at {}.", self.bus.oam_dma.address());
             }
+            if latest.nmi_signal_detector.set_value_then_detect(self.bus.cpu_pinout.nmi_signal_detector.current_value()) {
+                info!("NMI signal went {:?}.", self.bus.cpu_pinout.nmi_signal_detector.current_value());
+            }
+            if latest.reset_signal_detector.set_value_then_detect(self.bus.cpu_pinout.reset.current_value()) {
+                info!("RESET signal went {:?}.", self.bus.cpu_pinout.reset.current_value());
+            }
         }
 
         if log_enabled!(target: "mapperirqcounter", Info) {
@@ -648,6 +654,9 @@ struct LatestValues {
     dmc_irq_pending_detector: EdgeDetector<bool>,
     mapper_irq_asserted_detector: EdgeDetector<bool>,
 
+    nmi_signal_detector: EdgeDetector<SignalLevel>,
+    reset_signal_detector: EdgeDetector<SignalLevel>,
+
     irq_status_detector: EdgeDetector<IrqStatus>,
     nmi_status_detector: EdgeDetector<NmiStatus>,
     reset_status_detector: EdgeDetector<ResetStatus>,
@@ -692,6 +701,9 @@ impl LatestValues {
             apu_frame_irq_pending_detector: EdgeDetector::target_value(true),
             dmc_irq_pending_detector: EdgeDetector::target_value(true),
             mapper_irq_asserted_detector: EdgeDetector::any_edge(),
+
+            nmi_signal_detector: EdgeDetector::any_edge(),
+            reset_signal_detector: EdgeDetector::any_edge(),
 
             irq_status_detector: EdgeDetector::any_edge(),
             nmi_status_detector: EdgeDetector::any_edge(),
