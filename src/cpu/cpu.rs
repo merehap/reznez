@@ -13,7 +13,7 @@ use crate::cpu::status;
 use crate::cpu::status::Status;
 use crate::cpu::step::*;
 use crate::mapper::Mapper;
-use crate::memory::cpu::cpu_address::CpuAddress;
+use crate::memory::cpu::cpu_address::{CpuAddress, FriendlyCpuAddress};
 use crate::bus::{Bus, IRQ_VECTOR_HIGH, IRQ_VECTOR_LOW, NMI_VECTOR_HIGH, NMI_VECTOR_LOW, RESET_VECTOR_HIGH, RESET_VECTOR_LOW};
 use crate::memory::cpu::cpu_pinout::CpuPinout;
 use crate::memory::signal_level::SignalLevel;
@@ -198,15 +198,12 @@ impl Cpu {
             bus.cpu_pinout.data_bus = bus.cpu.field_value(&mut bus.cpu_pinout, field);
         }
 
-        bus.cpu.value = if bus.cpu.step.is_read() {
-            bus.cpu_read(mapper, current_address_bus_type)
-        } else {
-            bus.cpu_write(mapper, current_address_bus_type);
-            bus.cpu_pinout.data_bus
-        };
-
-        if let Step::ReadField(field, ..) = bus.cpu.step {
-            bus.cpu.set_field_value(field, bus.cpu.value);
+        if !bus.cpu.step.is_read() {
+            bus.cpu_write(mapper, bus.cpu.step.address_bus_type());
+            bus.cpu.value = bus.cpu_pinout.data_bus;
+        } else if address.to_friendly() == FriendlyCpuAddress::PpuStatus {
+            bus.ppu_regs.vblank_active = false;
+            bus.ppu_regs.suppress_vblank_active = true;
         }
     }
 
@@ -215,6 +212,14 @@ impl Cpu {
         if bus.cpu_pinout.reset.current_value() == SignalLevel::Low {
             // The CPU doesn't do anything while the RESET button is held down.
             return None;
+        }
+
+        if bus.cpu.step.is_read() {
+            bus.cpu.value = bus.cpu_read(mapper, bus.cpu.step.address_bus_type());
+        }
+
+        if let Step::ReadField(field, ..) = bus.cpu.step {
+            bus.cpu.set_field_value(field, bus.cpu.value);
         }
 
         if bus.cpu.step.is_dma() {

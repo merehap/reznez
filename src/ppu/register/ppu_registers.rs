@@ -30,11 +30,9 @@ pub struct PpuRegisters {
     // PPUSTATUS (0x2002) sub-registers
     pub vblank_active: bool,
     pub ppu_status_vblank_active: bool,
+    pub suppress_vblank_active: bool,
     pub sprite0_hit: bool,
     pub sprite_overflow: bool,
-
-    // PPUSTATUS (0x2002) and PPUCLOCK
-    pub suppress_vblank_active: bool,
 
     // OAMADDR (0x2003) and OAMDATA (0x2004)
     pub oam_addr: OamAddress,
@@ -78,11 +76,9 @@ impl PpuRegisters {
             // PPUSTATUS (0x2002)
             vblank_active: false,
             ppu_status_vblank_active: false,
+            suppress_vblank_active: false,
             sprite0_hit: false,
             sprite_overflow: false,
-
-            // PPUSTATUS (0x2002) and PPUCLOCK
-            suppress_vblank_active: false,
 
             // OAMADDR (0x2003) and OAMDATA (0x2004)
             oam_addr: OamAddress::from_u8(0),
@@ -165,16 +161,11 @@ impl PpuRegisters {
     }
 
     // Read 0x2002
-    pub fn read_status(&mut self, clock: &PpuClock) -> ReadResult {
+    pub fn read_status(&mut self) -> ReadResult {
         let value = self.peek_status();
         self.ppu_io_bus.update_from_status_read(value.unmasked_value());
 
         self.write_toggle = WriteToggle::FirstByte;
-        self.vblank_active = false;
-        // https://wiki.nesdev.org/w/index.php?title=NMI#Race_condition
-        if clock.scanline() == 241 && clock.cycle() == 0 {
-            self.suppress_vblank_active = true;
-        }
 
         ReadResult::full(self.ppu_io_bus.value())
     }

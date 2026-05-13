@@ -165,6 +165,7 @@ impl DerefMut for CpuAddress {
     }
 }
 
+#[derive(PartialEq, Eq)]
 pub enum FriendlyCpuAddress {
     CpuInternalRam(u11),
 
@@ -226,7 +227,7 @@ impl FriendlyCpuAddress {
                 0x2004 => OamData,
                 0x2005 => PpuScroll,
                 0x2006 => PpuAddress,
-                0x2007 => PpuData, 
+                0x2007 => PpuData,
                 _ => unreachable!(),
             }
 

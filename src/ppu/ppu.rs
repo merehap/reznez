@@ -82,6 +82,11 @@ impl Ppu {
             Ppu::execute_cycle_action(bus, mapper, frame, cycle_action);
         }
 
+        if bus.ppu_regs.suppress_vblank_active {
+            bus.ppu_regs.vblank_active = false;
+            bus.ppu_regs.suppress_vblank_active = false;
+        }
+
         if bus.ppu_regs.vblank_active && bus.ppu_regs.nmi_enabled() {
             bus.cpu_pinout.nmi_signal_detector.set_value(SignalLevel::Low);
         } else {
@@ -331,15 +336,9 @@ impl Ppu {
             }
 
             StartVblank => {
-                if bus.ppu_regs.suppress_vblank_active {
-                    info!(target: "ppuflags", " {}\tSuppressing vblank.", bus.ppu_clock());
-                } else {
-                    bus.ppu_regs.vblank_active = true;
-                    // "During VBlank ... the value on the PPU address bus is the current value of the v register."
-                    bus.set_ppu_address_bus(mapper, bus.ppu_regs.current_address);
-                }
-
-                bus.ppu_regs.suppress_vblank_active = false;
+                bus.ppu_regs.vblank_active = true;
+                // "During VBlank ... the value on the PPU address bus is the current value of the v register."
+                bus.set_ppu_address_bus(mapper, bus.ppu_regs.current_address);
             }
             SetInitialScrollOffsets => {
                 if !bus.ppu_regs.background_enabled() { return; }

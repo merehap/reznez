@@ -301,7 +301,7 @@ impl Bus {
         use FriendlyCpuAddress as Addr;
         let normal_read_value = match addr.to_friendly() {
             Addr::CpuInternalRam(index) => self.cpu_internal_ram().peek(index),
-            Addr::PpuStatus             => self.ppu_regs.read_status(self.master_clock.ppu_clock()),
+            Addr::PpuStatus             => self.ppu_regs.read_status(),
             Addr::OamData               => self.ppu_regs.read_oam_data(&mut self.oam, self.master_clock.ppu_clock()),
             Addr::PpuData => {
                 self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
@@ -383,7 +383,9 @@ impl Bus {
             Addr::CpuInternalRam(index) => self.cpu_internal_ram.write(index, self.cpu_pinout.data_bus),
 
             // PPU registers.
-            Addr::PpuControl => self.ppu_regs.write_ctrl(self.cpu_pinout.data_bus),
+            Addr::PpuControl => {
+                self.ppu_regs.write_ctrl(self.cpu_pinout.data_bus);
+            }
             Addr::PpuMask    => self.ppu_regs.write_mask(self.cpu_pinout.data_bus),
             Addr::PpuStatus  => self.ppu_regs.write_status(self.cpu_pinout.data_bus), // Read-only
             Addr::OamAddress => self.ppu_regs.write_oam_addr(self.cpu_pinout.data_bus),

@@ -397,9 +397,6 @@ impl Nes {
             if latest.sprite_overflow.set_value_then_detect(regs.sprite_overflow) {
                 info!("Sprite overflow changed to {}", regs.sprite_overflow);
             }
-            if latest.suppress_vblank_active.set_value_then_detect(regs.suppress_vblank_active) {
-                info!("Suppress VBlank active changed to {}", regs.suppress_vblank_active);
-            }
         }
 
         if log_enabled!(target: "cpuflowcontrol", Info) {
@@ -648,7 +645,6 @@ struct LatestValues {
     vblank_active: EdgeDetector<bool>,
     sprite0_hit: EdgeDetector<bool>,
     sprite_overflow: EdgeDetector<bool>,
-    suppress_vblank_active: EdgeDetector<bool>,
 
     apu_frame_irq_pending_detector: EdgeDetector<bool>,
     dmc_irq_pending_detector: EdgeDetector<bool>,
@@ -696,7 +692,6 @@ impl LatestValues {
             vblank_active: EdgeDetector::any_edge(),
             sprite0_hit: EdgeDetector::any_edge(),
             sprite_overflow: EdgeDetector::any_edge(),
-            suppress_vblank_active: EdgeDetector::any_edge(),
 
             apu_frame_irq_pending_detector: EdgeDetector::target_value(true),
             dmc_irq_pending_detector: EdgeDetector::target_value(true),
