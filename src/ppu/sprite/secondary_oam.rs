@@ -1,6 +1,8 @@
+use ux::u5;
+
 pub struct SecondaryOam {
     data: [u8; 32],
-    index: usize,
+    index: u5,
     is_full: bool,
 }
 
@@ -8,7 +10,7 @@ impl SecondaryOam {
     pub fn new() -> SecondaryOam {
         SecondaryOam {
             data: [0xFF; 32],
-            index: 0,
+            index: u5::MIN,
             is_full: false,
         }
     }
@@ -18,7 +20,7 @@ impl SecondaryOam {
     }
 
     pub fn current_field(&self) -> SpriteField {
-        match self.index % 4 {
+        match u8::from(self.index) % 4 {
             0 => SpriteField::Y,
             1 => SpriteField::Tile,
             2 => SpriteField::Attributes,
@@ -28,32 +30,36 @@ impl SecondaryOam {
     }
 
     pub fn peek(&self) -> u8 {
-        self.data[self.index]
+        self.data[to_usize(self.index)]
     }
 
     pub fn read_and_advance(&mut self) -> u8 {
-        let result = self.data[self.index];
+        let result = self.data[to_usize(self.index)];
         self.advance();
         result
     }
 
     pub fn write(&mut self, value: u8) {
-        self.data[self.index] = value;
+        self.data[to_usize(self.index)] = value;
     }
 
     pub fn reset_index(&mut self) {
-        self.index = 0;
+        self.index = u5::MIN;
         self.is_full = false;
     }
 
     pub fn advance(&mut self) {
-        if self.index == 31 {
-            self.index = 0;
+        if self.index == u5::MAX {
+            self.index = u5::MIN;
             self.is_full = true;
         } else {
-            self.index += 1;
+            self.index = self.index + u5::new(1);
         }
     }
+}
+
+fn to_usize(value: u5) -> usize {
+    u8::from(value).into()
 }
 
 #[derive(PartialEq, Eq)]
