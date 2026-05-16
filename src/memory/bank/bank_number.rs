@@ -45,7 +45,7 @@ pub struct PrgBankRegisters {
 impl PrgBankRegisters {
     pub fn new(cartridge_has_ram: bool, work_ram_start_page_number: u16) -> Self {
         Self {
-            registers: [BankNumber(0); 11],
+            registers: [BankNumber::ZERO; 11],
             read_statuses: [ReadStatus::Enabled; 16],
             write_statuses: [WriteStatus::Enabled; 16],
             rom_ram_modes: [PrgSource::RamOrRom; 12],
@@ -80,6 +80,12 @@ impl PrgBankRegisters {
 
     pub fn set(&mut self, id: PrgBankRegisterId, bank_number: BankNumber) {
         self.registers[id as usize] = bank_number;
+    }
+
+    pub fn reset_registers(&mut self) {
+        for register in &mut self.registers {
+            *register = BankNumber::ZERO;
+        }
     }
 
     pub fn read_status(&self, id: ReadStatusRegisterId) -> ReadStatus {
@@ -121,7 +127,7 @@ pub struct ChrBankRegisters {
 impl ChrBankRegisters {
     pub fn new(cartridge_has_rom: bool, cartridge_has_ram: bool, default_chr_source: ChrSource) -> Self {
         Self {
-            registers: [BankNumber(0); 16],
+            registers: [BankNumber::ZERO; 16],
             // Meta registers are only used for CHR currently.
             chr_meta_registers: [ChrBankRegisterId::C; 4],
             read_statuses: [ReadStatus::Enabled; 15],
@@ -189,6 +195,16 @@ impl ChrBankRegisters {
 
     pub const fn get_register_id_from_meta(&self, id: MetaRegisterId) -> ChrBankRegisterId {
         self.chr_meta_registers[id as usize]
+    }
+
+    pub fn reset_registers(&mut self) {
+        for register in &mut self.registers {
+            *register = BankNumber::ZERO;
+        }
+
+        for register in &mut self.chr_meta_registers {
+            *register = ChrBankRegisterId::C;
+        }
     }
 
     pub fn read_status(&self, id: ReadStatusRegisterId) -> ReadStatus {

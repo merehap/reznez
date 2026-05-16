@@ -197,6 +197,13 @@ impl Bus {
         self.prg_memory.set_rom_outer_bank_number(index);
     }
 
+    pub fn reset_bank_registers(&mut self) {
+        self.prg_memory.reset_bank_registers();
+        self.chr_memory.reset_bank_registers();
+        self.prg_memory.set_rom_outer_bank_number(0);
+        self.chr_memory.set_rom_outer_bank_number(0);
+    }
+
     pub fn set_reads_enabled(&mut self, id: ReadStatusRegisterId, enabled: bool) {
         let status = if enabled { ReadStatus::Enabled } else { ReadStatus::Disabled };
         self.prg_memory.set_read_status(id, status);

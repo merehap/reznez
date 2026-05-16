@@ -176,6 +176,10 @@ impl PrgMemory {
         &self.regs
     }
 
+    pub fn reset_bank_registers(&mut self) {
+        self.regs.reset_registers();
+    }
+
     pub fn ram_present(&self) -> bool {
         !self.work_ram.is_empty() || !self.save_ram.is_empty()
     }

@@ -90,6 +90,13 @@ pub struct Mapper052_0 {
 }
 
 impl Mapper for Mapper052_0 {
+    fn reset(&mut self, bus: &mut Bus) {
+        self.lock_outer_bank_register = false;
+        self.expanded_outer_chr_bank = false;
+        self.expanded_outer_prg_bank = false;
+        bus.reset_bank_registers();
+    }
+
     fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         // "The MMC3's WRAM interface must be enabled and writeable in MMC3 register $A001.
         // The Outer Bank Register overlaps any actual PRG RAM that may be present."

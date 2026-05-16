@@ -228,6 +228,10 @@ impl ChrMemory {
         &self.regs
     }
 
+    pub fn reset_bank_registers(&mut self) {
+        self.regs.reset_registers();
+    }
+
     pub fn set_layout(&mut self, index: u8) {
         assert!(index < self.layouts.count());
         self.base_memory_map_index = index;

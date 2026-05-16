@@ -33,14 +33,18 @@ pub trait Mapper {
     // Every mapper must define a Layout.
     fn layout(&self) -> Layout;
 
+    // Every mapper must implement write_register.
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8);
+
+    // Many mappers clear bank registers or some mapper-specific state upon soft reset.
+    // TODO: Require each mapper to implement this.
+    fn reset(&mut self, _: &mut Bus) {}
+
     // Most mappers don't support peeking register values.
     fn peek_register(&self, _bus: &Bus, addr: CpuAddress) -> ReadResult {
         assert!(0x4020 <= *addr && *addr <= 0x5FFF);
         ReadResult::OPEN_BUS
     }
-
-    // Every mapper must implement write_register.
-    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8);
 
     // Most mappers don't need to modify the MapperParams before ROM execution begins, but this
     // provides a relief valve for the rare settings that can't be expressed in a Layout.
