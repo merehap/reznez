@@ -137,6 +137,17 @@ impl ChrWindow {
     pub fn ram_address_template(&self, bank_sizes: &BankSizes, work_ram_start_inner_bank_number: u16) -> AddressResolver<ChrBankRegisterId> {
         AddressResolver::chr(self.bank.chr_bank_number_provider(), self.size, bank_sizes, work_ram_start_inner_bank_number)
     }
+
+    pub const fn validate_rom_address_template_width(&self, max_rom_size: u32) {
+        if let Some(rom_address_template) = self.bank().rom_address_template_override() {
+            let max_width = (max_rom_size - 1).count_ones() as u8;
+            let template_width = rom_address_template.total_width();
+            let segment_count = rom_address_template.segment_count();
+            const_panic::concat_assert!(template_width == max_width,
+                "Override ROM Address Template was not the correct bit width. Expected ", max_width, ", Found ", template_width,
+                " Segment count: ", segment_count);
+        }
+    }
 }
 
 const PRG_PAGE_SIZE: u16 = 8 * KIBIBYTE as u16;

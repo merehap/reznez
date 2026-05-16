@@ -229,7 +229,17 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (49, None) => m::mapper049::Mapper049::new().supported(),
         // N-32 conversion of Super Mario Bros. 2 (J). PCB code 761214.
         (50, None) => m::mapper050::Mapper050::new().supported(),
-        (51..=54, _) => TodoMapper,
+        (51, _) => TodoMapper,
+
+        // Submappers for Realtec 8213 and similar
+        (52, None) => UnspecifiedSubmapper,
+        (52, Some(0)) => m::mapper052_0::Mapper052_0::new().supported(),
+        // CHR ROM/CHR RAM switchable on PRG A17/A18
+        (52, Some(13)) => TodoSubmapper,
+        // AB892: (AB-128) Well 8-in-1
+        (52, Some(14)) => TodoSubmapper,
+
+        (53..=54, _) => TodoMapper,
         // BTL-MARIO1-MALEE2
         (55, None) => m::mapper055::Mapper055.supported(),
         // Unlicensed reproduction of Super Mario Bros. 3

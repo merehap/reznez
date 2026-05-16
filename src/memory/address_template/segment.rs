@@ -71,12 +71,8 @@ impl <ID: const RegisterId> Segment<ID> {
                     return Err("Contiguous segment elements must have decrementing subscripts.");
                 }
 
-                if next_atom.label.has_register_id() && label.has_register_id() {
-                    return Err("Contiguous inner bank segments must have decrementing subscripts.");
-                }
-
                 match (next_atom.label, label) {
-                    (               _, Label::AddressBus) => return Err("The address bus segment must the be last segment."),
+                    (               _, Label::AddressBus) => return Err("The address bus segment must be the last segment."),
                     (Label::OuterBank,                 _) => return Err("If present, an outer bank segment must be the first segment."),
                     _ => { /* The next segment is in a valid relative location. */ }
                 }
@@ -293,14 +289,6 @@ impl <Id: Copy + const RegisterId> Label<Id> {
             Self::AddressBus | Self::OuterBank => None,
             Self::InnerBankSegment(reg_id) => reg_id,
             Self::MetaInnerBankSegment(meta_id) => Some(metas[meta_id as usize]),
-        }
-    }
-
-    pub const fn has_register_id(self) -> bool {
-        match self {
-            Self::AddressBus | Self::OuterBank => false,
-            Self::InnerBankSegment(reg_id) => reg_id.is_some(),
-            Self::MetaInnerBankSegment(_) => true,
         }
     }
 }

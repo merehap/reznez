@@ -222,7 +222,8 @@ impl LayoutBuilder {
     }
 
     pub const fn chr_layout(&mut self, windows: &'static [ChrWindow]) -> &mut Self {
-        self.chr_layouts.push(ChrLayout::new(windows));
+        let chr_rom_max_size = self.chr_rom_max_size.expect("CHR ROM max size must be set before creating a ChrLayout.");
+        self.chr_layouts.push(ChrLayout::new(windows, chr_rom_max_size));
         self
     }
 

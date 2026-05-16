@@ -27,14 +27,15 @@ pub struct ChrMemory {
     bank_size: ChrWindowSize,
     regs: ChrBankRegisters,
 
-    layout_index: u8,
+    base_memory_map_index: u8,
+    memory_map_index: u8,
 }
 
 impl ChrMemory {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         layouts: ChrLayouts,
-        layout_index: u8,
+        base_memory_map_index: u8,
         align_large_chr_banks: bool,
         rom_outer_bank_count: NonZeroU16,
         mut rom: RawMemory,
@@ -109,7 +110,8 @@ impl ChrMemory {
         ChrMemory {
             layouts,
             memory_maps,
-            layout_index,
+            base_memory_map_index,
+            memory_map_index: base_memory_map_index,
             rom,
             rom_outer_bank_size,
             rom_outer_bank_number: 0,
@@ -211,15 +213,15 @@ impl ChrMemory {
     }
 
     pub fn layout_index(&self) -> u8 {
-        self.layout_index
+        self.memory_map_index
     }
 
     pub fn current_layout(&self) -> &ChrLayout {
-        &self.layouts[self.layout_index]
+        &self.layouts[self.memory_map_index]
     }
 
     pub fn current_memory_map(&self) -> &ChrMemoryMap {
-        &self.memory_maps[self.layout_index as usize]
+        &self.memory_maps[self.memory_map_index as usize]
     }
 
     pub fn bank_registers(&self) -> &ChrBankRegisters {
@@ -228,7 +230,13 @@ impl ChrMemory {
 
     pub fn set_layout(&mut self, index: u8) {
         assert!(index < self.layouts.count());
-        self.layout_index = index;
+        self.base_memory_map_index = index;
+        self.memory_map_index = index;
+    }
+
+    pub fn modify_base_layout_index<F>(&mut self, f: F)
+    where F: FnOnce(u8) -> u8 {
+        self.memory_map_index = f(self.base_memory_map_index);
     }
 
     pub fn rom_outer_bank_number(&self) -> u8 {

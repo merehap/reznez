@@ -73,7 +73,7 @@ pub struct ChrLayout {
 }
 
 impl ChrLayout {
-    pub const fn new(initial_windows: &'static [ChrWindow]) -> ChrLayout {
+    pub const fn new(initial_windows: &'static [ChrWindow], max_rom_size: u32) -> ChrLayout {
         assert!(!initial_windows.is_empty(), "No CHR windows specified.");
 
         assert!(initial_windows[0].start() == 0x0000, "The first CHR window must start at 0x0000.");
@@ -81,8 +81,11 @@ impl ChrLayout {
         assert!(initial_windows.last().unwrap().end().get() >= 0x1FFF,
             "The last CHR window must end at 0x1FFF (or later, in rare cases).");
 
+        initial_windows[0].validate_rom_address_template_width(max_rom_size);
+
         let mut i = 1;
         while i < initial_windows.len() {
+            initial_windows[i].validate_rom_address_template_width(max_rom_size);
             assert!(initial_windows[i].start() == initial_windows[i - 1].end().get() + 1,
                     "There must be no gaps nor overlap between CHR layouts.");
 
