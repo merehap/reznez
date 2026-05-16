@@ -84,9 +84,11 @@ static SCHEDULED_EVENTS: LazyLock<BTreeMap<Crc, BTreeMap<FrameNumber, (Event, Bu
     presses_by_full_crc.insert(0x935D29C2, vec![(132, 133, Start), (348, 349, Start), (478, 479, Start), (549, 550, Start)]);
     // Crayon Shin-Chan - [BROKEN] Part of the status bar is CHR-corrupted due to bad IRQ implementation.
     presses_by_full_crc.insert(0xC15D624F, vec![(279, 280, Start), (449, 450, Start)]);
+    // Mario 7-in-1 - [BROKEN] Some CHR outer banks are corrupted and IRQ isn't fully accurate.
+    presses_by_full_crc.insert(0x10F045A3, vec![(40, 41, Start), (100, 101, Reset), (140, 141, Down), (160, 161, Start)]);
+
     // AccuracyCoin
     presses_by_full_crc.insert(0x769083E2, vec![(60, 61, Start)]);
-
     // cpu_reset/ram_after_reset
     presses_by_full_crc.insert(0xED9053BC, vec![(200, 201, Reset)]);
     // cpu_reset/ram_after_reset

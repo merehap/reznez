@@ -12,6 +12,21 @@ use crate::ppu::ppu_clock::PpuClock;
 use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::render::frame_rate::{FrameRate, TargetFrameRate};
 
+#[derive(Clone, Copy)]
+pub enum Event {
+    Button(Button),
+    Reset,
+}
+
+impl Event {
+    pub fn to_string(self) -> String {
+        match self {
+            Self::Button(button) => format!("{button:?}").to_ascii_lowercase(),
+            Self::Reset => "reset".to_string(),
+        }
+    }
+}
+
 pub struct Config {
     pub starting_cpu_cycle: i64,
     pub ppu_clock: PpuClock,
@@ -22,7 +37,7 @@ pub struct Config {
     pub frame_dump: bool,
     pub cpu_step_formatting: CpuStepFormatting,
     pub allow_saving: bool,
-    pub scheduled_button_events: BTreeMap<i64, (Button, ButtonStatus)>,
+    pub scheduled_button_events: BTreeMap<i64, (Event, ButtonStatus)>,
     pub dip_switch: u8,
     pub diff_logging_enabled: bool,
 }
@@ -55,17 +70,18 @@ impl Config {
         }
     }
 
-    pub fn add_scheduled_button_press_and_release(&mut self, press_frame_number: i64, unpress_frame_number: i64, button: Button) {
-        self.scheduled_button_events.insert(press_frame_number, (button, ButtonStatus::Pressed));
-        self.scheduled_button_events.insert(unpress_frame_number, (button, ButtonStatus::Unpressed));
+    pub fn add_scheduled_button_press_and_release(&mut self, press_frame_number: i64, unpress_frame_number: i64, event: Event) {
+        self.scheduled_button_events.insert(press_frame_number, (event, ButtonStatus::Pressed));
+        self.scheduled_button_events.insert(unpress_frame_number, (event, ButtonStatus::Unpressed));
     }
 
     fn parse_scheduled_button_events(&mut self, raw_presses: &[String]) {
+        let mut event_names = vec![Event::Reset];
+        event_names.append(&mut Button::ALL.map(Event::Button).to_vec());
         for raw_press in raw_presses {
-            for button in Button::ALL {
-                let button_text = format!("{button:?}").to_ascii_lowercase();
-                if raw_press.to_ascii_lowercase().starts_with(&button_text) {
-                    let raw_frame_number = &raw_press[button_text.len() ..];
+            for event_name in &event_names {
+                if raw_press.to_ascii_lowercase().starts_with(&event_name.to_string()) {
+                    let raw_frame_number = &raw_press[event_name.to_string().len() ..];
                     let (press_frame_number, unpress_frame_number) = if raw_frame_number.contains(':') {
                         let mut raw_numbers = raw_frame_number.split(':');
                         (raw_numbers.next().unwrap().parse().unwrap(), raw_numbers.next().unwrap().parse().unwrap())
@@ -74,13 +90,13 @@ impl Config {
                         (number, number + 1)
                     };
 
-                    self.add_scheduled_button_press_and_release(press_frame_number, unpress_frame_number, button);
+                    self.add_scheduled_button_press_and_release(press_frame_number, unpress_frame_number, *event_name);
                 }
             }
         }
 
         // One press and one release for every raw press.
-        assert_eq!(self.scheduled_button_events.len(), 2 * raw_presses.len());
+        assert_eq!(self.scheduled_button_events.len(), 2 * raw_presses.len(), "Bad press event name");
     }
 }
 

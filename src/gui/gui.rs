@@ -7,7 +7,7 @@ use std::time::{Duration, SystemTime};
 
 use log::{info, warn};
 
-use crate::config::Config;
+use crate::config::{Config, Event};
 use crate::controller::joypad::{Button, ButtonStatus};
 use crate::nes::Nes;
 use crate::ppu::register::ppu_registers::Mask;
@@ -29,8 +29,11 @@ where
     let target_frame_rate = config.target_frame_rate;
     let intended_frame_end_time = start_time.add(frame_duration(target_frame_rate));
 
-    if let Some((button, button_status)) = config.scheduled_button_events.get(&frame_index) {
-        events.joypad1_button_statuses.insert(*button, *button_status);
+    if let Some((event, button_status)) = config.scheduled_button_events.get(&frame_index) {
+        match event {
+            Event::Button(button) => _ = events.joypad1_button_statuses.insert(*button, *button_status),
+            Event::Reset => nes.set_reset_signal(),
+        }
     }
 
     nes.process_gui_events(&events);

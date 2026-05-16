@@ -81,6 +81,7 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 // Realtec 8213 (Mario 7-in-1)
+// FIXME: Mario 5, 10, and 7 have corrupted CHR rendering.
 pub struct Mapper052_0 {
     mmc3: mmc3::Mapper004Mmc3,
     // TODO: Unlock on reset
