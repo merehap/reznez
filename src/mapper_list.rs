@@ -378,7 +378,10 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (112, None) => m::mapper112::Mapper112::new().supported(),
         // HES NTD-8
         (113, None) => m::mapper113::Mapper113.supported(),
-        (114..=116, _) => TodoMapper,
+        (114, None) => UnspecifiedSubmapper,
+        (114, Some(0)) => m::mapper114_0::Mapper114_0::new().supported(),
+        (114, Some(1)) => TodoSubmapper,
+        (115..=116, _) => TodoMapper,
         // Future Media
         (117, None) => m::mapper117::Mapper117::new().supported(),
         // TxSROM

@@ -142,6 +142,12 @@ impl fmt::Display for CpuAddress {
     }
 }
 
+impl From<u16> for CpuAddress {
+    fn from(value: u16) -> Self {
+        CpuAddress::new(value)
+    }
+}
+
 impl FromStr for CpuAddress {
     type Err = String;
 
