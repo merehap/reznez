@@ -122,44 +122,45 @@ impl Ppu {
                 bus.set_ppu_address_bus(mapper, addr);
             }
 
-            GetPatternIndex => bus.ppu.next_tile_number = TileNumber::new(bus.ppu_internal_read(mapper).value()),
+            GetPatternIndex =>
+                bus.ppu.next_tile_number = TileNumber::new(bus.ppu_internal_read(mapper).value()),
             GetPatternLowByte => {
                 let pattern_low = bus.ppu_internal_read(mapper);
-                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
+                if !bus.ppu_regs.rendering_enabled() { return; }
                 bus.ppu.pattern_register.set_pending_low_byte(pattern_low);
             }
             GetPatternHighByte => {
                 let pattern_high = bus.ppu_internal_read(mapper);
-                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
+                if !bus.ppu_regs.rendering_enabled() { return; }
                 bus.ppu.pattern_register.set_pending_high_byte(pattern_high);
             }
             GetPaletteIndex => {
                 let attribute_byte = bus.ppu_internal_read(mapper).value();
-                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
+                if !bus.ppu_regs.rendering_enabled() { return; }
                 let index = bus.ppu_regs.current_address.to_palette_table_index(attribute_byte);
                 bus.ppu.attribute_register.set_pending_palette_table_index(index);
             }
             PrepareForNextTile => {
-                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
+                if !bus.ppu_regs.rendering_enabled() { return; }
                 bus.ppu.attribute_register.prepare_next_palette_table_index();
                 bus.ppu.pattern_register.load_next_palette_indexes();
             }
             PrepareForNextPixel => {
-                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
+                if !bus.ppu_regs.rendering_enabled() { return; }
                 bus.ppu.pattern_register.shift_left();
                 bus.ppu.attribute_register.push_next_palette_table_index();
             }
 
             GotoNextTileColumn => {
-                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
+                if !bus.ppu_regs.rendering_enabled() { return; }
                 bus.ppu_regs.current_address.increment_coarse_x_scroll();
             }
             GotoNextPixelRow => {
-                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
+                if !bus.ppu_regs.rendering_enabled() { return; }
                 bus.ppu_regs.current_address.increment_fine_y_scroll();
             }
             ResetTileColumn => {
-                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
+                if !bus.ppu_regs.rendering_enabled() { return; }
                 bus.ppu_regs.current_address.set_tile_column_from(bus.ppu_regs.next_address);
             }
             SetPixel => {

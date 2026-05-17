@@ -33,8 +33,7 @@ impl PatternRegister {
         let low_bits = unpack_bools(self.pending_low_byte.value());
         let high_bits = unpack_bools(self.pending_high_byte.value());
         for i in 0..8 {
-            self.current_indexes[i + 8] =
-                PaletteIndex::from_low_high(low_bits[i], high_bits[i]);
+            self.current_indexes[i + 8] = PaletteIndex::from_low_high(low_bits[i], high_bits[i]);
         }
 
         self.current_peek = self.pending_low_byte;
