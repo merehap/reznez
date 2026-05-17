@@ -68,7 +68,7 @@ impl Mapper for Mapper049 {
             }
         }
 
-        bus.modify_base_prg_layout_index(|base_index| {
+        bus.update_effective_prg_layout_index(|base_index| {
             match self.mode {
                 Mode::BigPrgWindow => base_index | 0b10,
                 Mode::NormalMmc3 => base_index,

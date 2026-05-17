@@ -65,7 +65,7 @@ impl Mapper for Mapper037 {
         self.mmc3.write_register(bus, addr, value);
 
         let prg_outer_bank_number = bus.prg_rom_outer_bank_number();
-        bus.modify_base_prg_layout_index(|base_index| {
+        bus.update_effective_prg_layout_index(|base_index| {
             if prg_outer_bank_number == 2 {
                 // Use the 128kiB outer bank layouts.
                 base_index | 0b10

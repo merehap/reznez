@@ -50,7 +50,7 @@ impl Mapper for Mapper123 {
 
         self.mmc3.write_register(bus, addr, value);
 
-        bus.modify_base_prg_layout_index(|base_index| {
+        bus.update_effective_prg_layout_index(|base_index| {
             match self.mode {
                 Mode::Mmc3 => base_index,
                 Mode::Nrom { layout_index } => layout_index,

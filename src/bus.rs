@@ -175,18 +175,18 @@ impl Bus {
         self.prg_memory.set_layout(index);
     }
 
-    pub fn modify_base_prg_layout_index<F>(&mut self, f: F)
+    pub fn update_effective_prg_layout_index<F>(&mut self, f: F)
     where F: FnOnce(u8) -> u8 {
-        self.prg_memory.modify_base_layout_index(f);
+        self.prg_memory.update_effective_layout_index(f);
     }
 
     pub fn set_chr_layout(&mut self, index: u8) {
         self.chr_memory.set_layout(index);
     }
 
-    pub fn modify_base_chr_layout_index<F>(&mut self, f: F)
+    pub fn update_effective_chr_layout_index<F>(&mut self, f: F)
     where F: FnOnce(u8) -> u8 {
-        self.chr_memory.modify_base_layout_index(f);
+        self.chr_memory.update_effective_layout_index(f);
     }
 
     pub fn prg_rom_outer_bank_number(&self) -> u8 {

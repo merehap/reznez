@@ -31,7 +31,7 @@ pub fn lookup_mapper(metadata_resolver: &MetadataResolver, cartridge: &Cartridge
         LookupResult::TodoMapper =>
             Err(format!("Mapper {number} is not supported yet. ROM: {cartridge_name}")),
         LookupResult::TodoSubmapper =>
-            Err(format!("Submapper {}. ROM: {cartridge_name}", sub_number.unwrap())),
+            Err(format!("Submapper {} of mapper {number} isn't supported yet. ROM: {cartridge_name}", sub_number.unwrap())),
         LookupResult::UnspecifiedSubmapper =>
             Err(format!("Submapper {sub_number:?} of mapper {number} has unspecified behavior. ROM: {cartridge_name}")),
         LookupResult::ReassignedMapper {correct_mapper, correct_submapper } =>
@@ -378,9 +378,14 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (112, None) => m::mapper112::Mapper112::new().supported(),
         // HES NTD-8
         (113, None) => m::mapper113::Mapper113.supported(),
+
+        // Submappers of an MMC3 Clone with scrambled registers
         (114, None) => UnspecifiedSubmapper,
-        (114, Some(0)) => m::mapper114_0::Mapper114_0::new().supported(),
-        (114, Some(1)) => TodoSubmapper,
+        // Normal scrambling pattern
+        (114, Some(0)) => m::mapper114_0::mapper114_0().supported(),
+        // Boogerman scrambling pattern
+        (114, Some(1)) => m::mapper114_1::mapper114_1().supported(),
+
         (115..=116, _) => TodoMapper,
         // Future Media
         (117, None) => m::mapper117::Mapper117::new().supported(),

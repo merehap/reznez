@@ -112,14 +112,14 @@ impl Mapper for Mapper052_0 {
         }
 
         self.mmc3.write_register(bus, addr, value);
-        bus.modify_base_prg_layout_index(|base_index| {
+        bus.update_effective_prg_layout_index(|base_index| {
             if self.expanded_outer_prg_bank {
                 base_index | 0b10
             } else {
                 base_index
             }
         });
-        bus.modify_base_chr_layout_index(|base_index| {
+        bus.update_effective_chr_layout_index(|base_index| {
             if self.expanded_outer_chr_bank {
                 base_index | 0b10
             } else {

@@ -238,7 +238,7 @@ impl ChrMemory {
         self.memory_map_index = index;
     }
 
-    pub fn modify_base_layout_index<F>(&mut self, f: F)
+    pub fn update_effective_layout_index<F>(&mut self, f: F)
     where F: FnOnce(u8) -> u8 {
         self.memory_map_index = f(self.base_memory_map_index);
     }

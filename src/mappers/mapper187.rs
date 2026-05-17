@@ -73,7 +73,7 @@ impl Mapper for Mapper187 {
             }
         }
 
-        bus.modify_base_prg_layout_index(|base_index| {
+        bus.update_effective_prg_layout_index(|base_index| {
             match self.prg_layout_mode {
                 PrgLayoutMode::Mmc3 => base_index,
                 PrgLayoutMode::Nrom(nrom_layout_index) => nrom_layout_index,
