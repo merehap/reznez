@@ -10,11 +10,6 @@ impl <T: Copy + Default, const N: usize> ShiftArray<T, N> {
         ShiftArray(VecDeque::from_iter([Default::default(); N]))
     }
 
-    pub fn shift_left(&mut self) {
-        self.0.pop_front();
-        self.0.push_back(Default::default());
-    }
-
     pub fn push(&mut self, value: T) {
         self.0.pop_front();
         self.0.push_back(value);

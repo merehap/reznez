@@ -40,7 +40,7 @@ impl PatternRegister {
     }
 
     pub fn shift_left(&mut self) {
-        self.current_indexes.shift_left();
+        self.current_indexes.push(Some(PaletteIndex::Two));
     }
 
     pub fn palette_index(&self, column_in_tile: ColumnInTile) -> Option<PaletteIndex> {
