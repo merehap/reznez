@@ -21,7 +21,7 @@ impl OamRegisters {
     }
 
     pub fn step(&mut self, palette_table: &PaletteTable) -> (Rgbt, Priority, bool, PpuPeek) {
-        let mut result = (Rgbt::Transparent, Priority::Behind, false, PpuPeek::ZERO);
+        let mut result = (Rgbt::Transparent, Priority::Behind, false, PpuPeek::VOID);
         for register in self.registers.iter_mut().rev() {
             let candidate@(rgbt, _, _, _) = register.step(palette_table);
             if let Rgbt::Opaque(_) = rgbt {
@@ -62,9 +62,9 @@ impl SpriteRegisters {
     pub fn new() -> SpriteRegisters {
         SpriteRegisters {
             low_pattern: 0,
-            low_pattern_info: PpuPeek::ZERO,
+            low_pattern_info: PpuPeek::VOID,
             high_pattern: 0,
-            high_pattern_info: PpuPeek::ZERO,
+            high_pattern_info: PpuPeek::VOID,
             attributes: SpriteAttributes::new(),
             x_counter: 0,
             is_sprite_0: false,

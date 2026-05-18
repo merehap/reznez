@@ -425,7 +425,7 @@ pub struct PpuPeek {
 }
 
 impl PpuPeek {
-    pub const ZERO: PpuPeek = PpuPeek { value: 0, source: PeekSource::Rom(BankNumber::from_u8(0)) };
+    pub const VOID: PpuPeek = PpuPeek { value: 0, source: PeekSource::Void };
 
     pub fn new(value: u8, source: PeekSource) -> Self {
         Self { value, source }
@@ -448,6 +448,7 @@ pub enum PeekSource {
     Ciram(CiramSide),
     PaletteTable,
     MapperCustom { page_id: u8 },
+    Void,
 }
 
 impl PeekSource {

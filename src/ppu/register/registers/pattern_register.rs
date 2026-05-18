@@ -14,9 +14,9 @@ pub struct PatternRegister {
 impl PatternRegister {
     pub fn new() -> PatternRegister {
         PatternRegister {
-            pending_low_byte: PpuPeek::ZERO,
-            pending_high_byte: PpuPeek::ZERO,
-            current_peek: PpuPeek::ZERO,
+            pending_low_byte: PpuPeek::VOID,
+            pending_high_byte: PpuPeek::VOID,
+            current_peek: PpuPeek::VOID,
             current_indexes: ShiftArray::new(),
         }
     }

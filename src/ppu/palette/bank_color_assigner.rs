@@ -43,6 +43,8 @@ impl BankColorAssigner {
             PeekSource::MapperCustom { page_id: 1, .. } => Rgb::new(0x00, 0x26, 0x4D),
             PeekSource::MapperCustom { page_id: _, .. } =>
                 todo!("No currently supported mappers have more than two pages of custom memory."),
+            // Bistre
+            PeekSource::Void => Rgb::new(0x3D, 0x2B, 0x1F),
         }
     }
 }
