@@ -1,3 +1,4 @@
+use log::{Level, info, log_enabled};
 use splitbits::{splitbits, combinebits};
 
 use crate::mapper::{PatternTableSide, ReadResult};
@@ -313,6 +314,11 @@ impl PpuRegisters {
             }
             Ready => {
                 self.rendering_enabled = !self.rendering_enabled;
+                if log_enabled!(target: "ppuflags", Level::Info) {
+                    let state = if self.rendering_enabled { "enabled" } else { "disabled" };
+                    info!("Rendering {state}");
+                }
+
                 self.rendering_toggle_state = Inactive;
                 Some(if self.rendering_enabled { Toggle::Enable } else { Toggle::Disable })
             }
