@@ -316,7 +316,7 @@ impl PpuRegisters {
                 self.rendering_enabled = !self.rendering_enabled;
                 if log_enabled!(target: "ppuflags", Level::Info) {
                     let state = if self.rendering_enabled { "enabled" } else { "disabled" };
-                    info!("Rendering {state}");
+                    info!("Rendering {state} on {clock}");
                 }
 
                 self.rendering_toggle_state = Inactive;

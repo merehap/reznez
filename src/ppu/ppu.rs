@@ -146,7 +146,7 @@ impl Ppu {
                 bus.ppu.pattern_register.load_next_palette_indexes();
             }
             PrepareForNextPixel => {
-                if !bus.ppu_regs.rendering_enabled() { return; }
+                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
                 bus.ppu.pattern_register.shift_left();
                 bus.ppu.attribute_register.push_next_palette_table_index();
             }
