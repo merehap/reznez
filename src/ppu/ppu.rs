@@ -250,7 +250,7 @@ impl Ppu {
             }
 
             MaybeCorruptOamStart => {
-                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
+                if !bus.ppu_regs.rendering_enabled() { return; }
                 // Unclear if these are the correct cycles to trigger on.
                 let oam_addr = bus.ppu_regs.oam_addr;
                 bus.oam.maybe_corrupt_starting_byte(bus.master_clock.ppu_clock(), oam_addr, bus.ppu_regs.rendering_enabled());
@@ -279,28 +279,28 @@ impl Ppu {
                 info!(target: "ppustage", "\t\tLoading OAM registers ended.");
             }
             ReadOamByte => {
-                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
+                if !bus.ppu_regs.rendering_enabled() { return; }
                 bus.ppu.sprite_evaluator.read_oam(&mut bus.oam, &bus.master_clock.ppu_clock(), &bus.ppu_regs);
             }
             WriteSecondaryOamByte => {
-                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
+                if !bus.ppu_regs.rendering_enabled() { return; }
                 bus.ppu.sprite_evaluator.write_secondary_oam(bus.master_clock.ppu_clock(), &mut bus.ppu_regs);
             }
             ReadSpriteY => {
-                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
+                if !bus.ppu_regs.rendering_enabled() { return; }
                 bus.ppu.current_sprite_y = SpriteY::new(bus.ppu.sprite_evaluator.read_secondary_oam_and_advance());
             }
             ReadSpritePatternIndex => {
-                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
+                if !bus.ppu_regs.rendering_enabled() { return; }
                 bus.ppu.next_sprite_tile_number = TileNumber::new(bus.ppu.sprite_evaluator.read_secondary_oam_and_advance());
             }
             ReadSpriteAttributes => {
-                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
+                if !bus.ppu_regs.rendering_enabled() { return; }
                 let attributes = SpriteAttributes::from_u8(bus.ppu.sprite_evaluator.read_secondary_oam_and_advance());
                 bus.ppu.oam_registers[bus.ppu.oam_register_index].set_attributes(attributes);
             }
             ReadSpriteX => {
-                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
+                if !bus.ppu_regs.rendering_enabled() { return; }
                 let x_counter = bus.ppu.sprite_evaluator.read_secondary_oam_and_advance();
                 bus.ppu.oam_registers[bus.ppu.oam_register_index].set_x_counter(x_counter);
             }
@@ -330,13 +330,13 @@ impl Ppu {
             }
             GetSpritePatternLowByte => {
                 let pattern_low = bus.ppu_internal_read(mapper);
-                if (bus.ppu_regs.background_enabled() || bus.ppu_regs.sprites_enabled()) && bus.ppu.sprite_visible {
+                if (bus.ppu_regs.rendering_enabled()) && bus.ppu.sprite_visible {
                     bus.ppu.oam_registers[bus.ppu.oam_register_index].set_pattern_low(pattern_low);
                 }
             }
             GetSpritePatternHighByte => {
                 let pattern_high = bus.ppu_internal_read(mapper);
-                if (bus.ppu_regs.background_enabled() || bus.ppu_regs.sprites_enabled()) && bus.ppu.sprite_visible {
+                if (bus.ppu_regs.rendering_enabled()) && bus.ppu.sprite_visible {
                     bus.ppu.oam_registers[bus.ppu.oam_register_index].set_pattern_high(pattern_high);
                 }
             }
