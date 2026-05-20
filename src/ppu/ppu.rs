@@ -64,7 +64,7 @@ impl Ppu {
         }
     }
 
-    pub fn step(bus: &mut Bus, mapper: &mut dyn Mapper, frame: &mut Frame) {
+    pub fn step_first_half(bus: &mut Bus, mapper: &mut dyn Mapper, frame: &mut Frame) {
         let tick_result = bus.ppu_regs.tick(bus.master_clock.ppu_clock());
         if tick_result.rendering_toggled == Some(Toggle::Disable) {
             // "... when rendering is disabled, the value on the PPU address bus is the current value of the v register."
@@ -94,6 +94,10 @@ impl Ppu {
         }
 
         mapper.on_end_of_ppu_cycle();
+    }
+
+    pub fn step_second_half(&mut self) {
+
     }
 
     fn execute_cycle_action(bus: &mut Bus, mapper: &mut dyn Mapper, frame: &mut Frame, cycle_action: CycleAction) {

@@ -3,32 +3,32 @@ use crate::ppu::ppu_clock::PpuClock;
 
 use CycleType::*;
 const NTSC_SCHEDULE: [&[CycleType]; 12] = [
-    &[Apu, CpuFirstHalf, Ppu],
+    &[Apu, CpuFirstHalf, PpuFirstHalf],
     &[],
+    &[PpuSecondHalf],
     &[],
+    &[CpuSecondHalf, PpuFirstHalf],
     &[],
-    &[CpuSecondHalf, Ppu],
+    &[PpuSecondHalf],
     &[],
+    &[PpuFirstHalf],
     &[],
-    &[],
-    &[Ppu],
-    &[],
-    &[],
+    &[PpuSecondHalf],
     &[],
 ];
 
 const NTSC_SCHEDULE_WITH_LOGGING: [&[CycleType]; 12] = [
-    &[ApuWithLogging, CpuFirstHalfWithLogging, PpuWithLogging],
+    &[ApuWithLogging, CpuFirstHalfWithLogging, PpuFirstHalfWithLogging],
     &[],
+    &[PpuSecondHalf],
     &[],
+    &[CpuSecondHalfWithLogging, PpuFirstHalfWithLogging],
     &[],
-    &[CpuSecondHalfWithLogging, PpuWithLogging],
+    &[PpuSecondHalf],
     &[],
+    &[PpuFirstHalfWithLogging],
     &[],
-    &[],
-    &[PpuWithLogging],
-    &[],
-    &[],
+    &[PpuSecondHalf],
     &[],
 ];
 
@@ -119,6 +119,7 @@ pub enum CycleType {
     CpuFirstHalfWithLogging,
     CpuSecondHalf,
     CpuSecondHalfWithLogging,
-    Ppu,
-    PpuWithLogging,
+    PpuFirstHalf,
+    PpuFirstHalfWithLogging,
+    PpuSecondHalf,
 }
