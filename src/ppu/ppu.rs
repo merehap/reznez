@@ -222,7 +222,7 @@ impl Ppu {
                 };
                 bus.ppu.pattern_source_frame.set_background_pixel(pixel_column, pixel_row, bank_pixel);
 
-                if bus.ppu_regs.rendering_enabled() {
+                if bus.ppu_regs.background_enabled() || bus.ppu_regs.sprites_enabled() {
                     let (mut sprite_pixel, priority, is_sprite_0, ppu_peek) = bus.ppu.oam_registers.step(&bus.palette_table());
                     // HACK: Transparent sprites on row 0 should be a natural consequence of the shifter pipeline instead.
                     if pixel_row == PixelRow::ZERO {
@@ -330,13 +330,13 @@ impl Ppu {
             }
             GetSpritePatternLowByte => {
                 let pattern_low = bus.ppu_internal_read(mapper);
-                if (bus.ppu_regs.rendering_enabled()) && bus.ppu.sprite_visible {
+                if bus.ppu_regs.rendering_enabled() && bus.ppu.sprite_visible {
                     bus.ppu.oam_registers[bus.ppu.oam_register_index].set_pattern_low(pattern_low);
                 }
             }
             GetSpritePatternHighByte => {
                 let pattern_high = bus.ppu_internal_read(mapper);
-                if (bus.ppu_regs.rendering_enabled()) && bus.ppu.sprite_visible {
+                if bus.ppu_regs.rendering_enabled() && bus.ppu.sprite_visible {
                     bus.ppu.oam_registers[bus.ppu.oam_register_index].set_pattern_high(pattern_high);
                 }
             }
