@@ -219,8 +219,10 @@ impl Ppu {
                 };
                 bus.ppu.pattern_source_frame.set_background_pixel(pixel_column, pixel_row, bank_pixel);
 
-                if bus.ppu_regs.background_enabled() || bus.ppu_regs.sprites_enabled() {
-                    let (mut sprite_pixel, priority, is_sprite_0, ppu_peek) = bus.ppu.oam_registers.step(&bus.palette_table());
+                // This is not delayed, unlike ppu_regs.rendering_enabled()
+                let rendering_enabled = bus.ppu_regs.background_enabled() || bus.ppu_regs.sprites_enabled();
+                let (mut sprite_pixel, priority, is_sprite_0, ppu_peek) = bus.ppu.oam_registers.step(&bus.palette_table(), rendering_enabled);
+                if rendering_enabled {
                     // HACK: Transparent sprites on row 0 should be a natural consequence of the shifter pipeline instead.
                     if pixel_row == PixelRow::ZERO {
                         sprite_pixel = Rgbt::Transparent;

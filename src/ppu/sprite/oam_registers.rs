@@ -20,10 +20,10 @@ impl OamRegisters {
         self.registers[0].is_sprite_0 = present;
     }
 
-    pub fn step(&mut self, palette_table: &PaletteTable) -> (Rgbt, Priority, bool, PpuPeek) {
+    pub fn step(&mut self, palette_table: &PaletteTable, should_shift: bool) -> (Rgbt, Priority, bool, PpuPeek) {
         let mut result = (Rgbt::Transparent, Priority::Behind, false, PpuPeek::VOID);
         for register in self.registers.iter_mut().rev() {
-            let candidate@(rgbt, _, _, _) = register.step(palette_table);
+            let candidate@(rgbt, _, _, _) = register.step(palette_table, should_shift);
             if let Rgbt::Opaque(_) = rgbt {
                 result = candidate;
             }
@@ -93,7 +93,7 @@ impl SpriteRegisters {
         self.x_counter = initial_value;
     }
 
-    pub fn step(&mut self, palette_table: &PaletteTable) -> (Rgbt, Priority, bool, PpuPeek) {
+    pub fn step(&mut self, palette_table: &PaletteTable, should_shift: bool) -> (Rgbt, Priority, bool, PpuPeek) {
         if self.x_counter > 0 {
             // This sprite is still inactive.
             self.x_counter -= 1;
@@ -107,13 +107,17 @@ impl SpriteRegisters {
         if self.attributes.flip_horizontally() {
             low_bit = self.low_pattern & 1 == 1;
             high_bit = self.high_pattern & 1 == 1;
-            self.low_pattern >>= 1;
-            self.high_pattern >>= 1;
+            if should_shift {
+                self.low_pattern >>= 1;
+                self.high_pattern >>= 1;
+            }
         } else {
             low_bit = self.low_pattern >> 7 == 1;
             high_bit = self.high_pattern >> 7 == 1;
-            self.low_pattern <<= 1;
-            self.high_pattern <<= 1;
+            if should_shift {
+                self.low_pattern <<= 1;
+                self.high_pattern <<= 1;
+            }
         }
 
         let palette = palette_table.sprite_palette(self.attributes.palette_table_index());
