@@ -34,6 +34,7 @@ pub struct Ppu {
     attribute_register: AttributeRegister,
     next_rendering_field_to_set: Option<RenderingRegisterField>,
     next_register_value: PpuPeek,
+    pending_register_shift: bool,
 
     next_sprite_tile_number: TileNumber,
     current_sprite_y: SpriteY,
@@ -57,6 +58,7 @@ impl Ppu {
             attribute_register: AttributeRegister::new(),
             next_rendering_field_to_set: None,
             next_register_value: PpuPeek::VOID,
+            pending_register_shift: false,
 
             next_sprite_tile_number: TileNumber::new(0),
             current_sprite_y: SpriteY::new(0),
@@ -102,6 +104,12 @@ impl Ppu {
     }
 
     pub fn step_second_half(Bus { ppu, ppu_regs, .. }: &mut Bus) {
+        if ppu.pending_register_shift && (ppu_regs.background_enabled() || ppu_regs.sprites_enabled()) {
+            ppu.pending_register_shift = false;
+            ppu.pattern_register.shift_left();
+            ppu.attribute_register.push_next_palette_table_index();
+        }
+
         match ppu.next_rendering_field_to_set {
             None => { /* Nothing to set. */ }
             Some(RenderingRegisterField::PatternIndex) => {
@@ -170,9 +178,7 @@ impl Ppu {
                 bus.ppu.next_rendering_field_to_set = Some(RenderingRegisterField::PaletteIndex);
             }
             PrepareForNextPixel => {
-                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
-                bus.ppu.pattern_register.shift_left();
-                bus.ppu.attribute_register.push_next_palette_table_index();
+                bus.ppu.pending_register_shift = true;
             }
 
             GotoNextTileColumn => {
