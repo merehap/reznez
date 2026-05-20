@@ -126,6 +126,7 @@ impl Ppu {
                 ppu.pattern_register.set_pending_high_byte(ppu.next_register_value);
                 ppu.attribute_register.prepare_next_palette_table_index();
                 ppu.pattern_register.load_next_palette_indexes();
+                ppu_regs.current_address.increment_coarse_x_scroll();
             }
         }
 
@@ -181,10 +182,6 @@ impl Ppu {
                 bus.ppu.pending_register_shift = true;
             }
 
-            GotoNextTileColumn => {
-                if !bus.ppu_regs.rendering_enabled() { return; }
-                bus.ppu_regs.current_address.increment_coarse_x_scroll();
-            }
             GotoNextPixelRow => {
                 if !bus.ppu_regs.rendering_enabled() { return; }
                 bus.ppu_regs.current_address.increment_fine_y_scroll();
