@@ -3,6 +3,7 @@ use log::Level::Info;
 
 use crate::mapper::Mapper;
 use crate::bus::Bus;
+use crate::memory::ppu::chr_memory::PpuPeek;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::signal_level::SignalLevel;
 use crate::ppu::cycle_action::cycle_action::CycleAction;
@@ -31,6 +32,8 @@ pub struct Ppu {
     next_tile_number: TileNumber,
     pattern_register: PatternRegister,
     attribute_register: AttributeRegister,
+    next_rendering_field_to_set: Option<RenderingRegisterField>,
+    next_register_value: PpuPeek,
 
     next_sprite_tile_number: TileNumber,
     current_sprite_y: SpriteY,
@@ -52,6 +55,8 @@ impl Ppu {
             next_tile_number: TileNumber::new(0),
             pattern_register: PatternRegister::new(),
             attribute_register: AttributeRegister::new(),
+            next_rendering_field_to_set: None,
+            next_register_value: PpuPeek::VOID,
 
             next_sprite_tile_number: TileNumber::new(0),
             current_sprite_y: SpriteY::new(0),
@@ -96,8 +101,27 @@ impl Ppu {
         mapper.on_end_of_ppu_cycle();
     }
 
-    pub fn step_second_half(&mut self) {
+    pub fn step_second_half(Bus { ppu, ppu_regs, .. }: &mut Bus) {
+        match ppu.next_rendering_field_to_set {
+            None => { /* Nothing to set. */ }
+            Some(RenderingRegisterField::PatternIndex) => {
+                ppu.next_tile_number = TileNumber::new(ppu.next_register_value.value());
+            }
+            Some(RenderingRegisterField::PaletteIndex) => {
+                let index = ppu_regs.current_address.to_palette_table_index(ppu.next_register_value.value());
+                ppu.attribute_register.set_pending_palette_table_index(index);
+            }
+            Some(RenderingRegisterField::PatternLow) => {
+                ppu.pattern_register.set_pending_low_byte(ppu.next_register_value);
+            }
+            Some(RenderingRegisterField::PatternHighAndNextTile) => {
+                ppu.pattern_register.set_pending_high_byte(ppu.next_register_value);
+                ppu.attribute_register.prepare_next_palette_table_index();
+                ppu.pattern_register.load_next_palette_indexes();
+            }
+        }
 
+        ppu.next_rendering_field_to_set = None;
     }
 
     fn execute_cycle_action(bus: &mut Bus, mapper: &mut dyn Mapper, frame: &mut Frame, cycle_action: CycleAction) {
@@ -126,28 +150,24 @@ impl Ppu {
                 bus.set_ppu_address_bus(mapper, addr);
             }
 
-            GetPatternIndex =>
-                bus.ppu.next_tile_number = TileNumber::new(bus.ppu_internal_read(mapper).value()),
+            GetPatternIndex => {
+                bus.ppu.next_register_value = bus.ppu_internal_read(mapper);
+                bus.ppu.next_rendering_field_to_set = Some(RenderingRegisterField::PatternIndex);
+            }
             GetPatternLowByte => {
-                let pattern_low = bus.ppu_internal_read(mapper);
+                bus.ppu.next_register_value = bus.ppu_internal_read(mapper);
                 if !bus.ppu_regs.rendering_enabled() { return; }
-                bus.ppu.pattern_register.set_pending_low_byte(pattern_low);
+                bus.ppu.next_rendering_field_to_set = Some(RenderingRegisterField::PatternLow);
             }
             GetPatternHighByte => {
-                let pattern_high = bus.ppu_internal_read(mapper);
+                bus.ppu.next_register_value = bus.ppu_internal_read(mapper);
                 if !bus.ppu_regs.rendering_enabled() { return; }
-                bus.ppu.pattern_register.set_pending_high_byte(pattern_high);
+                bus.ppu.next_rendering_field_to_set = Some(RenderingRegisterField::PatternHighAndNextTile);
             }
             GetPaletteIndex => {
-                let attribute_byte = bus.ppu_internal_read(mapper).value();
+                bus.ppu.next_register_value = bus.ppu_internal_read(mapper);
                 if !bus.ppu_regs.rendering_enabled() { return; }
-                let index = bus.ppu_regs.current_address.to_palette_table_index(attribute_byte);
-                bus.ppu.attribute_register.set_pending_palette_table_index(index);
-            }
-            PrepareForNextTile => {
-                if !bus.ppu_regs.rendering_enabled() { return; }
-                bus.ppu.attribute_register.prepare_next_palette_table_index();
-                bus.ppu.pattern_register.load_next_palette_indexes();
+                bus.ppu.next_rendering_field_to_set = Some(RenderingRegisterField::PaletteIndex);
             }
             PrepareForNextPixel => {
                 if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
@@ -413,4 +433,11 @@ impl Ppu {
 
         (address, visible)
     }
+}
+
+enum RenderingRegisterField {
+    PatternIndex,
+    PaletteIndex,
+    PatternLow,
+    PatternHighAndNextTile,
 }

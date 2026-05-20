@@ -16,7 +16,6 @@ pub enum CycleAction {
 
     GotoNextTileColumn,
     GotoNextPixelRow,
-    PrepareForNextTile,
     ResetTileColumn,
 
     SetPixel,

@@ -361,7 +361,7 @@ impl Nes {
     }
 
     fn ppu_step_second_half(&mut self) {
-        self.bus.ppu.step_second_half();
+        Ppu::step_second_half(&mut self.bus);
     }
 
     fn detect_changes(&mut self) {
