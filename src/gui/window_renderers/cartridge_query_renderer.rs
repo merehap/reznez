@@ -43,7 +43,8 @@ impl WindowRenderer for CartridgeQueryPopupRenderer {
                         Box::new(cartridge_query_renderer) as Box<dyn WindowRenderer>,
                         Position::Physical(PhysicalPosition { x: 50, y: 50 }),
                         1,
-                    ))};
+                    )),
+                };
             }
         });
 
@@ -108,11 +109,27 @@ impl WindowRenderer for CartridgeQueryRenderer {
                         ui.end_row();
 
                         for (path, metadata) in &self.metadata_by_path {
-                            let ResolvedMetadata { mapper_number, submapper_number, name_table_mirroring, has_persistent_memory,
-                                full_hash, prg_rom_hash, chr_rom_hash, prg_rom_size, prg_work_ram_size, prg_save_ram_size,
-                                chr_rom_size, chr_work_ram_size, chr_save_ram_size, console_type, region_timing_mode, miscellaneous_rom_count,
-                                default_expansion_device, vs } = metadata;
-                                /*
+                            let ResolvedMetadata {
+                                mapper_number,
+                                submapper_number,
+                                name_table_mirroring,
+                                has_persistent_memory,
+                                full_hash,
+                                prg_rom_hash,
+                                chr_rom_hash,
+                                prg_rom_size,
+                                prg_work_ram_size,
+                                prg_save_ram_size,
+                                chr_rom_size,
+                                chr_work_ram_size,
+                                chr_save_ram_size,
+                                console_type,
+                                region_timing_mode,
+                                miscellaneous_rom_count,
+                                default_expansion_device,
+                                vs,
+                            } = metadata;
+                            /*
                             if *mapper_number != 5 {
                                 continue;
                             }
@@ -120,7 +137,7 @@ impl WindowRenderer for CartridgeQueryRenderer {
 
                             let mut vs_hardware_type = None;
                             let mut vs_ppu_type = None;
-                            if let Some(Vs { hardware_type, ppu_type}) = vs {
+                            if let Some(Vs { hardware_type, ppu_type }) = vs {
                                 vs_hardware_type = Some(hardware_type);
                                 vs_ppu_type = Some(ppu_type);
                             }
@@ -134,9 +151,15 @@ impl WindowRenderer for CartridgeQueryRenderer {
                                 }
                             }
 
-                            ui.label(path.file_stem().map_or("???".to_owned(), |stem| stem.to_string_lossy().into_owned()));
+                            ui.label(path.file_stem().map_or("???".to_owned(), |stem| {
+                                stem.to_string_lossy().into_owned()
+                            }));
                             ui.label(mapper_number.to_string());
-                            ui.label(submapper_number.map(|s| s.to_string()).unwrap_or(String::new()));
+                            ui.label(
+                                submapper_number
+                                    .map(|s| s.to_string())
+                                    .unwrap_or(String::new()),
+                            );
                             ui.label(name_table_mirroring.unwrap().to_string());
                             ui.label(has_persistent_memory.to_string());
                             ui.label(console_type.to_string());
@@ -149,8 +172,15 @@ impl WindowRenderer for CartridgeQueryRenderer {
                             ui.label(format!("{region_timing_mode:?}"));
                             ui.label(miscellaneous_rom_count.to_string());
                             ui.label(format!("{default_expansion_device:?}"));
-                            ui.label(vs_hardware_type.map_or(String::new(), |hardware| format!("{hardware:?}")));
-                            ui.label(vs_ppu_type.map_or(String::new(), |ppu| format!("{ppu:?}")));
+                            ui.label(
+                                vs_hardware_type.map_or(String::new(), |hardware| {
+                                    format!("{hardware:?}")
+                                }),
+                            );
+                            ui.label(
+                                vs_ppu_type
+                                    .map_or(String::new(), |ppu| format!("{ppu:?}")),
+                            );
                             ui.label(format!("{full_hash:X}"));
                             ui.label(format!("{prg_rom_hash:X}"));
                             ui.label(format!("{chr_rom_hash:X}"));

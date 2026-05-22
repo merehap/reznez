@@ -21,6 +21,8 @@ use crate::gui::window_renderers::primary_renderer::PrimaryRenderer;
 use crate::gui::world::World;
 use crate::nes::Nes;
 
+const PRIMARY_WINDOW_SCALE_FACTOR: f32 = 3.0;
+
 pub struct EguiGui;
 
 impl Gui for EguiGui {
@@ -28,8 +30,12 @@ impl Gui for EguiGui {
         let input = WinitInputHelper::new();
 
         let gilrs = gilrs::Gilrs::new().unwrap();
-        let gamepads: Vec<(gilrs::GamepadId, gilrs::Gamepad)> = gilrs.gamepads().collect();
-        assert!(gamepads.len() < 2, "There must not be more than one gamepad connected at a time.");
+        let gamepads: Vec<(gilrs::GamepadId, gilrs::Gamepad)> =
+            gilrs.gamepads().collect();
+        assert!(
+            gamepads.len() < 2,
+            "There must not be more than one gamepad connected at a time."
+        );
         let active_gamepad_id = gamepads.first().map(|(id, _)| *id);
 
         let mut world = World { nes, config, input, gilrs, active_gamepad_id };
@@ -39,75 +45,80 @@ impl Gui for EguiGui {
         let primary_window_name = primary_renderer.name();
         let primary_window = EguiWindow::from_event_loop(
             &event_loop,
-            3,
+            PRIMARY_WINDOW_SCALE_FACTOR as f64,
             Position::Physical(PhysicalPosition { x: 50, y: 50 }),
             primary_renderer,
         );
         let mut window_manager = WindowManager::new(primary_window, primary_window_name);
 
-        event_loop.run(move |event, event_loop_window_target| {
-            if world.input.update(&event) {
-                if let Some(nes) = &mut world.nes {
-                    if world.input.key_pressed(KeyCode::F1) {
-                        info!("{}", nes.bus().oam);
-                    }
+        event_loop
+            .run(move |event, event_loop_window_target| {
+                if world.input.update(&event) {
+                    if let Some(nes) = &mut world.nes {
+                        if world.input.key_pressed(KeyCode::F1) {
+                            info!("{}", nes.bus().oam);
+                        }
 
-                    if world.input.key_pressed(KeyCode::F12) {
-                        nes.set_reset_signal();
-                    }
-                }
-
-                if world.input.key_pressed(KeyCode::Pause)
-                    || world.input.key_pressed(KeyCode::KeyP)
-                    || world.input.key_pressed(KeyCode::Escape)
-                {
-                    window_manager.toggle_pause();
-                }
-
-                window_manager.request_redraws();
-            }
-
-            if let Event::WindowEvent { event, window_id } = event {
-                match event {
-                    WindowEvent::CloseRequested => {
-                        let primary_removed = window_manager.remove_window(window_id);
-                        if primary_removed {
-                            log::logger().flush();
-                            event_loop_window_target.exit();
+                        if world.input.key_pressed(KeyCode::F12) {
+                            nes.set_reset_signal();
                         }
                     }
-                    WindowEvent::RedrawRequested => {
-                        match window_manager.draw(&mut world, window_id) {
-                            Ok(FlowControl { window_args, should_close_window }) => {
-                                if let Some((renderer, position, scale)) = window_args {
-                                    window_manager.create_window_from_renderer(
-                                        event_loop_window_target,
-                                        renderer,
-                                        position,
-                                        scale,
-                                    );
-                                }
 
-                                if should_close_window {
-                                    window_manager.remove_window(window_id);
-                                }
-                            }
-                            Err(e) => {
-                                if window_id == window_manager.primary_window_id {
-                                    info!("Closing REZNEZ due to redraw failure. {e}");
-                                    event_loop_window_target.exit();
-                                }
+                    if world.input.key_pressed(KeyCode::Pause)
+                        || world.input.key_pressed(KeyCode::KeyP)
+                        || world.input.key_pressed(KeyCode::Escape)
+                    {
+                        window_manager.toggle_pause();
+                    }
+
+                    window_manager.request_redraws();
+                }
+
+                if let Event::WindowEvent { event, window_id } = event {
+                    match event {
+                        WindowEvent::CloseRequested => {
+                            let primary_removed = window_manager.remove_window(window_id);
+                            if primary_removed {
+                                log::logger().flush();
+                                event_loop_window_target.exit();
                             }
                         }
-                    }
-                    _ => {
-                        if let Some(window) = window_manager.window_mut(window_id) {
-                            window.handle_event(&event);
+                        WindowEvent::RedrawRequested => {
+                            match window_manager.draw(&mut world, window_id) {
+                                Ok(FlowControl { window_args, should_close_window }) => {
+                                    if let Some((renderer, position, scale)) = window_args
+                                    {
+                                        window_manager.create_window_from_renderer(
+                                            event_loop_window_target,
+                                            renderer,
+                                            position,
+                                            scale as f64,
+                                        );
+                                    }
+
+                                    if should_close_window {
+                                        window_manager.remove_window(window_id);
+                                    }
+                                }
+                                Err(e) => {
+                                    if window_id == window_manager.primary_window_id {
+                                        info!(
+                                            "Closing REZNEZ due to redraw failure. {e}"
+                                        );
+                                        event_loop_window_target.exit();
+                                    }
+                                }
+                            }
+                        }
+                        _ => {
+                            if let Some(window) = window_manager.window_mut(window_id) {
+                                window.handle_event(&event);
+                            }
                         }
                     }
                 }
-            }
-        }).unwrap();
+            })
+            .unwrap();
     }
 }
 
@@ -125,17 +136,17 @@ struct EguiWindow<'a> {
     renderer: Box<dyn WindowRenderer>,
 }
 
-impl <'a> EguiWindow<'a> {
+impl<'a> EguiWindow<'a> {
     fn from_event_loop(
         event_loop: &EventLoopWindowTarget<()>,
-        scale_factor: u64,
+        scale_factor: f64,
         initial_position: Position,
         renderer: Box<dyn WindowRenderer>,
     ) -> Self {
         let window = {
             let size = LogicalSize::new(
-                scale_factor as f64 * renderer.width() as f64,
-                scale_factor as f64 * renderer.height() as f64,
+                scale_factor * renderer.width() as f64,
+                scale_factor * renderer.height() as f64,
             );
             WindowBuilder::new()
                 .with_title(renderer.name())
@@ -178,7 +189,8 @@ impl <'a> EguiWindow<'a> {
         renderer: Box<dyn WindowRenderer>,
     ) -> Self {
         let egui_ctx = Context::default();
-        let egui_state = egui_winit::State::new(egui_ctx, ViewportId::ROOT, &window, None, None);
+        let egui_state =
+            egui_winit::State::new(egui_ctx, ViewportId::ROOT, &window, None, None);
         let screen_descriptor = ScreenDescriptor {
             physical_width: width,
             physical_height: height,
@@ -208,18 +220,25 @@ impl <'a> EguiWindow<'a> {
         self.renderer.render(world, &mut self.pixels);
 
         // Run the egui frame and create all paint jobs to prepare for rendering.
-        let raw_input = self.egui_state.take_egui_input(&self.window);
+        let mut raw_input = self.egui_state.take_egui_input(&self.window);
+
+        raw_input.viewports.iter_mut().for_each(|viewport| {
+            // Hack around bug with scale factor causing egui to crash in fonts lookup
+            viewport.1.native_pixels_per_point = Some(PRIMARY_WINDOW_SCALE_FACTOR);
+        });
+
         let mut result = FlowControl::CONTINUE;
         let output = self.egui_state.egui_ctx().run(raw_input, |egui_ctx| {
             result = self.renderer.ui(egui_ctx, world);
         });
 
         self.textures.append(output.textures_delta);
-        self.egui_state.handle_platform_output(
-            &self.window,
-            output.platform_output,
-        );
-        self.paint_jobs = self.egui_state.egui_ctx().tessellate(output.shapes, 1.0);
+        self.egui_state
+            .handle_platform_output(&self.window, output.platform_output);
+        self.paint_jobs = self
+            .egui_state
+            .egui_ctx()
+            .tessellate(output.shapes, PRIMARY_WINDOW_SCALE_FACTOR);
 
         self.pixels
             .render_with(|encoder, render_target, context| {
@@ -264,7 +283,7 @@ struct WindowManager<'a> {
     window_names: BTreeSet<String>,
 }
 
-impl <'a> WindowManager<'a> {
+impl<'a> WindowManager<'a> {
     pub fn new(primary_window: EguiWindow<'a>, name: String) -> WindowManager<'a> {
         let mut manager = WindowManager {
             primary_window_id: primary_window.window.id(),
@@ -283,7 +302,7 @@ impl <'a> WindowManager<'a> {
         event_loop: &EventLoopWindowTarget<()>,
         renderer: Box<dyn WindowRenderer>,
         position: Position,
-        scale: u64,
+        scale: f64,
     ) {
         let name = renderer.name();
         if self.window_names.contains(&name) {
@@ -308,7 +327,12 @@ impl <'a> WindowManager<'a> {
     }
 
     pub fn toggle_pause(&mut self) {
-        self.windows_by_id.get_mut(&self.primary_window_id).unwrap().1.renderer.toggle_pause();
+        self.windows_by_id
+            .get_mut(&self.primary_window_id)
+            .unwrap()
+            .1
+            .renderer
+            .toggle_pause();
     }
 
     pub fn request_redraws(&self) {
@@ -317,8 +341,14 @@ impl <'a> WindowManager<'a> {
         }
     }
 
-    pub fn draw(&mut self, world: &mut World, window_id: WindowId) -> Result<FlowControl, String> {
-        let window = self.window_mut(window_id).ok_or("Failed to create window")?;
+    pub fn draw(
+        &mut self,
+        world: &mut World,
+        window_id: WindowId,
+    ) -> Result<FlowControl, String> {
+        let window = self
+            .window_mut(window_id)
+            .ok_or("Failed to create window")?;
         window.draw(world)
     }
 
