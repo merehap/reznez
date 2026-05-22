@@ -1,5 +1,9 @@
-use std::collections::{BTreeMap, BTreeSet};
-use std::sync::Arc;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::sync::{Arc, LazyLock};
+
+use gilrs::GamepadId;
+
+use crate::controller::joypad::{Button, ButtonStatus};
 
 use egui::{ClippedPrimitive, Context, TexturesDelta, ViewportId};
 use egui_wgpu_backend::{RenderPass, ScreenDescriptor};
@@ -15,11 +19,73 @@ use winit::window::{WindowBuilder, WindowId};
 use winit_input_helper::WinitInputHelper;
 
 use crate::config::Config;
-use crate::gui::gui::Gui;
+use crate::gui::gui::{Gui, Events};
 use crate::gui::window_renderer::{FlowControl, WindowRenderer};
 use crate::gui::window_renderers::primary_renderer::PrimaryRenderer;
 use crate::gui::world::World;
 use crate::nes::Nes;
+
+#[rustfmt::skip]
+static JOY_1_KEYBOARD_MAPPINGS: LazyLock<HashMap<KeyCode, Button>> = LazyLock::new(|| {
+    let mut mappings = HashMap::new();
+    mappings.insert(KeyCode::KeyJ,   Button::B);
+    mappings.insert(KeyCode::KeyK,   Button::A);
+    mappings.insert(KeyCode::KeyU,   Button::Select);
+    mappings.insert(KeyCode::KeyI,   Button::Start);
+
+    mappings.insert(KeyCode::KeyW,   Button::Up);
+    mappings.insert(KeyCode::KeyS,   Button::Down);
+    mappings.insert(KeyCode::KeyA,   Button::Left);
+    mappings.insert(KeyCode::KeyD,   Button::Right);
+    mappings.insert(KeyCode::ArrowUp,    Button::Up);
+    mappings.insert(KeyCode::ArrowDown,  Button::Down);
+    mappings.insert(KeyCode::ArrowLeft,  Button::Left);
+    mappings.insert(KeyCode::ArrowRight, Button::Right);
+    mappings
+});
+
+#[rustfmt::skip]
+static JOY_2_KEYBOARD_MAPPINGS: LazyLock<HashMap<KeyCode, Button>> = LazyLock::new(|| {
+    let mut mappings = HashMap::new();
+    mappings.insert(KeyCode::Numpad0,        Button::A);
+    mappings.insert(KeyCode::NumpadEnter,    Button::B);
+    mappings.insert(KeyCode::NumpadSubtract, Button::Select);
+    mappings.insert(KeyCode::NumpadAdd,      Button::Start);
+    mappings.insert(KeyCode::Numpad8,        Button::Up);
+    mappings.insert(KeyCode::Numpad5,        Button::Down);
+    mappings.insert(KeyCode::Numpad4,        Button::Left);
+    mappings.insert(KeyCode::Numpad6,        Button::Right);
+    mappings
+});
+
+static JOY_1_JOYPAD_MAPPINGS: LazyLock<HashMap<u32, Button>> = LazyLock::new(|| {
+    let mut mappings = HashMap::new();
+    mappings.insert(65824, Button::A);
+    mappings.insert(65825, Button::B);
+    mappings.insert(65830, Button::Select);
+    mappings.insert(65831, Button::Start);
+    mappings.insert(66080, Button::Up);
+    mappings.insert(66081, Button::Down);
+    mappings.insert(66082, Button::Left);
+    mappings.insert(66083, Button::Right);
+    mappings
+});
+
+/*
+#[rustfmt::skip]
+static JOY_2_JOYPAD_MAPPINGS: LazyLock<HashMap<u32, Button>> = LazyLock::new(|| {
+    let mut mappings = HashMap::new();
+    mappings.insert(VirtualKeyCode::Numpad0,        Button::A);
+    mappings.insert(VirtualKeyCode::NumpadEnter,    Button::B);
+    mappings.insert(VirtualKeyCode::NumpadSubtract, Button::Select);
+    mappings.insert(VirtualKeyCode::NumpadAdd,      Button::Start);
+    mappings.insert(VirtualKeyCode::Numpad8,        Button::Up);
+    mappings.insert(VirtualKeyCode::Numpad5,        Button::Down);
+    mappings.insert(VirtualKeyCode::Numpad4,        Button::Left);
+    mappings.insert(VirtualKeyCode::Numpad6,        Button::Right);
+    mappings
+});
+*/
 
 const PRIMARY_WINDOW_SCALE_FACTOR: f32 = 3.0;
 
@@ -38,7 +104,8 @@ impl Gui for EguiGui {
         );
         let active_gamepad_id = gamepads.first().map(|(id, _)| *id);
 
-        let mut world = World { nes, config, input, gilrs, active_gamepad_id };
+        let events = Events::none();
+        let mut world = World { nes, config, input, gilrs, active_gamepad_id, events };
         let event_loop = EventLoop::new().unwrap();
 
         let primary_renderer = Box::new(PrimaryRenderer::new());
@@ -53,7 +120,8 @@ impl Gui for EguiGui {
 
         event_loop
             .run(move |event, event_loop_window_target| {
-                if world.input.update(&event) {
+                let updated = world.input.update(&event);
+                if updated {
                     if let Some(nes) = &mut world.nes {
                         if world.input.key_pressed(KeyCode::F1) {
                             info!("{}", nes.bus().oam);
@@ -70,6 +138,8 @@ impl Gui for EguiGui {
                     {
                         window_manager.toggle_pause();
                     }
+
+                    world.events = poll_button_events(&world.input, &mut world.gilrs, world.active_gamepad_id);
 
                     window_manager.request_redraws();
                 }
@@ -358,8 +428,48 @@ impl<'a> WindowManager<'a> {
             .map(|(_, window)| window)
     }
 }
-/*
-fn button_pressed(key: input: &WinitInputHelper, gilrs: gilrs::Gilrs, active_gamepad_id: Option<GamepadId>) -> bool {
 
+fn poll_button_events(input: &WinitInputHelper, gilrs: &mut gilrs::Gilrs, active_gamepad_id: Option<GamepadId>) -> Events {
+    let mut joypad1_button_statuses = BTreeMap::new();
+    let mut joypad2_button_statuses = BTreeMap::new();
+
+    while let Some(gilrs::Event { id, event, .. }) = gilrs.next_event() {
+        assert_eq!(Some(id), active_gamepad_id);
+        match event {
+            gilrs::EventType::ButtonPressed(_, code) => {
+                if let Some(button) = JOY_1_JOYPAD_MAPPINGS.get(&code.into_u32()) {
+                    joypad1_button_statuses.insert(*button, ButtonStatus::Pressed);
+                }
+            }
+            gilrs::EventType::ButtonReleased(_, code) => {
+                if let Some(button) = JOY_1_JOYPAD_MAPPINGS.get(&code.into_u32()) {
+                    joypad1_button_statuses.insert(*button, ButtonStatus::Unpressed);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    for (&key, &button) in JOY_1_KEYBOARD_MAPPINGS.iter() {
+        if input.key_pressed(key) {
+            joypad1_button_statuses.insert(button, ButtonStatus::Pressed);
+        } else if input.key_released(key) {
+            joypad1_button_statuses.insert(button, ButtonStatus::Unpressed);
+        }
+    }
+
+    for (&key, &button) in JOY_2_KEYBOARD_MAPPINGS.iter() {
+        if input.key_pressed(key) {
+            joypad2_button_statuses.insert(button, ButtonStatus::Pressed);
+        } else if input.key_released(key) {
+            joypad2_button_statuses.insert(button, ButtonStatus::Unpressed);
+        }
+    }
+
+    Events {
+        // Quit-handling is done by winit.
+        should_quit: false,
+        joypad1_button_statuses,
+        joypad2_button_statuses,
+    }
 }
-*/

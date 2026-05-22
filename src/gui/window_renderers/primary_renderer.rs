@@ -1,14 +1,7 @@
-use std::collections::{BTreeMap, HashMap};
-use std::sync::LazyLock;
-
 pub use egui::Context;
-use gilrs::GamepadId;
 use pixels::Pixels;
 pub use winit::dpi::{PhysicalPosition, Position};
-use winit::keyboard::KeyCode;
-use winit_input_helper::WinitInputHelper;
 
-use crate::controller::joypad::{Button, ButtonStatus};
 use crate::gui::gui::{execute_frame, Events};
 pub use crate::gui::window_renderer::{FlowControl, WindowRenderer};
 use crate::gui::window_renderers::audio_visualizer::AudioVisualizer;
@@ -27,70 +20,8 @@ pub use crate::gui::world::World;
 use crate::ppu::pixel_index::{PixelColumn, PixelRow};
 use crate::ppu::render::frame::Frame;
 
-#[rustfmt::skip]
-static JOY_1_KEYBOARD_MAPPINGS: LazyLock<HashMap<KeyCode, Button>> = LazyLock::new(|| {
-    let mut mappings = HashMap::new();
-    mappings.insert(KeyCode::KeyJ,   Button::B);
-    mappings.insert(KeyCode::KeyK,   Button::A);
-    mappings.insert(KeyCode::KeyU,   Button::Select);
-    mappings.insert(KeyCode::KeyI,   Button::Start);
-
-    mappings.insert(KeyCode::KeyW,   Button::Up);
-    mappings.insert(KeyCode::KeyS,   Button::Down);
-    mappings.insert(KeyCode::KeyA,   Button::Left);
-    mappings.insert(KeyCode::KeyD,   Button::Right);
-    mappings.insert(KeyCode::ArrowUp,    Button::Up);
-    mappings.insert(KeyCode::ArrowDown,  Button::Down);
-    mappings.insert(KeyCode::ArrowLeft,  Button::Left);
-    mappings.insert(KeyCode::ArrowRight, Button::Right);
-    mappings
-});
-
-#[rustfmt::skip]
-static JOY_2_KEYBOARD_MAPPINGS: LazyLock<HashMap<KeyCode, Button>> = LazyLock::new(|| {
-    let mut mappings = HashMap::new();
-    mappings.insert(KeyCode::Numpad0,        Button::A);
-    mappings.insert(KeyCode::NumpadEnter,    Button::B);
-    mappings.insert(KeyCode::NumpadSubtract, Button::Select);
-    mappings.insert(KeyCode::NumpadAdd,      Button::Start);
-    mappings.insert(KeyCode::Numpad8,        Button::Up);
-    mappings.insert(KeyCode::Numpad5,        Button::Down);
-    mappings.insert(KeyCode::Numpad4,        Button::Left);
-    mappings.insert(KeyCode::Numpad6,        Button::Right);
-    mappings
-});
-
-static JOY_1_JOYPAD_MAPPINGS: LazyLock<HashMap<u32, Button>> = LazyLock::new(|| {
-    let mut mappings = HashMap::new();
-    mappings.insert(65824, Button::A);
-    mappings.insert(65825, Button::B);
-    mappings.insert(65830, Button::Select);
-    mappings.insert(65831, Button::Start);
-    mappings.insert(66080, Button::Up);
-    mappings.insert(66081, Button::Down);
-    mappings.insert(66082, Button::Left);
-    mappings.insert(66083, Button::Right);
-    mappings
-});
-
-/*
-#[rustfmt::skip]
-static JOY_2_JOYPAD_MAPPINGS: LazyLock<HashMap<u32, Button>> = LazyLock::new(|| {
-    let mut mappings = HashMap::new();
-    mappings.insert(VirtualKeyCode::Numpad0,        Button::A);
-    mappings.insert(VirtualKeyCode::NumpadEnter,    Button::B);
-    mappings.insert(VirtualKeyCode::NumpadSubtract, Button::Select);
-    mappings.insert(VirtualKeyCode::NumpadAdd,      Button::Start);
-    mappings.insert(VirtualKeyCode::Numpad8,        Button::Up);
-    mappings.insert(VirtualKeyCode::Numpad5,        Button::Down);
-    mappings.insert(VirtualKeyCode::Numpad4,        Button::Left);
-    mappings.insert(VirtualKeyCode::Numpad6,        Button::Right);
-    mappings
-});
-*/
-
 pub struct PrimaryRenderer {
-    paused: bool,
+    pub paused: bool,
 }
 
 impl PrimaryRenderer {
@@ -237,7 +168,7 @@ impl WindowRenderer for PrimaryRenderer {
             execute_frame(
                 nes,
                 &world.config,
-                events(&world.input, &mut world.gilrs, world.active_gamepad_id),
+                std::mem::replace(&mut world.events, Events::none()),
                 display_frame,
             );
         }
@@ -253,50 +184,5 @@ impl WindowRenderer for PrimaryRenderer {
 
     fn height(&self) -> usize {
         PixelRow::ROW_COUNT
-    }
-}
-
-fn events(input: &WinitInputHelper, gilrs: &mut gilrs::Gilrs, active_gamepad_id: Option<GamepadId>) -> Events {
-    let mut joypad1_button_statuses = BTreeMap::new();
-    let mut joypad2_button_statuses = BTreeMap::new();
-
-    while let Some(gilrs::Event { id, event, .. }) = gilrs.next_event() {
-        assert_eq!(Some(id), active_gamepad_id);
-        match event {
-            gilrs::EventType::ButtonPressed(_, code) => {
-                if let Some(button) = JOY_1_JOYPAD_MAPPINGS.get(&code.into_u32()) {
-                    joypad1_button_statuses.insert(*button, ButtonStatus::Pressed);
-                }
-            }
-            gilrs::EventType::ButtonReleased(_, code) => {
-                if let Some(button) = JOY_1_JOYPAD_MAPPINGS.get(&code.into_u32()) {
-                    joypad1_button_statuses.insert(*button, ButtonStatus::Unpressed);
-                }
-            }
-            _ => {}
-        }
-    }
-
-    for (&key, &button) in JOY_1_KEYBOARD_MAPPINGS.iter() {
-        if input.key_pressed(key) {
-            joypad1_button_statuses.insert(button, ButtonStatus::Pressed);
-        } else if input.key_released(key) {
-            joypad1_button_statuses.insert(button, ButtonStatus::Unpressed);
-        }
-    }
-
-    for (&key, &button) in JOY_2_KEYBOARD_MAPPINGS.iter() {
-        if input.key_pressed(key) {
-            joypad2_button_statuses.insert(button, ButtonStatus::Pressed);
-        } else if input.key_released(key) {
-            joypad2_button_statuses.insert(button, ButtonStatus::Unpressed);
-        }
-    }
-
-    Events {
-        // Quit-handling is done by winit.
-        should_quit: false,
-        joypad1_button_statuses,
-        joypad2_button_statuses,
     }
 }
