@@ -35,6 +35,7 @@ pub struct Ppu {
     next_rendering_field_to_set: Option<RenderingRegisterField>,
     next_register_value: PpuPeek,
     pending_register_shift: bool,
+    pending_get_pattern_high_byte: bool,
 
     next_sprite_tile_number: TileNumber,
     current_sprite_y: SpriteY,
@@ -59,6 +60,7 @@ impl Ppu {
             next_rendering_field_to_set: None,
             next_register_value: PpuPeek::VOID,
             pending_register_shift: false,
+            pending_get_pattern_high_byte: false,
 
             next_sprite_tile_number: TileNumber::new(0),
             current_sprite_y: SpriteY::new(0),
@@ -157,6 +159,7 @@ impl Ppu {
                     true,
                 );
                 bus.set_ppu_address_bus(mapper, addr);
+                bus.ppu.pending_get_pattern_high_byte = bus.ppu_regs.rendering_enabled();
             }
 
             GetPatternIndex => {
@@ -170,8 +173,10 @@ impl Ppu {
             }
             GetPatternHighByte => {
                 bus.ppu.next_register_value = bus.ppu_internal_read(mapper);
-                if !bus.ppu_regs.rendering_enabled() { return; }
-                bus.ppu.next_rendering_field_to_set = Some(RenderingRegisterField::PatternHighAndNextTile);
+                if bus.ppu.pending_get_pattern_high_byte {
+                    bus.ppu.pending_get_pattern_high_byte = false;
+                    bus.ppu.next_rendering_field_to_set = Some(RenderingRegisterField::PatternHighAndNextTile);
+                }
             }
             GetPaletteIndex => {
                 bus.ppu.next_register_value = bus.ppu_internal_read(mapper);
