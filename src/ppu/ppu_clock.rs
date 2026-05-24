@@ -40,7 +40,7 @@ impl PpuClock {
     }
 
     pub fn scanline_pixel_row(&self) -> Option<PixelRow> {
-        PixelRow::try_from_u16(self.scanline)
+        PixelRow::from_scanline(self.scanline)
     }
 
     pub fn is_on_visible_scanline(&self) -> bool {

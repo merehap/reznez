@@ -13,7 +13,7 @@ impl SpriteY {
     }
 
     pub fn to_current_pixel_row(self) -> Option<PixelRow> {
-        PixelRow::try_from_u16(u16::from(self.0))
+        PixelRow::from_scanline(u16::from(self.0))
     }
 
     pub fn row_in_sprite(

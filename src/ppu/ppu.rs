@@ -436,7 +436,7 @@ impl Ppu {
                 visible = false;
             }
         } else {
-            // Pre-render scanline. TODO: use correct address based upon pattern index.
+            // VBlank scanlines. TODO: use correct address based upon pattern index.
             if sprite_table_side == PatternTableSide::Left {
                 address = PpuAddress::from_u16(0x0000);
             } else {

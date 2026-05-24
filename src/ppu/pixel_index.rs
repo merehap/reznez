@@ -36,7 +36,7 @@ impl PixelIndex {
 
     fn try_from_scanline_cycle(scanline: u16, cycle: u16) -> Option<PixelIndex> {
         let column = PixelColumn::try_from_u16(cycle - 1)?;
-        let row = PixelRow::try_from_u16(scanline)?;
+        let row = PixelRow::from_scanline(scanline)?;
         Some(PixelIndex { column, row })
     }
 }
@@ -142,16 +142,8 @@ impl PixelRow {
         }
     }
 
-    pub fn try_from_u16(pixel_row: u16) -> Option<PixelRow> {
-        PixelRow::try_from_u8(pixel_row.try_into().ok()?)
-    }
-
-    pub const fn saturate_from_u8(pixel_row: u8) -> PixelRow {
-        if let Some(row) = PixelRow::try_from_u8(pixel_row) {
-            row
-        } else {
-            PixelRow::MAX
-        }
+    pub fn from_scanline(pixel_row: u16) -> Option<PixelRow> {
+        PixelRow::try_from_u8(pixel_row as u8)
     }
 
     pub fn add_row_in_tile(self, row_in_tile: RowInTile) -> Option<PixelRow> {
