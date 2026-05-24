@@ -41,6 +41,7 @@ pub enum CycleAction {
     StartReadingBackgroundTiles,
     StopReadingBackgroundTiles,
     StartClearingSecondaryOam,
+    ClearOamRegisterIndex,
     StartSpriteEvaluation,
     StartLoadingOamRegisters,
     StopLoadingOamRegisters,

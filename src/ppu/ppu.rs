@@ -10,7 +10,7 @@ use crate::ppu::cycle_action::cycle_action::CycleAction;
 use crate::ppu::cycle_action::frame_actions::{FrameActions, NTSC_FRAME_ACTIONS};
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::pattern_table_side::PatternTableSide;
-use crate::ppu::pixel_index::{PixelIndex, PixelRow};
+use crate::ppu::pixel_index::PixelIndex;
 use crate::ppu::register::ppu_registers::Toggle;
 use crate::ppu::register::registers::attribute_register::AttributeRegister;
 use crate::ppu::register::registers::pattern_register::PatternRegister;
@@ -235,11 +235,6 @@ impl Ppu {
                 let rendering_enabled = bus.ppu_regs.background_enabled() || bus.ppu_regs.sprites_enabled();
                 let (mut sprite_pixel, priority, is_sprite_0, ppu_peek) = bus.ppu.oam_registers.step(&bus.palette_table(), rendering_enabled);
                 if rendering_enabled {
-                    // HACK: Transparent sprites on row 0 should be a natural consequence of the shifter pipeline instead.
-                    if pixel_row == PixelRow::ZERO {
-                        sprite_pixel = Rgbt::Transparent;
-                    }
-
                     if !bus.ppu_regs.sprites_enabled() {
                         sprite_pixel = Rgbt::Transparent;
                     }
@@ -276,10 +271,12 @@ impl Ppu {
                 info!(target: "ppustage", "{}\t\tCLEARING SECONDARY OAM", bus.ppu_clock());
                 bus.ppu.sprite_evaluator.start_clearing_secondary_oam();
             }
+            ClearOamRegisterIndex => {
+                bus.ppu.oam_register_index = 0;
+            }
             StartSpriteEvaluation => {
                 info!(target: "ppustage", "\t\tSPRITE EVALUATION");
                 bus.ppu.sprite_evaluator.start_sprite_evaluation();
-                bus.ppu.oam_register_index = 0;
             }
             StartLoadingOamRegisters => {
                 info!(target: "ppustage", "\t\tLoading OAM registers.");
