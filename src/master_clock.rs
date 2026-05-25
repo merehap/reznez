@@ -1,5 +1,5 @@
 use crate::apu::apu_clock::ApuClock;
-use crate::ppu::ppu_clock::PpuClock;
+use crate::ppu::ppu_clock::{LastCycle, PpuClock};
 
 use CycleType::*;
 const NTSC_SCHEDULE: [&[CycleType]; 12] = [
@@ -107,7 +107,7 @@ impl MasterClock {
         self.cpu_cycle += 1;
     }
 
-    pub fn tick_ppu_clock(&mut self, skip_odd_frame_cycle: bool) -> bool {
+    pub fn tick_ppu_clock(&mut self, skip_odd_frame_cycle: bool) -> Option<LastCycle> {
         self.ppu_clock.tick(skip_odd_frame_cycle)
     }
 }

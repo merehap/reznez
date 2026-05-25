@@ -341,13 +341,13 @@ impl Nes {
     }
 
     fn ppu_step_first_half(&mut self) -> bool {
-        let is_last_cycle_of_frame = self.bus.master_clock.tick_ppu_clock(self.bus.ppu_regs.rendering_enabled());
+        let is_last_cycle_of_frame = self.bus.master_clock.tick_ppu_clock(self.bus.ppu_regs.rendering_enabled()).is_some();
         Ppu::step_first_half(&mut self.bus, &mut *self.mapper, &mut self.frame);
         is_last_cycle_of_frame
     }
 
     fn ppu_step_first_half_with_logging(&mut self) -> bool {
-        let is_last_cycle_of_frame = self.bus.master_clock.tick_ppu_clock(self.bus.ppu_regs.rendering_enabled());
+        let is_last_cycle_of_frame = self.bus.master_clock.tick_ppu_clock(self.bus.ppu_regs.rendering_enabled()).is_some();
 
         if log_enabled!(target: "timings", Info) {
             self.snapshots.current().add_ppu_position(self.bus.master_clock().ppu_clock());

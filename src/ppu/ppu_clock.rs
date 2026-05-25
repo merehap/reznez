@@ -3,7 +3,6 @@ use std::fmt;
 use crate::ppu::pixel_index::PixelRow;
 
 pub const MAX_SCANLINE: u16 = 261;
-pub const MAX_CYCLE: u16 = 340;
 
 #[derive(Clone, Debug)]
 pub struct PpuClock {
@@ -65,27 +64,29 @@ impl PpuClock {
         self.is_on_visible_scanline() && self.cycle >= 256 && self.cycle <= 320
     }
 
-    pub fn tick(&mut self, skip_odd_frame_cycle: bool) -> bool {
+    pub fn tick(&mut self, skip_odd_frame_cycle: bool) -> Option<LastCycle> {
         self.total_cycles += 1;
 
-        let max_cycle = if skip_odd_frame_cycle && self.frame % 2 == 1 {
-            MAX_CYCLE - 1
+        let last_cycle = if skip_odd_frame_cycle && self.frame % 2 == 1 {
+            LastCycle::Skipped
         } else {
-            MAX_CYCLE
+            LastCycle::Normal
         };
-        let is_last_cycle_of_frame = self.scanline == MAX_SCANLINE && self.cycle >= max_cycle;
+
+        let is_last_cycle_of_frame = self.scanline == MAX_SCANLINE && self.cycle >= last_cycle as u16;
         if is_last_cycle_of_frame {
             self.frame += 1;
             self.scanline = 0;
             self.cycle = 0;
-        } else if self.cycle == MAX_CYCLE {
+            Some(last_cycle)
+        } else if self.cycle == LastCycle::Normal as u16 {
             self.scanline += 1;
             self.cycle = 0;
+            None
         } else {
             self.cycle += 1;
+            None
         }
-
-        is_last_cycle_of_frame
     }
 }
 
@@ -93,4 +94,10 @@ impl fmt::Display for PpuClock {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "F:{},S:{:03},C:{:03}", self.frame, self.scanline, self.cycle)
     }
+}
+
+#[derive(Clone, Copy)]
+pub enum LastCycle {
+    Normal = 340,
+    Skipped = 339,
 }
