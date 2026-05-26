@@ -98,10 +98,10 @@ impl Gui for EguiGui {
         let gilrs = gilrs::Gilrs::new().unwrap();
         let gamepads: Vec<(gilrs::GamepadId, gilrs::Gamepad)> =
             gilrs.gamepads().collect();
-        assert!(
-            gamepads.len() < 2,
-            "There must not be more than one gamepad connected at a time."
-        );
+            if gamepads.len() > 1 {
+                info!("More than one gamepad connected. Using the first detected gamepad.");
+            }
+            
         let active_gamepad_id = gamepads.first().map(|(id, _)| *id);
 
         let events = Events::none();
@@ -434,7 +434,10 @@ fn poll_button_events(input: &WinitInputHelper, gilrs: &mut gilrs::Gilrs, active
     let mut joypad2_button_statuses = BTreeMap::new();
 
     while let Some(gilrs::Event { id, event, .. }) = gilrs.next_event() {
-        assert_eq!(Some(id), active_gamepad_id);
+        if Some(id) != active_gamepad_id {
+            continue;
+        }
+        
         match event {
             gilrs::EventType::ButtonPressed(_, code) => {
                 if let Some(button) = JOY_1_JOYPAD_MAPPINGS.get(&code.into_u32()) {
