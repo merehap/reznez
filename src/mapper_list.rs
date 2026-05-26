@@ -404,7 +404,9 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (124, _) => TodoMapper,
         // Monty on the Run (Whirlwind Manu's FDS conversion)
         (125, None) => m::mapper125::Mapper125.supported(),
-        (126..=128, _) => TodoMapper,
+        (126..=127, _) => TodoMapper,
+        // Duplicate
+        (128, None) => m::mapper265::Mapper265::new().supported(),
         // Duplicate
         (129, None) => m::mapper058::Mapper058.supported(),
         (130..=132, _) => TodoMapper,
@@ -577,7 +579,9 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (255, None) => m::mapper225::Mapper225::default().supported(),
 
         // Cony UNL-YOKO
-        (264, _) => m::mapper264::Mapper264::new().supported(),
+        (264, None) => m::mapper264::Mapper264::new().supported(),
+        // T-262 multicarts
+        (265, None) => m::mapper265::Mapper265::new().supported(),
 
         (464..=466, _) => UnassignedMapper,
         (475, _) => UnassignedMapper,
