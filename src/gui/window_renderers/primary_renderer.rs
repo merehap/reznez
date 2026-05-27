@@ -14,6 +14,7 @@ pub use crate::gui::window_renderer::{FlowControl, WindowRenderer};
 use crate::gui::window_renderers::audio_visualizer::AudioVisualizer;
 use crate::gui::window_renderers::cartridge_metadata_renderer::CartridgeMetadataRenderer;
 use crate::gui::window_renderers::cartridge_query_renderer::CartridgeQueryPopupRenderer;
+use crate::gui::window_renderers::controls_renderer::ControlsRenderer;
 use crate::gui::window_renderers::display_settings_renderer::DisplaySettingsRenderer;
 use crate::gui::window_renderers::layers_renderer::LayersRenderer;
 pub use crate::gui::window_renderers::load_rom_renderer::LoadRomRenderer;
@@ -138,6 +139,17 @@ impl WindowRenderer for PrimaryRenderer {
                         ui.close_menu();
                         result = FlowControl::spawn_window((
                             Box::new(DisplaySettingsRenderer::new()) as Box<dyn WindowRenderer>,
+                            Position::Physical(PhysicalPosition { x: 850, y: 360 }),
+                            2,
+                        ));
+                    }
+                });
+
+                ui.menu_button("Help", |ui| {
+                    if ui.button("Controls").clicked() {
+                        ui.close_menu();
+                        result = FlowControl::spawn_window((
+                            Box::new(ControlsRenderer) as Box<dyn WindowRenderer>,
                             Position::Physical(PhysicalPosition { x: 850, y: 360 }),
                             2,
                         ));
