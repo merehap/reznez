@@ -1,6 +1,7 @@
 use egui::Context;
 use pixels::Pixels;
 
+
 use crate::gui::window_renderer::{FlowControl, WindowRenderer};
 use crate::gui::world::World;
 
@@ -21,18 +22,21 @@ impl WindowRenderer for DisplaySettingsRenderer {
     }
 
     fn ui(&mut self, ctx: &Context, world: &mut World) -> FlowControl {
-        if let Some(nes) = &mut world.nes {
-            egui::CentralPanel::default().show(ctx, |ui| {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            if let Some(nes) = &mut world.nes {
                 egui::Grid::new("my_grid")
                     .num_columns(2)
                     .spacing([40.0, 4.0])
                     .striped(true)
                     .show(ui, |ui| {
-                        ui.checkbox(nes.frame_mut().show_overscan_mut(), "Show overscan?");
+                        ui.checkbox(nes.frame_mut().show_overscan_mut(), "Show overscan");
                         ui.end_row();
                     });
-            });
-        }
+            } else {
+                ui.label("Load a ROM to change display settings.");
+
+            }
+        });
 
         FlowControl::CONTINUE
     }
