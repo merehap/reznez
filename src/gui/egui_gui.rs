@@ -8,7 +8,7 @@ use crate::controller::joypad::{Button, ButtonStatus};
 use egui::{ClippedPrimitive, Context, TexturesDelta, ViewportId};
 use egui_wgpu_backend::{RenderPass, ScreenDescriptor};
 use gilrs;
-use log::info;
+use log::{info, warn};
 use pixels::{Pixels, SurfaceTexture};
 use winit::dpi::{LogicalSize, PhysicalPosition, Position};
 use winit::event::{Event, WindowEvent};
@@ -98,11 +98,11 @@ impl Gui for EguiGui {
         let gilrs = gilrs::Gilrs::new().unwrap();
         let gamepads: Vec<(gilrs::GamepadId, gilrs::Gamepad)> =
             gilrs.gamepads().collect();
-        assert!(
-            gamepads.len() < 2,
-            "There must not be more than one gamepad connected at a time."
-        );
         let active_gamepad_id = gamepads.first().map(|(id, _)| *id);
+        if gamepads.len() > 1 {
+            warn!("Only one gamepad at a time is currently supported, but multiple are connected. Proceeding with only the first detected gamepad: {active_gamepad_id:?}."
+            );
+        }
 
         let events = Events::none();
         let mut world = World { nes, config, input, gilrs, active_gamepad_id, events };
@@ -434,7 +434,10 @@ fn poll_button_events(input: &WinitInputHelper, gilrs: &mut gilrs::Gilrs, active
     let mut joypad2_button_statuses = BTreeMap::new();
 
     while let Some(gilrs::Event { id, event, .. }) = gilrs.next_event() {
-        assert_eq!(Some(id), active_gamepad_id);
+        if Some(id) != active_gamepad_id {
+            warn!("Event won't be processed from ignored gamepad {id:?}: {event:?}");
+            continue;
+        }
         match event {
             gilrs::EventType::ButtonPressed(_, code) => {
                 if let Some(button) = JOY_1_JOYPAD_MAPPINGS.get(&code.into_u32()) {
