@@ -13,6 +13,7 @@ use crate::nes::Nes;
 
 pub struct LoadRomRenderer {
     file_dialog: FileDialog,
+    load_error: Option<String>,
 }
 
 impl LoadRomRenderer {
@@ -22,6 +23,7 @@ impl LoadRomRenderer {
     pub fn new(file_dialog: FileDialog) -> Self {
         Self {
             file_dialog,
+            load_error: None,
         }
     }
 }
@@ -34,19 +36,28 @@ impl WindowRenderer for LoadRomRenderer {
     fn ui(&mut self, ctx: &Context, world: &mut World) -> FlowControl {
         let mut result = FlowControl::CONTINUE;
         let header_db = HeaderDb::load();
-        egui::CentralPanel::default().show(ctx, |_ui| {
+        egui::CentralPanel::default().show(ctx, |ui| {
             self.file_dialog.show(ctx);
-            if let Some(rom_path) = self.file_dialog.path() && !rom_path.is_dir() {
-                result = FlowControl::CLOSE;
+            if let Some(load_error) = &self.load_error {
+                ui.colored_label(egui::Color32::RED, load_error);
+            }
 
-                world.nes = match load_nes(&header_db, &world.config, rom_path) {
-                    Ok(nes) => Some(nes),
+            if let Some(rom_path) = self.file_dialog.path() && !rom_path.is_dir() {
+                match load_nes(&header_db, &world.config, rom_path) {
+                    Ok(nes) => {
+                        world.nes = Some(nes);
+                        result = FlowControl::CLOSE;
+                    }
                     Err(err) => {
                         error!("Failed to load ROM {}. {err}", rom_path.to_string_lossy());
-                        None
+                        self.load_error = Some(format!("Failed to load ROM.\nDetails: {err}"));
+                        let current_directory = self.file_dialog.directory().to_owned();
+                        self.file_dialog.set_path(current_directory);
+
                     }
-                };
+                }
             }
+
         });
 
         result
