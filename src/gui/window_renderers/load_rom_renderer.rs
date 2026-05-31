@@ -40,24 +40,28 @@ impl WindowRenderer for LoadRomRenderer {
             self.file_dialog.show(ctx);
             if let Some(load_error) = &self.load_error {
                 ui.colored_label(egui::Color32::RED, load_error);
-            }
-
-            if let Some(rom_path) = self.file_dialog.path() && !rom_path.is_dir() {
-                match load_nes(&header_db, &world.config, rom_path) {
-                    Ok(nes) => {
-                        world.nes = Some(nes);
-                        result = FlowControl::CLOSE;
-                    }
-                    Err(err) => {
-                        error!("Failed to load ROM {}. {err}", rom_path.to_string_lossy());
-                        self.load_error = Some(format!("Failed to load ROM.\nDetails: {err}"));
-                        let current_directory = self.file_dialog.directory().to_owned();
-                        self.file_dialog.set_path(current_directory);
-
-                    }
+                if ui.button("Choose another file").clicked() {
+                    self.load_error = None;
+                    self.file_dialog.open();
                 }
             }
 
+            if self.file_dialog.selected() {
+                if let Some(rom_path) = self.file_dialog.path() && !rom_path.is_dir() {
+                    match load_nes(&header_db, &world.config, rom_path) {
+                        Ok(nes) => {
+                            world.nes = Some(nes);
+                            result = FlowControl::CLOSE;
+                        }
+                        Err(err) => {
+                            error!("Failed to load ROM {}. {err}", rom_path.to_string_lossy());
+                            self.load_error = Some(format!("Failed to load ROM.\nDetails: {err}"));
+                            let current_directory = self.file_dialog.directory().to_owned();
+                            self.file_dialog.set_path(current_directory);
+                        }
+                    }
+                }
+            }
         });
 
         result
