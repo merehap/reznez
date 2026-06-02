@@ -1,68 +1,13 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use egui::Context;
-use egui_file::FileDialog;
 use pixels::Pixels;
-use winit::dpi::{PhysicalPosition, Position};
 
 use crate::analysis::cartridge_db;
 use crate::cartridge::resolved_metadata::{ResolvedMetadata, Vs};
 use crate::gui::window_renderer::{FlowControl, WindowRenderer};
 use crate::gui::world::World;
 use crate::mapper::KIBIBYTE;
-
-pub struct CartridgeQueryPopupRenderer {
-    file_dialog: FileDialog,
-}
-
-impl CartridgeQueryPopupRenderer {
-    const WIDTH: usize = 300;
-    const HEIGHT: usize = 300;
-
-    pub fn new(file_dialog: FileDialog) -> Self {
-        Self { file_dialog }
-    }
-}
-
-impl WindowRenderer for CartridgeQueryPopupRenderer {
-    fn name(&self) -> String {
-        "ROM Query Pop-up".to_string()
-    }
-
-    fn ui(&mut self, ctx: &Context, _world: &mut World) -> FlowControl {
-        let mut result = FlowControl::CONTINUE;
-        egui::CentralPanel::default().show(ctx, |_ui| {
-            self.file_dialog.show(ctx);
-            if self.file_dialog.selected() {
-                let cartridge_query_renderer = CartridgeQueryRenderer {
-                    metadata_by_path: cartridge_db::analyze(self.file_dialog.directory()),
-                };
-                result = FlowControl {
-                    should_close_window: true,
-                    window_args: Some((
-                        Box::new(cartridge_query_renderer) as Box<dyn WindowRenderer>,
-                        Position::Physical(PhysicalPosition { x: 50, y: 50 }),
-                        1,
-                    )),
-                };
-            }
-        });
-
-        result
-    }
-
-    fn render(&mut self, _world: &mut World, _pixels: &mut Pixels) {
-        // Do nothing yet.
-    }
-
-    fn width(&self) -> usize {
-        Self::WIDTH
-    }
-
-    fn height(&self) -> usize {
-        Self::HEIGHT
-    }
-}
 
 pub struct CartridgeQueryRenderer {
     metadata_by_path: Vec<(PathBuf, ResolvedMetadata)>,
@@ -71,6 +16,12 @@ pub struct CartridgeQueryRenderer {
 impl CartridgeQueryRenderer {
     const WIDTH: usize = 1900;
     const HEIGHT: usize = 800;
+
+    pub fn new(directory: &Path) -> Self {
+        Self {
+            metadata_by_path: cartridge_db::analyze(directory),
+        }
+    }
 }
 
 impl WindowRenderer for CartridgeQueryRenderer {
