@@ -1,16 +1,22 @@
+use std::path::Path;
+
 pub use egui::Context;
+use egui_file::FileDialog;
+use log::error;
 use pixels::Pixels;
 pub use winit::dpi::{PhysicalPosition, Position};
 
+use crate::cartridge::header_db::HeaderDb;
+use crate::config::Config;
 use crate::gui::gui::{execute_frame, Events};
 pub use crate::gui::window_renderer::{FlowControl, WindowRenderer};
+use crate::nes::Nes;
 use crate::gui::window_renderers::audio_visualizer::AudioVisualizer;
 use crate::gui::window_renderers::cartridge_metadata_renderer::CartridgeMetadataRenderer;
 use crate::gui::window_renderers::cartridge_query_renderer::CartridgeQueryPopupRenderer;
 use crate::gui::window_renderers::controls_renderer::ControlsRenderer;
 use crate::gui::window_renderers::display_settings_renderer::DisplaySettingsRenderer;
 use crate::gui::window_renderers::layers_renderer::LayersRenderer;
-pub use crate::gui::window_renderers::load_rom_renderer::LoadRomRenderer;
 use crate::gui::window_renderers::memory_viewer_renderer::MemoryViewerRenderer;
 use crate::gui::window_renderers::name_table_renderer::NameTableRenderer;
 use crate::gui::window_renderers::pattern_source_renderer::PatternSourceRenderer;
@@ -23,12 +29,16 @@ use crate::ppu::render::frame::Frame;
 
 pub struct PrimaryRenderer {
     pub paused: bool,
+    file_dialog: FileDialog,
+    load_error: Option<String>,
 }
 
 impl PrimaryRenderer {
     pub fn new() -> Self {
         Self {
             paused: false,
+            file_dialog: FileDialog::open_file(None),
+            load_error: None,
         }
     }
 }
@@ -38,21 +48,17 @@ impl WindowRenderer for PrimaryRenderer {
         "REZNEZ".to_string()
     }
 
-    fn ui(&mut self, ctx: &Context, _world: &mut World) -> FlowControl {
+    fn ui(&mut self, ctx: &Context, world: &mut World) -> FlowControl {
         let mut result = FlowControl::CONTINUE;
         egui::TopBottomPanel::top("menubar_container").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
                 ui.menu_button("File", |ui| {
                     if ui.button("Open").clicked() {
                         ui.close_menu();
-                        let mut file_dialog = egui_file::FileDialog::open_file(None);
-                        file_dialog.open();
-                        result = FlowControl::spawn_window((
-                            Box::new(LoadRomRenderer::new(file_dialog)) as Box<dyn WindowRenderer>,
-                            Position::Physical(PhysicalPosition { x: 850, y: 360 }),
-                            2,
-                        ));
+                        self.load_error = None;
+                        self.file_dialog.open();
                     }
+
                     if ui.button("ROM Query").clicked() {
                         ui.close_menu();
                         let mut file_dialog = egui_file::FileDialog::select_folder(None);
@@ -164,9 +170,44 @@ impl WindowRenderer for PrimaryRenderer {
             });
         });
 
+        self.file_dialog.show(ctx);
+
+        if let Some(load_error) = &self.load_error {
+            let mut choose_another_file = false;
+            egui::CentralPanel::default().show(ctx, |ui| {
+                ui.colored_label(egui::Color32::RED, load_error);
+                if ui.button("Choose another file").clicked() {
+                    choose_another_file = true;
+                }
+            });
+
+            if choose_another_file {
+                self.load_error = None;
+                self.file_dialog.open();
+            }
+        }
+
+
+        if self.file_dialog.selected() {
+            if let Some(rom_path) = self.file_dialog.path() && !rom_path.is_dir() {
+                let header_db = HeaderDb::load();
+                match load_nes(&header_db, &world.config, rom_path) {
+                    Ok(nes) => {
+                        world.nes = Some(nes);
+                    }
+                    Err(err) => {
+                        error!("Failed to load ROM {}. {err}", rom_path.to_string_lossy());
+                        self.load_error = Some(format!("Failed to load ROM.\nDetails: {err}"));
+                        let current_directory = self.file_dialog.directory().to_owned();
+                        self.file_dialog.set_path(current_directory);
+                    }
+                }
+            }
+        }
+
         result
     }
-
+    
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
         if self.paused {
             return;
@@ -185,6 +226,7 @@ impl WindowRenderer for PrimaryRenderer {
             );
         }
     }
+    
 
     fn toggle_pause(&mut self) {
         self.paused = !self.paused;
@@ -197,4 +239,9 @@ impl WindowRenderer for PrimaryRenderer {
     fn height(&self) -> usize {
         PixelRow::ROW_COUNT
     }
+}
+
+fn load_nes(header_db: &HeaderDb, config: &Config, rom_path: &Path) -> Result<Nes, String> {
+    let cartridge = Nes::load_cartridge(rom_path)?;
+    Nes::new(header_db, config, &cartridge)
 }

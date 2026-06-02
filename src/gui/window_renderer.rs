@@ -22,7 +22,6 @@ pub struct FlowControl {
 
 impl FlowControl {
     pub const CONTINUE: Self = Self { window_args: None, should_close_window: false };
-    pub const CLOSE: Self = Self { window_args: None, should_close_window: true };
 
     pub fn spawn_window(window_args: WindowArgs) -> Self {
         Self {
