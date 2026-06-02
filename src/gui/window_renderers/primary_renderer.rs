@@ -1,6 +1,6 @@
 use std::path::Path;
 
-pub use egui::{vec2, Align2, Context};
+use egui::{vec2, Align2, CentralPanel, ColorImage, Context, Frame as EguiFrame, TextureHandle, TextureOptions};
 use egui_file::FileDialog;
 use log::error;
 use pixels::Pixels;
@@ -32,6 +32,7 @@ pub struct PrimaryRenderer {
     file_dialog: FileDialog,
     load_error: Option<String>,
     cartridge_query_dialog: FileDialog,
+    splash_texture: Option<TextureHandle>,
 }
 
 impl PrimaryRenderer {
@@ -43,9 +44,25 @@ impl PrimaryRenderer {
             load_error: None,
             cartridge_query_dialog: FileDialog::select_folder(None)
                 .anchor(Align2::CENTER_CENTER, vec2(0.0, 0.0)),
+            splash_texture: None,
         }
     }
+
+    fn splash_texture(&mut self, ctx: &Context) -> &TextureHandle {
+        self.splash_texture.get_or_insert_with(|| {
+            let image_bytes = include_bytes!("../assets/reznez_splash.png");
+            let image = image::load_from_memory(image_bytes).unwrap().to_rgba8();
+            let size = [image.width() as usize, image.height() as usize];
+
+            ctx.load_texture(
+                "reznez_splash",
+                ColorImage::from_rgba_unmultiplied(size, image.as_raw()),
+                TextureOptions::NEAREST,
+            )
+        })
+    }
 }
+
 
 impl WindowRenderer for PrimaryRenderer {
     fn name(&self) -> String {
@@ -167,13 +184,23 @@ impl WindowRenderer for PrimaryRenderer {
                 })
             });
         });
+        
+        if world.nes.is_none() {
+            CentralPanel::default()
+                .frame(EguiFrame::none())
+                .show(ctx, |ui| {
+                    let available_size = ui.available_size();
+                    let texture = self.splash_texture(ctx);
+                    ui.image((texture.id(), available_size));
+                });
+        }
 
         self.file_dialog.show(ctx);
         self.cartridge_query_dialog.show(ctx);
 
         if let Some(load_error) = &self.load_error {
             let mut choose_another_file = false;
-            egui::CentralPanel::default().show(ctx, |ui| {
+            CentralPanel::default().show(ctx, |ui| {
                 ui.colored_label(egui::Color32::RED, load_error);
                 if ui.button("Choose another file").clicked() {
                     choose_another_file = true;
