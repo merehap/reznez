@@ -1,6 +1,6 @@
 use std::path::Path;
 
-pub use egui::Context;
+pub use egui::{vec2, Align2, Context};
 use egui_file::FileDialog;
 use log::error;
 use pixels::Pixels;
@@ -38,9 +38,11 @@ impl PrimaryRenderer {
     pub fn new() -> Self {
         Self {
             paused: false,
-            file_dialog: FileDialog::open_file(None),
+            file_dialog: FileDialog::open_file(None)
+                .anchor(Align2::CENTER_CENTER, vec2(0.0, 0.0)),
             load_error: None,
-            cartridge_query_dialog: FileDialog::select_folder(None),
+            cartridge_query_dialog: FileDialog::select_folder(None)
+                .anchor(Align2::CENTER_CENTER, vec2(0.0, 0.0)),
         }
     }
 }
