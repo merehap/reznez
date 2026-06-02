@@ -13,7 +13,7 @@ pub use crate::gui::window_renderer::{FlowControl, WindowRenderer};
 use crate::nes::Nes;
 use crate::gui::window_renderers::audio_visualizer::AudioVisualizer;
 use crate::gui::window_renderers::cartridge_metadata_renderer::CartridgeMetadataRenderer;
-use crate::gui::window_renderers::cartridge_query_renderer::CartridgeQueryPopupRenderer;
+use crate::gui::window_renderers::cartridge_query_renderer::CartridgeQueryRenderer;
 use crate::gui::window_renderers::controls_renderer::ControlsRenderer;
 use crate::gui::window_renderers::display_settings_renderer::DisplaySettingsRenderer;
 use crate::gui::window_renderers::layers_renderer::LayersRenderer;
@@ -31,6 +31,7 @@ pub struct PrimaryRenderer {
     pub paused: bool,
     file_dialog: FileDialog,
     load_error: Option<String>,
+    cartridge_query_dialog: FileDialog,
 }
 
 impl PrimaryRenderer {
@@ -39,6 +40,7 @@ impl PrimaryRenderer {
             paused: false,
             file_dialog: FileDialog::open_file(None),
             load_error: None,
+            cartridge_query_dialog: FileDialog::select_folder(None),
         }
     }
 }
@@ -61,13 +63,7 @@ impl WindowRenderer for PrimaryRenderer {
 
                     if ui.button("ROM Query").clicked() {
                         ui.close_menu();
-                        let mut file_dialog = egui_file::FileDialog::select_folder(None);
-                        file_dialog.open();
-                        result = FlowControl::spawn_window((
-                            Box::new(CartridgeQueryPopupRenderer::new(file_dialog)) as Box<dyn WindowRenderer>,
-                            Position::Physical(PhysicalPosition { x: 850, y: 360 }),
-                            2,
-                        ));
+                        self.cartridge_query_dialog.open();
                     }
                 });
 
@@ -171,6 +167,7 @@ impl WindowRenderer for PrimaryRenderer {
         });
 
         self.file_dialog.show(ctx);
+        self.cartridge_query_dialog.show(ctx);
 
         if let Some(load_error) = &self.load_error {
             let mut choose_another_file = false;
@@ -205,6 +202,13 @@ impl WindowRenderer for PrimaryRenderer {
             }
         }
 
+        if self.cartridge_query_dialog.selected() {
+            result = FlowControl::spawn_window((
+                Box::new(CartridgeQueryRenderer::new(self.cartridge_query_dialog.directory())) as Box<dyn WindowRenderer>,
+                Position::Physical(PhysicalPosition { x: 50, y: 50 }),
+                1,
+            ));
+        }
         result
     }
     
