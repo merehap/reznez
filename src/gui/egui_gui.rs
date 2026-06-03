@@ -14,6 +14,7 @@ use winit::dpi::{LogicalSize, PhysicalPosition, Position};
 use winit::event::{Event, WindowEvent};
 use winit::event_loop::{EventLoop, EventLoopWindowTarget};
 use winit::keyboard::KeyCode;
+use winit::window::Icon;
 use winit::window::Window;
 use winit::window::{WindowBuilder, WindowId};
 use winit_input_helper::WinitInputHelper;
@@ -220,6 +221,7 @@ impl<'a> EguiWindow<'a> {
             );
             WindowBuilder::new()
                 .with_title(renderer.name())
+                .with_window_icon(Some(window_icon()))
                 .with_inner_size(size)
                 .with_min_inner_size(size)
                 .with_resizable(false)
@@ -475,4 +477,14 @@ fn poll_button_events(input: &WinitInputHelper, gilrs: &mut gilrs::Gilrs, active
         joypad1_button_statuses,
         joypad2_button_statuses,
     }
+}
+
+fn window_icon() -> Icon {
+    let image_bytes = include_bytes!("assets/reznez_logo.png");
+    let image = image::load_from_memory(image_bytes)
+        .unwrap()
+        .into_rgba8();
+    let (width, height) = image.dimensions();
+
+    Icon::from_rgba(image.into_raw(), width, height).unwrap()
 }
