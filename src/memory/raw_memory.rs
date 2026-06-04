@@ -9,6 +9,54 @@ use num_traits::Euclid;
 
 // A chunk of primitive memory. Allows indexing on u32s instead of usizes.
 #[derive(Clone, Debug)]
+pub struct RawData(Vec<u8>);
+
+impl RawData {
+    pub fn from_vec(vec: Vec<u8>) -> Self {
+        assert!(vec.len() <= u32::MAX.try_into().unwrap());
+        Self(vec)
+    }
+
+    pub fn peek_u64(&self, range: RangeInclusive<u32>) -> Option<u64> {
+        assert_eq!(range.end() - range.start(), 7);
+        self.0.get(*range.start() as usize..=*range.end() as usize)
+            .map(|slice| u64::from_be_bytes(slice.try_into().unwrap()))
+    }
+
+    pub fn as_slice(&self) -> &[u8] {
+        &self.0[..]
+    }
+
+    pub fn slice(&self, range: Range<u32>) -> RawMemorySlice<'_> {
+        RawMemorySlice(&self.0[range.start as usize..range.end as usize])
+    }
+
+    pub fn maybe_slice(&self, range: Range<u32>) -> Option<RawMemorySlice<'_>> {
+        self.0.get(range.start as usize..range.end as usize)
+            .map(RawMemorySlice)
+    }
+
+    pub fn size(&self) -> u32 {
+        self.0.len() as u32
+    }
+}
+
+impl Index<u32> for RawData {
+    type Output = u8;
+
+    fn index(&self, index: u32) -> &u8 {
+        &self.0[index as usize]
+    }
+}
+
+impl IndexMut<u32> for RawData {
+    fn index_mut(&mut self, index: u32) -> &mut u8 {
+        &mut self.0[index as usize]
+    }
+}
+
+// A chunk of primitive memory. Allows indexing on u32s instead of usizes.
+#[derive(Clone, Debug)]
 pub struct RawMemory(Vec<u8>);
 
 impl RawMemory {
@@ -46,12 +94,6 @@ impl RawMemory {
         Self(result)
     }
 
-    pub fn peek_u64(&self, range: RangeInclusive<u32>) -> Option<u64> {
-        assert_eq!(range.end() - range.start(), 7);
-        self.0.get(*range.start() as usize..=*range.end() as usize)
-            .map(|slice| u64::from_be_bytes(slice.try_into().unwrap()))
-    }
-
     pub fn as_slice(&self) -> &[u8] {
         &self.0[..]
     }
@@ -62,16 +104,6 @@ impl RawMemory {
 
     pub fn slice(&self, range: Range<u32>) -> RawMemorySlice<'_> {
         RawMemorySlice(&self.0[range.start as usize..range.end as usize])
-    }
-
-    pub fn maybe_slice(&self, range: Range<u32>) -> Option<RawMemorySlice<'_>> {
-        self.0.get(range.start as usize..range.end as usize)
-            .map(RawMemorySlice)
-    }
-
-    pub fn sized_slice<const SIZE: usize>(&self, start: u32) -> &[u8; SIZE] {
-        let start = start as usize;
-        (&self.0[start..start + SIZE]).try_into().unwrap()
     }
 
     pub fn sized_slice_mut<const SIZE: usize>(&mut self, start: u32) -> &mut [u8; SIZE] {

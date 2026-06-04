@@ -5,7 +5,7 @@ use splitbits::{combinebits, splitbits};
 use ux::u2;
 
 use crate::cartridge::cartridge_metadata::{CartridgeMetadata, CartridgeMetadataBuilder, ConsoleType};
-use crate::memory::raw_memory::{RawMemory, RawMemoryArray};
+use crate::memory::raw_memory::{RawData, RawMemory, RawMemoryArray};
 use crate::util::unit::KIBIBYTE;
 
 pub const PRG_ROM_CHUNK_LENGTH: u32 = 16 * KIBIBYTE;
@@ -30,7 +30,7 @@ pub struct Cartridge {
 
 impl Cartridge {
     #[rustfmt::skip]
-    pub fn load(path: &Path, raw_header_and_data: &RawMemory) -> Result<Cartridge, String> {
+    pub fn load(path: &Path, raw_header_and_data: &RawData) -> Result<Cartridge, String> {
         let mut header = Self::parse(path, raw_header_and_data)?;
 
         let path = CartridgePath(path.to_path_buf());
@@ -104,7 +104,7 @@ impl Cartridge {
         self.chr_rom.size()
     }
 
-    fn parse(path: &Path, raw_header_and_data: &RawMemory) -> Result<CartridgeMetadata, String> {
+    fn parse(path: &Path, raw_header_and_data: &RawData) -> Result<CartridgeMetadata, String> {
         let Some(low_header) = raw_header_and_data.peek_u64(0..=7) else {
             return Err(format!("ROM file should have a 16 byte header. ROM: {}", path.display()));
         };

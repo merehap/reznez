@@ -28,7 +28,7 @@ use crate::logging::formatter::*;
 use crate::mapper::{IrqCounterInfo, Mapper, NameTableMirroring, PrgBankRegisterId, ReadStatus, WriteStatus};
 use crate::mapper_list;
 use crate::master_clock::{CycleType, MasterClock};
-use crate::memory::raw_memory::RawMemory;
+use crate::memory::raw_memory::RawData;
 use crate::memory::bank::bank_number::{BankNumber, ChrBankRegisterId};
 use crate::bus::Bus;
 use crate::memory::signal_level::SignalLevel;
@@ -55,7 +55,7 @@ impl Nes {
         info!("Loading ROM '{}'.", path.display());
         let mut raw_header_and_data = Vec::new();
         File::open(path).unwrap().read_to_end(&mut raw_header_and_data).unwrap();
-        let raw_header_and_data = RawMemory::from_vec(raw_header_and_data);
+        let raw_header_and_data = RawData::from_vec(raw_header_and_data);
         Cartridge::load(path, &raw_header_and_data)
     }
 
