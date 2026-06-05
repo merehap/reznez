@@ -337,8 +337,7 @@ impl ChrMemory {
 
     pub fn work_ram_1kib_page_mut(&mut self, start: u32) -> &mut [u8; KIBIBYTE as usize] {
         assert_eq!(start % 0x400, 0, "Work RAM 1KiB slices must start on a 1KiB page boundary (e.g. 0x000, 0x400, 0x800).");
-        let start = start as usize;
-        (&mut self.ram.as_mut_slice()[start..start + 0x400]).try_into().unwrap()
+        self.ram.sized_slice_mut(start)
     }
 
     fn rom_present(&self) -> bool {
