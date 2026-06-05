@@ -37,16 +37,27 @@ pub struct PrimaryRenderer {
 
 impl PrimaryRenderer {
     pub fn new() -> Self {
+        let nes_file_filter = Box::new(|path: &Path| {
+            path.extension()
+                .and_then(|extension| extension.to_str())
+                .is_some_and(|extension| extension.eq_ignore_ascii_case("nes"))
+        });
+
+        let file_dialog = FileDialog::open_file(None)
+            .show_files_filter(nes_file_filter)
+            .anchor(Align2::CENTER_CENTER, vec2(0.0, 0.0));
+        let cartridge_query_dialog = FileDialog::select_folder(None)
+            .anchor(Align2::CENTER_CENTER, vec2(0.0, 0.0));
+
         Self {
             paused: false,
-            file_dialog: FileDialog::open_file(None)
-                .anchor(Align2::CENTER_CENTER, vec2(0.0, 0.0)),
+            file_dialog,
             load_error: None,
-            cartridge_query_dialog: FileDialog::select_folder(None)
-                .anchor(Align2::CENTER_CENTER, vec2(0.0, 0.0)),
+            cartridge_query_dialog,
             splash_texture: None,
         }
     }
+
 
     fn splash_texture(&mut self, ctx: &Context) -> &TextureHandle {
         self.splash_texture.get_or_insert_with(|| {
