@@ -44,7 +44,7 @@ impl ChrMemory {
         // TODO: Warn on writes to an unused register.
         name_table_mirroring_fixed: bool,
         mut regs: ChrBankRegisters,
-    ) -> ChrMemory {
+    ) -> Result<ChrMemory, String> {
 
         let mut bank_size = None;
         for layout in layouts.iter() {
@@ -88,7 +88,7 @@ impl ChrMemory {
         let rom_bank_sizes = BankSizes::new(rom.size(), rom_outer_bank_size, bank_size.to_raw().into());
         let ram_bank_sizes = BankSizes::new(ram.size(), ram.size(), bank_size.to_raw().into());
 
-        let memory_maps = layouts.iter().map(|layout|
+        let memory_maps: Result<Vec<ChrMemoryMap>, String> = layouts.iter().map(|layout|
             ChrMemoryMap::new(
                 layout,
                 &rom_bank_sizes,
@@ -99,8 +99,9 @@ impl ChrMemory {
                 align_large_chr_banks,
                 &mut regs,
         )).collect();
+        let memory_maps = memory_maps?;
 
-        ChrMemory {
+        Ok(ChrMemory {
             layouts,
             memory_maps,
             base_memory_map_index,
@@ -111,7 +112,7 @@ impl ChrMemory {
             ram: ram.clone(),
             bank_size,
             regs,
-        }
+        })
     }
 
     pub fn window_count(&self) -> u8 {

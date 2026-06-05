@@ -80,7 +80,12 @@ impl Layout {
             prg_bank_registers.set(register_id, bank_number);
         }
 
-        let mut chr_bank_registers = ChrBankRegisters::new(chr_rom_size > 0, !chr_ram.is_empty(), self.default_chr_source);
+        let mut chr_bank_registers = ChrBankRegisters::new(
+            chr_rom_size > 0,
+            !chr_ram.is_empty(),
+
+            self.default_chr_source,
+        );
         for (register_id, bank_number) in self.chr_bank_register_overrides.as_iter() {
             chr_bank_registers.set(register_id, bank_number);
         }
@@ -113,6 +118,7 @@ impl Layout {
             self.fixed_name_table_mirroring,
             chr_bank_registers,
         );
+        let chr_memory = chr_memory?;
 
         Ok((prg_memory, chr_memory, self.name_table_mirrorings))
     }

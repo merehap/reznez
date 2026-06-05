@@ -31,7 +31,7 @@ impl ChrMemoryMap {
         bank_size: ChrWindowSize,
         _align_large_windows: bool,
         regs: &mut ChrBankRegisters,
-    ) -> Self {
+    ) -> Result<Self, String> {
         let mut page_mappings = Vec::with_capacity(CHR_SLOT_COUNT);
         for window in initial_layout.windows() {
             let pages_per_window = window.size().page_multiple();
@@ -53,8 +53,11 @@ impl ChrMemoryMap {
         // Most mappers only map 0x0000..=0x1FFF for pattern data, but some map up through 0x2FFF.
         // TODO: Map through 0x3EFF
         if page_mappings.len() == 8 {
-            let cartridge_name_table_mirroring = cartridge_name_table_mirroring
-                .expect("The mapper must specify mappings from 0x2000 to 0x2FFF when four screen mirroring is specified.");
+            let Some(cartridge_name_table_mirroring) = cartridge_name_table_mirroring else {
+                // TODO: Promote this to a panic once VS mode is supported.
+                return Err("The mapper must specify mappings from 0x2000 to 0x2FFF when four screen mirroring is specified.".into());
+            };
+
             let address_template = AddressResolver::chr(
                 ChrBankNumberProvider::Fixed(BankNumber::ZERO),
                 ChrWindowSize::NAME_TABLE_WINDOW_SIZE,
@@ -92,7 +95,7 @@ impl ChrMemoryMap {
         };
         memory_map.update_page_ids(regs);
 
-        memory_map
+        Ok(memory_map)
     }
 
     pub fn index_for_address(&self, address: PpuAddress) -> (ChrMemoryIndex, PeekSource) {
