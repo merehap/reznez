@@ -70,7 +70,6 @@ impl Cartridge {
             .take_while(|&c| c != '\u{0}')
             .collect();
 
-        let prg_rom = prg_rom.mirror_until_power_of_two();
         Ok(Cartridge { path, header, title, trainer: None, prg_rom, chr_rom })
     }
 
