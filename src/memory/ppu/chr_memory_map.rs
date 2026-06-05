@@ -1,3 +1,5 @@
+use log::warn;
+
 use crate::mapper::{BankNumber, ChrBank, ChrBankRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource};
 use crate::memory::address_template::address_resolver::AddressResolver;
 use crate::memory::address_template::bank_sizes::BankSizes;
@@ -102,6 +104,9 @@ impl ChrMemoryMap {
 
         let page_mapping = self.page_mappings[mapping_index as usize];
         let (chr_memory_index, peek_source) = match page_mapping.mem_type_status() {
+            ChrMemTypeStatus::Absent => {
+                (ChrMemoryIndex::Absent, PeekSource::Void)
+            }
             ChrMemTypeStatus::Rom(read_status) => {
                 let index = page_mapping.rom_address_resolver.resolve_index(address);
                 let bank_number = page_mapping.rom_address_resolver.resolve_inner_bank_number();
@@ -168,6 +173,7 @@ impl ChrMemoryMap {
     pub fn page_start_index(&self, mapping_index: u8) -> ChrMemoryIndex {
         let mapping = self.page_mappings[mapping_index as usize];
         match mapping.mem_type_status {
+            ChrMemTypeStatus::Absent => ChrMemoryIndex::Absent,
             ChrMemTypeStatus::Rom(read_status) => {
                 let page_number = mapping.rom_address_resolver.resolve_inner_bank_number() * mapping.pages_per_bank + mapping.page_offset;
                 ChrMemoryIndex::Rom(u32::from(page_number) * KIBIBYTE, read_status)
@@ -186,6 +192,7 @@ impl ChrMemoryMap {
 
 #[derive(Clone, Copy, Debug)]
 pub enum ChrMemoryIndex {
+    Absent,
     Rom(u32, ReadStatus),
     Ram(u32, ReadStatus, WriteStatus),
     Ciram(CiramSide, u32),
@@ -196,7 +203,11 @@ pub enum ChrMemoryIndex {
 impl ChrMemoryIndex {
     pub fn read_status(self) -> ReadStatus {
         match self {
+            // FIXME: This should return Disabled, but that's currently not supported.
+            Self::Absent => ReadStatus::Enabled,
             Self::Rom(_, read_status) | Self::Ram(_, read_status, _) => read_status,
+            // FIXME: CIRAM can be disabled, and is disabled on hard reset.
+            // That is already implemented, but must be hooked up properly.
             Self::Ciram(_, _) => ReadStatus::Enabled, // There's no way to disable reads to CIRAM.
             Self::MapperCustom { .. } => ReadStatus::Enabled, // FIXME: This is inaccurate.
         }
@@ -289,11 +300,11 @@ impl ChrMapping {
         let chr_source = self.bank.current_chr_source(regs).expect("NameTableSource can't come from an empty bank.");
         match chr_source {
             ChrSource::RomOrRam => {
-                assert!(!regs.cartridge_has_rom() || !regs.cartridge_has_ram(),
+                assert!(!regs.has_rom() || !regs.has_ram(),
                     "Don't know what to do with a Chr RomOrRam bank when the cartridge has both ROM and RAM.");
-                if regs.cartridge_has_rom() {
+                if regs.has_rom() {
                     Ok(NameTableSource::Rom { bank_number: self.bank.bank_number(regs).unwrap() })
-                } else if regs.cartridge_has_ram() {
+                } else if regs.has_ram() {
                     Ok(NameTableSource::Ram { bank_number: self.bank.bank_number(regs).unwrap() })
                 } else {
                     Err("Absent CHR banks are not yet supported.".to_owned())
@@ -314,9 +325,13 @@ impl ChrMapping {
         match bank.current_chr_source(regs) {
             None => todo!("EMPTY bank"),
             Some(ChrSource::RomOrRam) => {
-                match (regs.cartridge_has_rom(), regs.cartridge_has_ram()) {
-                    (false, false) => todo!("Absent CHR pages."),
-                    (true , true ) => panic!("Not sure what to do for a RomOrRam bank when both are present in the cartridge."),
+                match (regs.has_rom(), regs.has_ram()) {
+                    (false, false) => {
+                        self.mem_type_status = ChrMemTypeStatus::Absent;
+                    }
+                    (true , true ) => {
+                        warn!("Not sure what to do for a RomOrRam bank when both are present in the cartridge.");
+                    }
                     (true , false) => {
                         self.mem_type_status = ChrMemTypeStatus::Rom(read_status);
                     }
@@ -326,11 +341,11 @@ impl ChrMapping {
                 }
             }
             Some(ChrSource::Rom) => {
-                assert!(regs.cartridge_has_rom());
+                assert!(regs.has_rom());
                 self.mem_type_status = ChrMemTypeStatus::Rom(read_status);
             }
             Some(ChrSource::WorkRam) => {
-                assert!(regs.cartridge_has_ram());
+                assert!(regs.has_ram());
                 self.mem_type_status = ChrMemTypeStatus::Ram(read_status, write_status);
             }
             Some(ChrSource::Ciram(ciram_side)) => {
@@ -349,6 +364,7 @@ impl ChrMapping {
 
 #[derive(Clone, Copy, Debug)]
 pub enum ChrMemTypeStatus {
+    Absent,
     Rom(ReadStatus),
     Ram(ReadStatus, WriteStatus),
     // TODO: Read/Write status here in order to disable CIRAM for mapper 111

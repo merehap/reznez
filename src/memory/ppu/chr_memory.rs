@@ -47,8 +47,6 @@ impl ChrMemory {
     ) -> ChrMemory {
 
         let mut bank_size = None;
-        let mut rom_present_in_layout = false;
-        let mut ram_present_in_layout = false;
         for layout in layouts.iter() {
             for window in layout.windows() {
                 if let Some(size) = bank_size {
@@ -58,11 +56,11 @@ impl ChrMemory {
                 }
 
                 if window.bank().is_rom() {
-                    rom_present_in_layout = true;
+                    regs.layout_has_rom = true;
                 }
 
                 if window.bank().is_ram() {
-                    ram_present_in_layout = true;
+                    regs.layout_has_ram = true;
                 }
             }
         }
@@ -70,13 +68,13 @@ impl ChrMemory {
         // The page size for CHR ROM and CHR RAM appear to always match each other.
         let bank_size = bank_size.expect("at least one CHR ROM or CHR RAM window");
         if !rom.is_empty() && !ram.is_empty() {
-            if !rom_present_in_layout {
+            if !regs.layout_has_rom(){
                 warn!("The CHR ROM that was specified in the rom file will be ignored since it is not \
                         configured in the Layout for this mapper.");
                 rom = RawMemory::Absent;
             }
 
-            if !ram_present_in_layout {
+            if !regs.layout_has_ram() {
                 warn!("The CHR RAM that was specified in the rom file will be ignored since it is not \
                         configured in the Layout for this mapper.");
                 ram = RawMemory::Absent;
@@ -129,6 +127,10 @@ impl ChrMemory {
         let (index, source) = self.current_memory_map().index_for_address(address);
         assert_eq!(index.read_status(), ReadStatus::Enabled, "Disabling reading CHR RAM isn't supported yet.");
         let value = match index {
+            ChrMemoryIndex::Absent => {
+                warn!("Peeking from absent CHR.");
+                0
+            }
             ChrMemoryIndex::Rom(index, ..) => {
                 self.rom[index]
             }
@@ -165,6 +167,9 @@ impl ChrMemory {
     ) {
         let (chr_memory_index, _) = self.current_memory_map().index_for_address(address);
         match chr_memory_index {
+            ChrMemoryIndex::Absent => {
+                warn!("Writing to absent CHR.");
+            }
             ChrMemoryIndex::Ram(index, _, WriteStatus::Enabled) => {
                 self.ram[index] = value;
                 info!(target: "mapperramwrites", "Setting CHR [${address}]=${value:02} (Work RAM @ ${index:X})");
@@ -354,6 +359,7 @@ impl ChrMemory {
         [mem.page_start_index(0), mem.page_start_index(1), mem.page_start_index(2), mem.page_start_index(3)]
             .map(move |chr_index| {
                 match chr_index {
+                    ChrMemoryIndex::Absent => todo!(),
                     ChrMemoryIndex::Rom(index, ..) => {
                         let index = (u32::from(self.rom_outer_bank_number) * self.rom_outer_bank_size) | (index & (self.rom_outer_bank_size - 1));
                         self.rom.sized_slice(index)
@@ -373,6 +379,7 @@ impl ChrMemory {
         [mem.page_start_index(4), mem.page_start_index(5), mem.page_start_index(6), mem.page_start_index(7)]
             .map(move |chr_index| {
                 match chr_index {
+                    ChrMemoryIndex::Absent => todo!(),
                     ChrMemoryIndex::Rom(index, ..) => {
                         let index = (self.rom_outer_bank_number as u32 * self.rom_outer_bank_size) | (index & (self.rom_outer_bank_size - 1));
                         self.rom.sized_slice(index)
@@ -390,6 +397,7 @@ impl ChrMemory {
         let mut result = String::new();
         for mapping in self.current_memory_map().pattern_table_page_mappings() {
             let bank_string = match mapping.mem_type_status() {
+                ChrMemTypeStatus::Absent => "A".into(),
                 ChrMemTypeStatus::Rom(..) => mapping.rom_page_number().to_string(),
                 ChrMemTypeStatus::Ram(..) => format!("W{}", mapping.rom_page_number()),
                 ChrMemTypeStatus::Ciram => format!("C{:?}", mapping.ciram_side()),
