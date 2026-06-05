@@ -111,6 +111,10 @@ impl RawMemory {
         (&mut self.0[start..start + SIZE]).try_into().unwrap()
     }
 
+    pub fn hash(&self) -> u32 {
+        crc32fast::hash(&self.0)
+    }
+
     pub fn split_n(self, count: NonZeroU8) -> Vec<RawMemory> {
         if self.0.is_empty() {
             return Vec::new();

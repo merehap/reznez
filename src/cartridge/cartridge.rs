@@ -54,10 +54,8 @@ impl Cartridge {
             ));
         };
 
-        let prg_rom_hash = crc32fast::hash(prg_rom.as_slice());
-        header.set_prg_rom_hash(prg_rom_hash);
-        let chr_rom_hash = crc32fast::hash(chr_rom.as_slice());
-        header.set_chr_rom_hash(chr_rom_hash);
+        header.set_prg_rom_hash(prg_rom.hash());
+        header.set_chr_rom_hash(chr_rom.hash());
 
         let title_start = chr_rom_end;
         let title = raw_header_and_data.slice(title_start..raw_header_and_data.size()).to_raw().to_vec();
