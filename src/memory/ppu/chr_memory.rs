@@ -4,7 +4,7 @@ use log::{info, warn};
 
 use crate::mapper::{BankNumber, ChrBankRegisterId, ChrWindow, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource};
 use crate::memory::address_template::bank_sizes::BankSizes;
-use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId, ReadStatusRegisterId, WriteStatusRegisterId};
+use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId, MemoryPresence, ReadStatusRegisterId, WriteStatusRegisterId};
 use crate::memory::bank::bank_number::{ChrBankRegisters, ReadStatus, WriteStatus};
 use crate::memory::ppu::chr_layout::{ChrLayouts, ChrLayout};
 use crate::memory::ppu::ppu_address::PpuAddress;
@@ -55,26 +55,21 @@ impl ChrMemory {
                     bank_size = Some(window.size());
                 }
 
-                if window.bank().is_rom() {
-                    regs.layout_has_rom = true;
-                }
-
-                if window.bank().is_ram() {
-                    regs.layout_has_ram = true;
-                }
+                regs.layout_rom_presence = std::cmp::max(regs.layout_rom_presence, window.bank().rom_presence());
+                regs.layout_ram_presence = std::cmp::max(regs.layout_ram_presence, window.bank().ram_presence());
             }
         }
 
         // The page size for CHR ROM and CHR RAM appear to always match each other.
         let bank_size = bank_size.expect("at least one CHR ROM or CHR RAM window");
         if !rom.is_empty() && !ram.is_empty() {
-            if !regs.layout_has_rom(){
+            if regs.layout_rom_presence() == MemoryPresence::Absent {
                 warn!("The CHR ROM that was specified in the rom file will be ignored since it is not \
                         configured in the Layout for this mapper.");
                 rom = RawMemory::Absent;
             }
 
-            if !regs.layout_has_ram() {
+            if regs.layout_ram_presence() == MemoryPresence::Absent {
                 warn!("The CHR RAM that was specified in the rom file will be ignored since it is not \
                         configured in the Layout for this mapper.");
                 ram = RawMemory::Absent;

@@ -1,3 +1,5 @@
+use strum_macros::Display;
+
 use crate::mapper::CiramSide;
 use crate::mapper::NameTableSource;
 use crate::mapper::ReadStatus;
@@ -492,27 +494,20 @@ impl ChrBank {
         }
     }
 
-    pub const fn is_rom(self) -> bool {
-        matches!(
-            self.chr_source_provider,
-            ChrSourceProvider::Fixed(Some(ChrSource::Rom))
-                | ChrSourceProvider::Switchable(_)
-        )
+    pub const fn rom_presence(self) -> MemoryPresence {
+        match self.chr_source_provider {
+            ChrSourceProvider::Fixed(Some(ChrSource::Rom)) => MemoryPresence::Required,
+            ChrSourceProvider::Switchable(_) | ChrSourceProvider::Fixed(Some(ChrSource::RomOrRam)) => MemoryPresence::Supported,
+            ChrSourceProvider::Fixed(_) => MemoryPresence::Absent,
+        }
     }
 
-    pub fn is_ram(self) -> bool {
-        matches!(
-            self.chr_source_provider,
-            ChrSourceProvider::Fixed(Some(ChrSource::WorkRam)) | ChrSourceProvider::Switchable(_),
-        )
-    }
-
-    pub const fn supports_ram(self) -> bool {
-        matches!(
-            self.chr_source_provider,
-            ChrSourceProvider::Fixed(Some(ChrSource::RomOrRam | ChrSource::WorkRam))
-                | ChrSourceProvider::Switchable(_)
-        )
+    pub const fn ram_presence(self) -> MemoryPresence {
+        match self.chr_source_provider {
+            ChrSourceProvider::Fixed(Some(ChrSource::WorkRam)) => MemoryPresence::Required,
+            ChrSourceProvider::Switchable(_) | ChrSourceProvider::Fixed(Some(ChrSource::RomOrRam)) => MemoryPresence::Supported,
+            ChrSourceProvider::Fixed(_) => MemoryPresence::Absent,
+        }
     }
 
     pub const fn register_id(
@@ -635,4 +630,11 @@ impl ChrBankNumberProvider {
             }
         }
     }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, Display)]
+pub enum MemoryPresence {
+    Absent,
+    Supported,
+    Required,
 }

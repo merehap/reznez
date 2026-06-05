@@ -1,6 +1,7 @@
 use std::ops::Index;
 
 use crate::memory::address_template::bank_sizes::BankSizes;
+use crate::memory::bank::bank::MemoryPresence;
 use crate::memory::bank::bank_number::{ChrBankRegisterId, ChrBankRegisters};
 use crate::memory::window::ChrWindow;
 use crate::util::const_vec::ConstVec;
@@ -102,7 +103,7 @@ impl ChrLayout {
         let mut smallest_size = 32 * KIBIBYTE_U16;
         while i < self.initial_windows.len() {
             let window = &self.initial_windows[i];
-            if window.bank().is_rom() {
+            if !matches!(window.bank().rom_presence(), MemoryPresence::Absent) {
                 smallest_size = std::cmp::min(smallest_size, window.size().to_raw());
             }
 
@@ -115,7 +116,7 @@ impl ChrLayout {
     pub const fn supports_ram(&self) -> bool {
         let mut i = 0;
         while i < self.initial_windows.len() {
-            if self.initial_windows[i].bank().supports_ram() {
+            if !matches!(self.initial_windows[i].bank().ram_presence(), MemoryPresence::Absent) {
                 return true;
             }
 

@@ -1,6 +1,6 @@
 use num_derive::FromPrimitive;
 
-use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId, PrgSource, ReadStatusRegisterId, PrgSourceRegisterId, WriteStatusRegisterId};
+use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId, MemoryPresence, PrgSource, ReadStatusRegisterId, PrgSourceRegisterId, WriteStatusRegisterId};
 use crate::memory::ppu::ciram::CiramSide;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -123,8 +123,8 @@ pub struct ChrBankRegisters {
     // TODO: These 4 don't belong here, find the proper place for them.
     cartridge_has_rom: bool,
     cartridge_has_ram: bool,
-    pub layout_has_rom: bool,
-    pub layout_has_ram: bool,
+    pub layout_rom_presence: MemoryPresence,
+    pub layout_ram_presence: MemoryPresence,
 }
 
 impl ChrBankRegisters {
@@ -142,8 +142,8 @@ impl ChrBankRegisters {
             chr_sources: [default_chr_source; 12],
             cartridge_has_rom,
             cartridge_has_ram,
-            layout_has_rom: false,
-            layout_has_ram: false,
+            layout_rom_presence: MemoryPresence::Absent,
+            layout_ram_presence: MemoryPresence::Absent,
         }
     }
 
@@ -164,27 +164,23 @@ impl ChrBankRegisters {
     }
 
     pub fn has_rom(&self) -> bool {
-        self.cartridge_has_rom && self.layout_has_rom
+        self.cartridge_has_rom && self.layout_rom_presence != MemoryPresence::Absent
     }
 
     pub fn has_ram(&self) -> bool {
-        self.cartridge_has_ram && self.layout_has_ram
-    }
-
-    pub fn cartridge_has_rom(&self) -> bool {
-        self.cartridge_has_rom
+        self.cartridge_has_ram && self.layout_ram_presence != MemoryPresence::Absent
     }
 
     pub fn cartridge_has_ram(&self) -> bool {
         self.cartridge_has_ram
     }
 
-    pub fn layout_has_rom(&self) -> bool {
-        self.layout_has_rom
+    pub fn layout_rom_presence(&self) -> MemoryPresence {
+        self.layout_rom_presence
     }
 
-    pub fn layout_has_ram(&self) -> bool {
-        self.layout_has_ram
+    pub fn layout_ram_presence(&self) -> MemoryPresence {
+        self.layout_ram_presence
     }
 
     pub fn get(&self, id: ChrBankRegisterId) -> BankNumber {
