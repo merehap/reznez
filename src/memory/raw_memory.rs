@@ -94,16 +94,17 @@ impl RawMemory {
         Self(result)
     }
 
-    pub fn as_slice(&self) -> &[u8] {
-        &self.0[..]
-    }
-
     pub fn as_mut_slice(&mut self) -> &mut [u8] {
         &mut self.0[..]
     }
 
     pub fn slice(&self, range: Range<u32>) -> RawMemorySlice<'_> {
         RawMemorySlice(&self.0[range.start as usize..range.end as usize])
+    }
+
+    pub fn sized_slice<const SIZE: usize>(&self, start: u32) -> &[u8; SIZE] {
+        let start = start as usize;
+        (&self.0[start..start + SIZE]).try_into().unwrap()
     }
 
     pub fn sized_slice_mut<const SIZE: usize>(&mut self, start: u32) -> &mut [u8; SIZE] {

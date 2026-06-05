@@ -10,7 +10,7 @@ use crate::memory::ppu::chr_layout::{ChrLayouts, ChrLayout};
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::chr_memory_map::{ChrMemTypeStatus, ChrMemoryIndex, ChrMemoryMap};
 use crate::memory::ppu::ciram::Ciram;
-use crate::memory::raw_memory::{RawMemory, RawMemorySlice};
+use crate::memory::raw_memory::RawMemory;
 use crate::memory::small_page::SmallPage;
 use crate::memory::window::ChrWindowSize;
 use crate::util::unit::KIBIBYTE;
@@ -326,14 +326,13 @@ impl ChrMemory {
 
     pub fn rom_1kib_page(&self, start: u32) -> &[u8; KIBIBYTE as usize] {
         assert_eq!(start % 0x400, 0, "Work RAM 1KiB slices must start on a 1KiB page boundary (e.g. 0x000, 0x400, 0x800).");
-        let start = ((self.rom_outer_bank_number as u32 * self.rom_outer_bank_size) & (start & (self.rom_outer_bank_size - 1))) as usize;
-        (&self.rom.as_slice()[start..start + 0x400]).try_into().unwrap()
+        let start = (self.rom_outer_bank_number as u32 * self.rom_outer_bank_size) & (start & (self.rom_outer_bank_size - 1));
+        &self.rom.sized_slice(start)
     }
 
     pub fn work_ram_1kib_page(&self, start: u32) -> &[u8; KIBIBYTE as usize] {
         assert_eq!(start % 0x400, 0, "Work RAM 1KiB slices must start on a 1KiB page boundary (e.g. 0x000, 0x400, 0x800).");
-        let start = start as usize;
-        (&self.ram.as_slice()[start..start + 0x400]).try_into().unwrap()
+        &self.ram.sized_slice(start)
     }
 
     pub fn work_ram_1kib_page_mut(&mut self, start: u32) -> &mut [u8; KIBIBYTE as usize] {
@@ -351,40 +350,38 @@ impl ChrMemory {
     }
 
     #[inline]
-    pub fn left_chunks<'a>(&'a self, ciram: &'a Ciram) -> [RawMemorySlice<'a>; 4] {
+    pub fn left_chunks<'a>(&'a self, ciram: &'a Ciram) -> [&'a [u8; KIBIBYTE as usize]; 4] {
         let mem = self.current_memory_map();
         [mem.page_start_index(0), mem.page_start_index(1), mem.page_start_index(2), mem.page_start_index(3)]
             .map(move |chr_index| {
                 match chr_index {
                     ChrMemoryIndex::Rom(index, ..) => {
                         let index = (u32::from(self.rom_outer_bank_number) * self.rom_outer_bank_size) | (index & (self.rom_outer_bank_size - 1));
-                        self.rom.slice(index..index + 1 * KIBIBYTE)
+                        self.rom.sized_slice(index)
                     }
                     ChrMemoryIndex::Ram(index, ..) => {
-                        let index = index as usize;
-                        RawMemorySlice::from_raw(&self.ram.as_slice()[index..index + 1 * KIBIBYTE as usize])
+                        self.ram.sized_slice(index)
                     }
-                    ChrMemoryIndex::Ciram(side, ..) => RawMemorySlice::from_raw(ciram.side(side)),
+                    ChrMemoryIndex::Ciram(side, ..) => ciram.side(side),
                     ChrMemoryIndex::MapperCustom {..} => todo!(),
                 }
         })
     }
 
     #[inline]
-    pub fn right_chunks<'a>(&'a self, ciram: &'a Ciram) -> [RawMemorySlice<'a>; 4] {
+    pub fn right_chunks<'a>(&'a self, ciram: &'a Ciram) -> [&'a [u8; KIBIBYTE as usize]; 4] {
         let mem = self.current_memory_map();
         [mem.page_start_index(4), mem.page_start_index(5), mem.page_start_index(6), mem.page_start_index(7)]
             .map(move |chr_index| {
                 match chr_index {
                     ChrMemoryIndex::Rom(index, ..) => {
                         let index = (self.rom_outer_bank_number as u32 * self.rom_outer_bank_size) | (index & (self.rom_outer_bank_size - 1));
-                        self.rom.slice(index..index + 1 * KIBIBYTE)
+                        self.rom.sized_slice(index)
                     }
                     ChrMemoryIndex::Ram(index, ..) => {
-                        let index = index as usize;
-                        RawMemorySlice::from_raw(&self.ram.as_slice()[index..index + 1 * KIBIBYTE as usize])
+                        self.ram.sized_slice(index)
                     }
-                    ChrMemoryIndex::Ciram(side, ..) => RawMemorySlice::from_raw(ciram.side(side)),
+                    ChrMemoryIndex::Ciram(side, ..) => ciram.side(side),
                     ChrMemoryIndex::MapperCustom {..} => todo!(),
                 }
         })
