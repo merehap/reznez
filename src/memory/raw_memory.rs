@@ -91,33 +91,6 @@ impl RawMemory {
         }
     }
 
-    /*
-    pub fn mirror_until_power_of_two(self) -> Self {
-        let len = self.0.len();
-        if len.is_power_of_two() || len == 0 {
-            // We're already at a target length, no need for modification.
-            return self;
-        }
-
-        let magnitude = len.ilog2();
-        let mirror_start = 2usize.pow(magnitude);
-        let mirror_atom_size = len - mirror_start;
-        assert!(mirror_start.is_multiple_of(mirror_atom_size), "Very weird mem size can't be mirrored properly.");
-        let (multiple, remainder) = mirror_start.div_rem_euclid(&mirror_atom_size);
-        assert_eq!(remainder, 0);
-
-        let mut result = self.0.clone();
-        for _ in 1..multiple {
-            let mut next = self.0[mirror_start..].to_vec();
-            result.append(&mut next);
-        }
-
-        assert_eq!(result.len(), 2 * mirror_start);
-
-        Self(result)
-    }
-    */
-
     pub fn sized_slice<const SIZE: usize>(&self, start: u32) -> &[u8; SIZE] {
         assert_eq!(start & (KIBIBYTE - 1), 0);
         let start = start as usize;
@@ -154,35 +127,6 @@ impl RawMemory {
         h.finalize()
     }
 
-    /*
-    pub fn split_n(self, count: NonZeroU8) -> Vec<RawMemory> {
-        if self.0.is_empty() {
-            return Vec::new();
-        }
-
-        let results: Vec<_> = self.0.chunks_exact(self.0.len() / usize::from(count.get()))
-            .map(|chunk| RawMemory(chunk.to_vec()))
-            .collect();
-        assert_eq!(results.len(), usize::from(count.get()));
-        results
-    }
-    */
-
-    /*
-    pub fn chunks(self, size: NonZeroU16) -> Vec<RawMemory> {
-        if self.0.is_empty() {
-            return Vec::new()
-        } else if self.0.len() < usize::from(size.get()) {
-            return vec![self];
-        }
-
-        assert_eq!(self.0.len() % usize::from(size.get()), 0);
-        self.0.chunks(size.get() as usize)
-            .map(|chunk| RawMemory(chunk.to_vec()))
-            .collect()
-    }
-    */
-
     pub fn size(&self) -> u32 {
         match self {
             Self::Absent => 0,
@@ -194,38 +138,21 @@ impl RawMemory {
     pub fn is_empty(&self) -> bool {
         matches!(self, Self::Absent)
     }
-
-    /*
-    fn normalize_index(&self, index: u32) -> u32 {
-        let size = self.size();
-        if index < size {
-            index
-        } else if size.is_power_of_two() {
-            index & (size - 1)
-        } else if size == 0 {
-            0
-        } else {
-            let second_chip_start = 1 << size.ilog2();
-            let combined_chip_mask = (second_chip_start << 1) - 1;
-            let index = index & combined_chip_mask;
-
-            let second_chip_mask = size - second_chip_start;
-            assert!(second_chip_mask.is_power_of_two(), "Bad memory size: 0b{size:b}");
-            let remainder = index - second_chip_start;
-            second_chip_start +
-        }
-    }
-    */
 }
 
 impl Index<u32> for RawMemory {
     type Output = u8;
 
-    fn index(&self, index: u32) -> &u8 {
+    fn index(&self, mut index: u32) -> &u8 {
         match self {
             Self::Absent => panic!("Can't index into Absent RawMemory."),
-            Self::OneChip(chip) => &chip[index],
+            Self::OneChip(chip) => {
+                let mask = chip.len() - 1;
+                &chip[index & mask]
+            }
             Self::TwoChips(first, second) => {
+                let mask = (first.len() << 1) - 1;
+                index &= mask;
                 if index < first.len() {
                     &first[index]
                 } else {
@@ -237,11 +164,16 @@ impl Index<u32> for RawMemory {
 }
 
 impl IndexMut<u32> for RawMemory {
-    fn index_mut(&mut self, index: u32) -> &mut u8 {
+    fn index_mut(&mut self, mut index: u32) -> &mut u8 {
         match self {
             Self::Absent => panic!("Can't index into Absent RawMemory."),
-            Self::OneChip(chip) => &mut chip[index],
+            Self::OneChip(chip) => {
+                let mask = chip.len() - 1;
+                &mut chip[index & mask]
+            }
             Self::TwoChips(first, second) => {
+                let mask = (first.len() << 1) - 1;
+                index &= mask;
                 if index < first.len() {
                     &mut first[index]
                 } else {
