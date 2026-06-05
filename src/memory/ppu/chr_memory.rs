@@ -73,13 +73,13 @@ impl ChrMemory {
             if !rom_present_in_layout {
                 warn!("The CHR ROM that was specified in the rom file will be ignored since it is not \
                         configured in the Layout for this mapper.");
-                rom = RawMemory::new(0);
+                rom = RawMemory::Absent;
             }
 
             if !ram_present_in_layout {
                 warn!("The CHR RAM that was specified in the rom file will be ignored since it is not \
                         configured in the Layout for this mapper.");
-                ram = RawMemory::new(0);
+                ram = RawMemory::Absent;
             }
         }
 

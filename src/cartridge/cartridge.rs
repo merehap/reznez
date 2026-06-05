@@ -40,12 +40,12 @@ impl Cartridge {
         let Some(prg_rom) = raw_header_and_data.maybe_slice(prg_rom_start..prg_rom_end) else {
             return Err(format!("ROM {} was too short (claimed to have {}KiB PRG ROM).", path.rom_file_name(), header.prg_rom_size().unwrap() / KIBIBYTE));
         };
-        let prg_rom = prg_rom.to_raw_memory();
+        let prg_rom = prg_rom.to_raw_memory()?;
 
         let chr_rom_start = prg_rom_end;
         let chr_rom_end = chr_rom_start + header.chr_rom_size().unwrap();
         let chr_rom = if let Some(rom) = raw_header_and_data.maybe_slice(chr_rom_start..chr_rom_end) {
-            rom.to_raw_memory()
+            rom.to_raw_memory()?
         } else {
             return Err(format!("ROM {} claimed to have {}KiB CHR ROM, but the CHR ROM section was too short ({}KiB)).",
                 path.rom_file_name(),
@@ -201,12 +201,12 @@ pub mod test_data {
 
     pub fn dummy_cartridge(header: CartridgeMetadata) -> Cartridge {
         // Make all values of PRG and CHR ROM equal to the page it is located on, enabling some types of tests.
-        let mut prg_rom = RawMemory::new(header.prg_rom_size().unwrap());
+        let mut prg_rom = RawMemory::new(header.prg_rom_size().unwrap()).unwrap();
         for i in 0..prg_rom.size() {
             prg_rom[i] = (i / (8 * KIBIBYTE)) as u8;
         }
 
-        let mut chr_rom = RawMemory::new(header.chr_rom_size().unwrap());
+        let mut chr_rom = RawMemory::new(header.chr_rom_size().unwrap()).unwrap();
         for i in 0..chr_rom.size() {
             chr_rom[i] = (i / KIBIBYTE) as u8;
         }

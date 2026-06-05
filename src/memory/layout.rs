@@ -60,12 +60,12 @@ impl Layout {
 
         let chr_ram = if self.chr_save_ram_size > 0 {
             match metadata.chr_work_ram_size + metadata.chr_save_ram_size {
-                0 => RawMemory::new(self.chr_save_ram_size),
-                size if size == self.chr_save_ram_size => RawMemory::new(self.chr_save_ram_size),
+                0 => RawMemory::new(self.chr_save_ram_size)?,
+                size if size == self.chr_save_ram_size => RawMemory::new(self.chr_save_ram_size)?,
                 _ => panic!("CHR SAVE RAM size from cartridge did not match mapper override value."),
             }
         } else {
-            RawMemory::new(metadata.chr_work_ram_size + metadata.chr_save_ram_size)
+            RawMemory::new(metadata.chr_work_ram_size + metadata.chr_save_ram_size)?
         };
 
         let prg_save_ram_page_count = if metadata.prg_save_ram_size > 0 && metadata.prg_save_ram_size < 8 * KIBIBYTE {
@@ -94,7 +94,7 @@ impl Layout {
             self.prg_layout_index,
             cartridge.prg_rom().clone(),
             self.prg_rom_outer_bank_layout,
-            RawMemory::new(metadata.prg_work_ram_size),
+            RawMemory::new(metadata.prg_work_ram_size)?,
             SaveRam::open(&cartridge.path().to_prg_save_ram_file_path(), metadata.prg_save_ram_size, allow_saving),
             prg_bank_registers,
         );

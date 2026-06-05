@@ -71,22 +71,28 @@ pub enum RawMemory {
 }
 
 impl RawMemory {
-    pub fn new(size: u32) -> Self {
+    pub fn new(size: u32) -> Result<Self, String> {
         Self::from_vec(vec![0; size as usize])
     }
 
-    pub fn from_vec(vec: Vec<u8>) -> Self {
-        assert!(vec.len() <= u32::MAX.try_into().unwrap());
+    pub fn from_vec(vec: Vec<u8>) -> Result<Self, String> {
+        let full_len: u32 = vec.len().try_into().unwrap();
         match PowerOf2Vec::new(vec) {
             PowerOf2VecResult::Absent => {
-                RawMemory::Absent
+                Ok(RawMemory::Absent)
             }
             PowerOf2VecResult::Exact(first_chip) => {
-                RawMemory::OneChip(first_chip)
+                Ok(RawMemory::OneChip(first_chip))
             }
             PowerOf2VecResult::Split { start: first_chip, remainder } => {
-                let second_chip = PowerOf2Vec::strict(remainder);
-                RawMemory::TwoChips(first_chip, second_chip)
+                let second_chip = match PowerOf2Vec::new(remainder) {
+                    PowerOf2VecResult::Absent => unreachable!(),
+                    PowerOf2VecResult::Exact(chip) => chip,
+                    PowerOf2VecResult::Split {..} =>
+                        return Err(format!("A maximum of 2 chips are supported. Length: {}KiB", full_len / KIBIBYTE)),
+                };
+
+                Ok(RawMemory::TwoChips(first_chip, second_chip))
             }
         }
     }
@@ -220,7 +226,7 @@ impl<'a> RawMemorySlice<'a> {
         self.0
     }
 
-    pub fn to_raw_memory(&self) -> RawMemory {
+    pub fn to_raw_memory(&self) -> Result<RawMemory, String> {
         RawMemory::from_vec(self.0.to_vec())
     }
 
@@ -324,7 +330,7 @@ pub struct PowerOf2Vec(Vec<u8>);
 
 impl PowerOf2Vec {
     pub fn strict(raw: Vec<u8>) -> Self {
-        assert!(raw.len().is_power_of_two());
+        assert!(raw.len().is_power_of_two(), "Length must be a power of 2, but was: 0b{:b}", raw.len());
         Self(raw)
     }
 

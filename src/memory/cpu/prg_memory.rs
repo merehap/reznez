@@ -43,7 +43,7 @@ impl PrgMemory {
                 "The PRG RAM that was specified in the rom file will be ignored since it is not \
                     configured in the Layout for this mapper."
             );
-            work_ram = RawMemory::new(0);
+            work_ram = RawMemory::Absent;
             save_ram = SaveRam::empty();
         }
 
@@ -106,7 +106,7 @@ impl PrgMemory {
     }
 
     pub fn peek_raw_rom(&self, index: u32) -> u8 {
-        self.rom[index % self.rom.size()]
+        self.rom[index]
     }
 
     pub fn write(&mut self, address: CpuAddress, value: u8) {
