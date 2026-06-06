@@ -90,12 +90,20 @@ static JOY_2_JOYPAD_MAPPINGS: LazyLock<HashMap<u32, Button>> = LazyLock::new(|| 
 
 const PRIMARY_WINDOW_SCALE_FACTOR: f32 = 3.0;
 
-pub struct EguiGui;
+pub struct EguiGui {
+    keyboard: WinitInputHelper,
+}
+
+impl EguiGui {
+    pub fn new() -> Self {
+        Self {
+            keyboard: WinitInputHelper::new(),
+        }
+    }
+}
 
 impl Gui for EguiGui {
     fn run(&mut self, nes: Option<Nes>, config: Config) {
-        let mut input = WinitInputHelper::new();
-
         let mut gilrs = gilrs::Gilrs::new().unwrap();
         let gamepads: Vec<(gilrs::GamepadId, gilrs::Gamepad)> =
             gilrs.gamepads().collect();
@@ -121,26 +129,26 @@ impl Gui for EguiGui {
 
         event_loop
             .run(move |event, event_loop_window_target| {
-                let updated = input.update(&event);
+                let updated = self.keyboard.update(&event);
                 if updated {
                     if let Some(nes) = &mut world.nes {
-                        if input.key_pressed(KeyCode::F1) {
+                        if self.keyboard.key_pressed(KeyCode::F1) {
                             info!("{}", nes.bus().oam);
                         }
 
-                        if input.key_pressed(KeyCode::F12) {
+                        if self.keyboard.key_pressed(KeyCode::F12) {
                             nes.set_reset_signal();
                         }
                     }
 
-                    if input.key_pressed(KeyCode::Pause)
-                        || input.key_pressed(KeyCode::KeyP)
-                        || input.key_pressed(KeyCode::Escape)
+                    if self.keyboard.key_pressed(KeyCode::Pause)
+                        || self.keyboard.key_pressed(KeyCode::KeyP)
+                        || self.keyboard.key_pressed(KeyCode::Escape)
                     {
                         window_manager.toggle_pause();
                     }
 
-                    world.events = poll_button_events(&input, &mut gilrs, active_gamepad_id);
+                    world.events = poll_button_events(&self.keyboard, &mut gilrs, active_gamepad_id);
 
                     window_manager.request_redraws();
                 }
