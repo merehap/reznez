@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use egui::{vec2, Align2, CentralPanel, ColorImage, Context, Frame as EguiFrame, TextureHandle, TextureOptions};
+use egui::{include_image, vec2, Align2, CentralPanel, Context, Frame as EguiFrame, Image};
 use egui_file::FileDialog;
 use log::error;
 use pixels::Pixels;
@@ -13,7 +13,7 @@ pub use crate::gui::window_renderer::{FlowControl, WindowRenderer};
 use crate::nes::Nes;
 use crate::gui::window_renderers::audio_visualizer::AudioVisualizer;
 use crate::gui::window_renderers::cartridge_metadata_renderer::CartridgeMetadataRenderer;
-use crate::gui::window_renderers::cartridge_query_renderer::CartridgeQueryRenderer;
+use crate::gui::window_renderers::cartridge_query_renderer::{CartridgeQueryRenderer};
 use crate::gui::window_renderers::controls_renderer::ControlsRenderer;
 use crate::gui::window_renderers::display_settings_renderer::DisplaySettingsRenderer;
 use crate::gui::window_renderers::layers_renderer::LayersRenderer;
@@ -32,7 +32,6 @@ pub struct PrimaryRenderer {
     file_dialog: FileDialog,
     load_error: Option<String>,
     cartridge_query_dialog: FileDialog,
-    splash_texture: Option<TextureHandle>,
 }
 
 impl PrimaryRenderer {
@@ -54,26 +53,9 @@ impl PrimaryRenderer {
             file_dialog,
             load_error: None,
             cartridge_query_dialog,
-            splash_texture: None,
         }
     }
-
-
-    fn splash_texture(&mut self, ctx: &Context) -> &TextureHandle {
-        self.splash_texture.get_or_insert_with(|| {
-            let image_bytes = include_bytes!("../assets/reznez_splash.png");
-            let image = image::load_from_memory(image_bytes).unwrap().to_rgba8();
-            let size = [image.width() as usize, image.height() as usize];
-
-            ctx.load_texture(
-                "reznez_splash",
-                ColorImage::from_rgba_unmultiplied(size, image.as_raw()),
-                TextureOptions::NEAREST,
-            )
-        })
-    }
 }
-
 
 impl WindowRenderer for PrimaryRenderer {
     fn name(&self) -> String {
@@ -195,14 +177,16 @@ impl WindowRenderer for PrimaryRenderer {
                 })
             });
         });
-        
+
         if world.nes.is_none() {
             CentralPanel::default()
                 .frame(EguiFrame::none())
                 .show(ctx, |ui| {
                     let available_size = ui.available_size();
-                    let texture = self.splash_texture(ctx);
-                    ui.image((texture.id(), available_size));
+                    ui.add(
+                         Image::new(include_image!("../assets/reznez_splash.svg"))
+                            .fit_to_exact_size(available_size),
+                    );
                 });
         }
 
@@ -270,7 +254,6 @@ impl WindowRenderer for PrimaryRenderer {
             );
         }
     }
-    
 
     fn toggle_pause(&mut self) {
         self.paused = !self.paused;
