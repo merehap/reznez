@@ -94,9 +94,9 @@ pub struct EguiGui;
 
 impl Gui for EguiGui {
     fn run(&mut self, nes: Option<Nes>, config: Config) {
-        let input = WinitInputHelper::new();
+        let mut input = WinitInputHelper::new();
 
-        let gilrs = gilrs::Gilrs::new().unwrap();
+        let mut gilrs = gilrs::Gilrs::new().unwrap();
         let gamepads: Vec<(gilrs::GamepadId, gilrs::Gamepad)> =
             gilrs.gamepads().collect();
         let active_gamepad_id = gamepads.first().map(|(id, _)| *id);
@@ -106,7 +106,7 @@ impl Gui for EguiGui {
         }
 
         let events = Events::none();
-        let mut world = World { nes, config, input, gilrs, active_gamepad_id, events };
+        let mut world = World { nes, config, events };
         let event_loop = EventLoop::new().unwrap();
 
         let primary_renderer = Box::new(PrimaryRenderer::new());
@@ -121,26 +121,26 @@ impl Gui for EguiGui {
 
         event_loop
             .run(move |event, event_loop_window_target| {
-                let updated = world.input.update(&event);
+                let updated = input.update(&event);
                 if updated {
                     if let Some(nes) = &mut world.nes {
-                        if world.input.key_pressed(KeyCode::F1) {
+                        if input.key_pressed(KeyCode::F1) {
                             info!("{}", nes.bus().oam);
                         }
 
-                        if world.input.key_pressed(KeyCode::F12) {
+                        if input.key_pressed(KeyCode::F12) {
                             nes.set_reset_signal();
                         }
                     }
 
-                    if world.input.key_pressed(KeyCode::Pause)
-                        || world.input.key_pressed(KeyCode::KeyP)
-                        || world.input.key_pressed(KeyCode::Escape)
+                    if input.key_pressed(KeyCode::Pause)
+                        || input.key_pressed(KeyCode::KeyP)
+                        || input.key_pressed(KeyCode::Escape)
                     {
                         window_manager.toggle_pause();
                     }
 
-                    world.events = poll_button_events(&world.input, &mut world.gilrs, world.active_gamepad_id);
+                    world.events = poll_button_events(&input, &mut gilrs, active_gamepad_id);
 
                     window_manager.request_redraws();
                 }
