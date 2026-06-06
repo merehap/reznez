@@ -92,27 +92,30 @@ const PRIMARY_WINDOW_SCALE_FACTOR: f32 = 3.0;
 
 pub struct EguiGui {
     keyboard: WinitInputHelper,
+    gamepad_handler: gilrs::Gilrs,
+    active_gamepad_id: Option<gilrs::GamepadId>,
 }
 
 impl EguiGui {
     pub fn new() -> Self {
-        Self {
-            keyboard: WinitInputHelper::new(),
-        }
-    }
-}
-
-impl Gui for EguiGui {
-    fn run(&mut self, nes: Option<Nes>, config: Config) {
-        let mut gilrs = gilrs::Gilrs::new().unwrap();
-        let gamepads: Vec<(gilrs::GamepadId, gilrs::Gamepad)> =
-            gilrs.gamepads().collect();
+        let gamepad_handler = gilrs::Gilrs::new().unwrap();
+        let gamepads: Vec<(gilrs::GamepadId, gilrs::Gamepad)> = gamepad_handler.gamepads().collect();
         let active_gamepad_id = gamepads.first().map(|(id, _)| *id);
         if gamepads.len() > 1 {
             warn!("Only one gamepad at a time is currently supported, but multiple are connected. Proceeding with only the first detected gamepad: {active_gamepad_id:?}."
             );
         }
 
+        Self {
+            keyboard: WinitInputHelper::new(),
+            gamepad_handler,
+            active_gamepad_id,
+        }
+    }
+}
+
+impl Gui for EguiGui {
+    fn run(&mut self, nes: Option<Nes>, config: Config) {
         let events = Events::none();
         let mut world = World { nes, config, events };
         let event_loop = EventLoop::new().unwrap();
@@ -148,7 +151,7 @@ impl Gui for EguiGui {
                         window_manager.toggle_pause();
                     }
 
-                    world.events = poll_button_events(&self.keyboard, &mut gilrs, active_gamepad_id);
+                    world.events = poll_button_events(&self.keyboard, &mut self.gamepad_handler, self.active_gamepad_id);
 
                     window_manager.request_redraws();
                 }
