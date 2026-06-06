@@ -42,6 +42,11 @@ const fn size_to_width(size: u32) -> u8 {
         return 0;
     }
 
-    assert!(size.is_power_of_two());
-    (size - 1).count_ones() as u8
+    if size.is_power_of_two() {
+        (size - 1).count_ones() as u8
+    } else {
+        // Treat non-power-of-2 sizes as the next power-of-2 up.
+        // This results in index greater than the true size being mirrored appropriately by RawMemory.
+        size.ilog2() as u8 + 1
+    }
 }

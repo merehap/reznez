@@ -60,6 +60,14 @@ impl ChrMemory {
             }
         }
 
+        if regs.layout_rom_presence == MemoryPresence::Required && rom.is_empty() {
+            return Err("Bad ROM file (or bad mapper configuration): CHR ROM is required by the layout, but none was present in the ROM file.".into());
+        }
+
+        if regs.layout_ram_presence == MemoryPresence::Required && ram.is_empty() {
+            return Err("Bad RAM file (or bad mapper configuration): CHR RAM is required by the layout, but none was present in the ROM file.".into());
+        }
+
         // The page size for CHR ROM and CHR RAM appear to always match each other.
         let bank_size = bank_size.expect("at least one CHR ROM or CHR RAM window");
         if !rom.is_empty() && !ram.is_empty() {
