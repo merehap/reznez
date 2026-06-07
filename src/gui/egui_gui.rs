@@ -134,25 +134,6 @@ impl Gui for EguiGui {
             .run(move |event, event_loop_window_target| {
                 let updated = self.keyboard.update(&event);
                 if updated {
-                    if let Some(nes) = &mut world.nes {
-                        if self.keyboard.key_pressed(KeyCode::F1) {
-                            info!("{}", nes.bus().oam);
-                        }
-
-                        if self.keyboard.key_pressed(KeyCode::F12) {
-                            nes.set_reset_signal();
-                        }
-                    }
-
-                    if self.keyboard.key_pressed(KeyCode::Pause)
-                        || self.keyboard.key_pressed(KeyCode::KeyP)
-                        || self.keyboard.key_pressed(KeyCode::Escape)
-                    {
-                        window_manager.toggle_pause();
-                    }
-
-                    world.events = poll_button_events(&self.keyboard, &mut self.gamepad_handler, self.active_gamepad_id);
-
                     window_manager.request_redraws();
                 }
 
@@ -166,6 +147,25 @@ impl Gui for EguiGui {
                             }
                         }
                         WindowEvent::RedrawRequested => {
+                            if let Some(nes) = &mut world.nes {
+                                if self.keyboard.key_pressed(KeyCode::F1) {
+                                    info!("{}", nes.bus().oam);
+                                }
+
+                                if self.keyboard.key_pressed(KeyCode::F12) {
+                                    nes.set_reset_signal();
+                                }
+                            }
+
+                            if self.keyboard.key_pressed(KeyCode::Pause)
+                                || self.keyboard.key_pressed(KeyCode::KeyP)
+                                || self.keyboard.key_pressed(KeyCode::Escape)
+                            {
+                                window_manager.toggle_pause();
+                            }
+
+                            world.events = poll_button_events(&self.keyboard, &mut self.gamepad_handler, self.active_gamepad_id);
+
                             match window_manager.draw(&mut world, window_id) {
                                 Ok(FlowControl { window_args, should_close_window }) => {
                                     if let Some((renderer, position, scale)) = window_args
