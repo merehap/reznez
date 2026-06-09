@@ -38,7 +38,7 @@ impl WindowRenderer for AudioVisualizer {
         egui::CentralPanel::default().show(ctx, |ui| {
             nes.bus().apu_regs.pulse1_volumes.clone_to(&mut self.buffer);
             // Stop cloning once egui is upgraded.
-            let line = Line::new(self.buffer.clone());
+            let pulse_1_line = Line::new("Pulse 1", self.buffer.clone());
             Plot::new("my_plot")
                 .view_aspect(6.0)
                 .allow_scroll(false)
@@ -54,13 +54,13 @@ impl WindowRenderer for AudioVisualizer {
                     GridMark { value: 15.0, step_size: 5.0 },
                 ])
                 .show(ui, |plot_ui| {
-                    plot_ui.line(line);
+                    plot_ui.line(pulse_1_line);
                     // Force the y-axis to always have a max value of 15.
-                    plot_ui.line(Line::new(vec![[0.0, 15.0]]));
+                    plot_ui.line(Line::new("Pulse 1 Y Axis", vec![[0.0, 15.0]]));
                 });
 
             nes.bus().apu_regs.pulse2_volumes.clone_to(&mut self.buffer);
-            let line = Line::new(self.buffer.clone());
+            let pulse_2_line = Line::new("Pulse 2", self.buffer.clone());
             Plot::new("my_plot")
                 .view_aspect(6.0)
                 .allow_scroll(false)
@@ -75,12 +75,12 @@ impl WindowRenderer for AudioVisualizer {
                     GridMark { value: 15.0, step_size: 5.0 },
                 ])
                 .show(ui, |plot_ui| {
-                    plot_ui.line(line);
-                    plot_ui.line(Line::new(vec![[0.0, 15.0]]));
+                    plot_ui.line(pulse_2_line);
+                    plot_ui.line(Line::new("Pulse 2 Y Axis", vec![[0.0, 15.0]]));
                 });
 
                 nes.bus().apu_regs.triangle_volumes.clone_to(&mut self.buffer);
-                let line = Line::new(self.buffer.clone());
+                let line = Line::new("Triangle", self.buffer.clone());
                 Plot::new("my_plot")
                     .view_aspect(6.0)
                     .allow_scroll(false)
@@ -96,11 +96,11 @@ impl WindowRenderer for AudioVisualizer {
                     ])
                     .show(ui, |plot_ui| {
                         plot_ui.line(line);
-                        plot_ui.line(Line::new(vec![[0.0, 15.0]]));
+                        plot_ui.line(Line::new("Triangle Y Axis", vec![[0.0, 15.0]]));
                     });
 
                 nes.bus().apu_regs.noise_volumes.clone_to(&mut self.buffer);
-                let line = Line::new(self.buffer.clone());
+                let line = Line::new("Noise", self.buffer.clone());
                 Plot::new("my_plot")
                     .view_aspect(6.0)
                     .allow_scroll(false)
@@ -116,11 +116,11 @@ impl WindowRenderer for AudioVisualizer {
                     ])
                     .show(ui, |plot_ui| {
                         plot_ui.line(line);
-                        plot_ui.line(Line::new(vec![[0.0, 15.0]]));
+                        plot_ui.line(Line::new("Noise Y Axis", vec![[0.0, 15.0]]));
                     });
 
                 nes.bus().apu_regs.dmc_volumes.clone_to(&mut self.buffer);
-                let line = Line::new(self.buffer.clone());
+                let line = Line::new("DMC", self.buffer.clone());
                 Plot::new("my_plot")
                     .view_aspect(6.0)
                     .allow_scroll(false)
@@ -136,11 +136,11 @@ impl WindowRenderer for AudioVisualizer {
                     ])
                     .show(ui, |plot_ui| {
                         plot_ui.line(line);
-                        plot_ui.line(Line::new(vec![[0.0, 15.0]]));
+                        plot_ui.line(Line::new("DMC Y Axis", vec![[0.0, 15.0]]));
                     });
 
                 nes.bus().apu_regs.mixed_values.clone_to(&mut self.buffer);
-                let line = Line::new(self.buffer.clone());
+                let line = Line::new("Mixed Samples", self.buffer.clone());
                 Plot::new("my_plot")
                     .view_aspect(6.0)
                     .allow_scroll(false)
@@ -156,7 +156,7 @@ impl WindowRenderer for AudioVisualizer {
                     ])
                     .show(ui, |plot_ui| {
                         plot_ui.line(line);
-                        plot_ui.line(Line::new(vec![[0.0, 1.0]]));
+                        plot_ui.line(Line::new("Mixed Samples Y Axis", vec![[0.0, 1.0]]));
                     });
         });
 

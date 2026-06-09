@@ -35,17 +35,17 @@ strum_macros = "0.27.1"
 walkdir = "2.5.0"
 ux = "0.1.6"
 
-egui = "0.27.2"
-egui-wgpu = "0.27.2"
-egui_extras = { version = "0.27.2", features = ["svg"] }
-egui-winit = { version = "0.27.2", default-features = false, features = ["links"] }
-egui_plot = "0.27.2"
-egui_file = "0.17.0"
+egui = "0.34.1"
+egui-wgpu = "0.34.1"
+egui_extras = { version = "0.34.1", features = ["svg"] }
+egui-winit = { version = "0.34.1", default-features = false, features = ["links"] }
+egui_plot = "0.35.0"
+egui_file = "0.26.0"
 
-pixels = "0.15.0"
+pixels = "0.17.1"
 
-winit = "0.29.15"
-winit_input_helper = "0.16"
+winit = "0.30.13"
+winit_input_helper = "0.17"
 
 [profile.release]
 debug = true

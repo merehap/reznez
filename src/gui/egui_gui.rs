@@ -6,18 +6,17 @@ use gilrs::GamepadId;
 use crate::controller::joypad::{Button, ButtonStatus};
 
 use egui::{ClippedPrimitive, Context, TexturesDelta, ViewportId};
-use egui_wgpu::{Renderer, ScreenDescriptor};
+use egui_wgpu::{Renderer, RendererOptions, ScreenDescriptor};
 use gilrs;
 use log::{info, warn};
 use pixels::{Pixels, SurfaceTexture};
 use pixels::wgpu::{RenderPassDescriptor, RenderPassColorAttachment, Operations, LoadOp, StoreOp};
 use winit::dpi::{LogicalSize, PhysicalPosition, Position};
 use winit::event::{Event, WindowEvent};
-use winit::event_loop::{EventLoop, EventLoopWindowTarget};
+use winit::event_loop::{EventLoop, ActiveEventLoop};
 use winit::keyboard::KeyCode;
 use winit::window::Icon;
-use winit::window::Window;
-use winit::window::{WindowBuilder, WindowId};
+use winit::window::{Window, WindowId};
 use winit_input_helper::WinitInputHelper;
 
 use crate::config::Config;
@@ -116,11 +115,9 @@ impl Gui for EguiGui {
         let mut window_manager = WindowManager::new(primary_window, primary_window_name);
 
         event_loop
-            .run(move |event, event_loop_window_target| {
-                let updated = self.keyboard.update(&event);
-                if updated {
-                    window_manager.request_redraws();
-                }
+            .run(move |event, active_event_loop| {
+                //let updated = self.keyboard.update(&event);
+                window_manager.request_redraws();
 
                 if let Event::WindowEvent { event, window_id } = event {
                     match event {
@@ -128,7 +125,7 @@ impl Gui for EguiGui {
                             let primary_removed = window_manager.remove_window(window_id);
                             if primary_removed {
                                 log::logger().flush();
-                                event_loop_window_target.exit();
+                                active_event_loop.exit();
                             }
                         }
                         WindowEvent::RedrawRequested => {
@@ -156,7 +153,7 @@ impl Gui for EguiGui {
                                     if let Some((renderer, position, scale)) = window_args
                                     {
                                         window_manager.create_window_from_renderer(
-                                            event_loop_window_target,
+                                            active_event_loop,
                                             renderer,
                                             position,
                                             scale as f64,
@@ -172,7 +169,7 @@ impl Gui for EguiGui {
                                         info!(
                                             "Closing REZNEZ due to redraw failure. {e}"
                                         );
-                                        event_loop_window_target.exit();
+                                        active_event_loop.exit();
                                     }
                                 }
                             }
@@ -205,7 +202,7 @@ struct EguiWindow<'a> {
 
 impl<'a> EguiWindow<'a> {
     fn from_event_loop(
-        event_loop: &EventLoopWindowTarget<()>,
+        event_loop: &EventLoop<()>,
         scale_factor: f64,
         initial_position: Position,
         renderer: Box<dyn WindowRenderer>,
@@ -215,15 +212,57 @@ impl<'a> EguiWindow<'a> {
                 scale_factor * renderer.width() as f64,
                 scale_factor * renderer.height() as f64,
             );
-            WindowBuilder::new()
+            let window_attributes = Window::default_attributes()
                 .with_title(renderer.name())
                 .with_window_icon(Some(window_icon()))
                 .with_inner_size(size)
                 .with_min_inner_size(size)
                 .with_resizable(false)
-                .with_position(initial_position)
-                .build(event_loop)
-                .unwrap()
+                .with_position(initial_position);
+            event_loop.create_window(window_attributes).unwrap()
+        };
+
+        let window_size = window.inner_size();
+        let scale_factor = window.scale_factor() as f32;
+        let window = Arc::new(window);
+        let surface_texture =
+            SurfaceTexture::new(window_size.width, window_size.height, window.clone());
+        let pixels = Pixels::new(
+            renderer.width() as u32,
+            renderer.height() as u32,
+            surface_texture,
+        )
+        .unwrap();
+
+        EguiWindow::new(
+            window_size.width,
+            window_size.height,
+            scale_factor,
+            window.clone(),
+            pixels,
+            renderer,
+        )
+    }
+
+    fn from_active_event_loop(
+        event_loop: &ActiveEventLoop,
+        scale_factor: f64,
+        initial_position: Position,
+        renderer: Box<dyn WindowRenderer>,
+    ) -> Self {
+        let window = {
+            let size = LogicalSize::new(
+                scale_factor * renderer.width() as f64,
+                scale_factor * renderer.height() as f64,
+            );
+            let window_attributes = Window::default_attributes()
+                .with_title(renderer.name())
+                .with_window_icon(Some(window_icon()))
+                .with_inner_size(size)
+                .with_min_inner_size(size)
+                .with_resizable(false)
+                .with_position(initial_position);
+            event_loop.create_window(window_attributes).unwrap()
         };
 
         let window_size = window.inner_size();
@@ -258,13 +297,13 @@ impl<'a> EguiWindow<'a> {
     ) -> Self {
         let egui_ctx = Context::default();
         egui_extras::install_image_loaders(&egui_ctx);
-        let egui_state =
-            egui_winit::State::new(egui_ctx, ViewportId::ROOT, &window, None, None);
+        let egui_state = egui_winit::State::new(egui_ctx, ViewportId::ROOT, &window, None, None, None);
         let screen_descriptor = ScreenDescriptor {
             pixels_per_point: scale_factor,
             size_in_pixels: [width, height],
         };
-        let wgpu_renderer = Renderer::new(pixels.device(), pixels.render_texture_format(), None, 1);
+        let renderer_options = RendererOptions::default();
+        let wgpu_renderer = Renderer::new(pixels.device(), pixels.render_texture_format(), renderer_options);
         let textures = TexturesDelta::default();
 
         Self {
@@ -332,11 +371,13 @@ impl<'a> EguiWindow<'a> {
                                 load: LoadOp::Load,
                                 store: StoreOp::Store,
                             },
+                            depth_slice: None,
                         })],
                         depth_stencil_attachment: None,
                         timestamp_writes: None,
                         occlusion_query_set: None,
-                    });
+                        multiview_mask: None,
+                    }).forget_lifetime();
 
                     // Record all render passes.
                     self.wgpu_renderer.render(&mut rpass, &self.paint_jobs, &self.screen_descriptor);
@@ -378,7 +419,7 @@ impl<'a> WindowManager<'a> {
 
     pub fn create_window_from_renderer(
         &mut self,
-        event_loop: &EventLoopWindowTarget<()>,
+        event_loop: &ActiveEventLoop,
         renderer: Box<dyn WindowRenderer>,
         position: Position,
         scale: f64,
@@ -390,7 +431,7 @@ impl<'a> WindowManager<'a> {
 
         self.window_names.insert(name.clone());
 
-        let window = EguiWindow::from_event_loop(event_loop, scale, position, renderer);
+        let window = EguiWindow::from_active_event_loop(event_loop, scale, position, renderer);
         self.windows_by_id
             .insert(window.window.id(), (name, window));
     }

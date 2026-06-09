@@ -42,10 +42,10 @@ impl PrimaryRenderer {
                 .is_some_and(|extension| extension.eq_ignore_ascii_case("nes"))
         });
 
-        let file_dialog = FileDialog::open_file(None)
+        let file_dialog = FileDialog::open_file()
             .show_files_filter(nes_file_filter)
             .anchor(Align2::CENTER_CENTER, vec2(0.0, 0.0));
-        let cartridge_query_dialog = FileDialog::select_folder(None)
+        let cartridge_query_dialog = FileDialog::select_folder()
             .anchor(Align2::CENTER_CENTER, vec2(0.0, 0.0));
 
         Self {
@@ -235,7 +235,7 @@ impl WindowRenderer for PrimaryRenderer {
         }
         result
     }
-    
+
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
         if self.paused {
             return;
