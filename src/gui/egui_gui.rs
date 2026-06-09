@@ -6,10 +6,11 @@ use gilrs::GamepadId;
 use crate::controller::joypad::{Button, ButtonStatus};
 
 use egui::{ClippedPrimitive, Context, TexturesDelta, ViewportId};
-use egui_wgpu_backend::{RenderPass, ScreenDescriptor};
+use egui_wgpu::{Renderer, ScreenDescriptor};
 use gilrs;
 use log::{info, warn};
 use pixels::{Pixels, SurfaceTexture};
+use pixels::wgpu::{RenderPassDescriptor, RenderPassColorAttachment, Operations, LoadOp, StoreOp};
 use winit::dpi::{LogicalSize, PhysicalPosition, Position};
 use winit::event::{Event, WindowEvent};
 use winit::event_loop::{EventLoop, EventLoopWindowTarget};
@@ -71,22 +72,6 @@ static JOY_1_JOYPAD_MAPPINGS: LazyLock<HashMap<u32, Button>> = LazyLock::new(|| 
     mappings.insert(66083, Button::Right);
     mappings
 });
-
-/*
-#[rustfmt::skip]
-static JOY_2_JOYPAD_MAPPINGS: LazyLock<HashMap<u32, Button>> = LazyLock::new(|| {
-    let mut mappings = HashMap::new();
-    mappings.insert(VirtualKeyCode::Numpad0,        Button::A);
-    mappings.insert(VirtualKeyCode::NumpadEnter,    Button::B);
-    mappings.insert(VirtualKeyCode::NumpadSubtract, Button::Select);
-    mappings.insert(VirtualKeyCode::NumpadAdd,      Button::Start);
-    mappings.insert(VirtualKeyCode::Numpad8,        Button::Up);
-    mappings.insert(VirtualKeyCode::Numpad5,        Button::Down);
-    mappings.insert(VirtualKeyCode::Numpad4,        Button::Left);
-    mappings.insert(VirtualKeyCode::Numpad6,        Button::Right);
-    mappings
-});
-*/
 
 const PRIMARY_WINDOW_SCALE_FACTOR: f32 = 3.0;
 
@@ -208,14 +193,14 @@ impl Gui for EguiGui {
 struct EguiWindow<'a> {
     egui_state: egui_winit::State,
     screen_descriptor: ScreenDescriptor,
-    rpass: RenderPass,
+    wgpu_renderer: Renderer,
     paint_jobs: Vec<ClippedPrimitive>,
     textures: TexturesDelta,
 
     // State for the GUI
     window: Arc<Window>,
     pixels: Pixels<'a>,
-    renderer: Box<dyn WindowRenderer>,
+    window_renderer: Box<dyn WindowRenderer>,
 }
 
 impl<'a> EguiWindow<'a> {
@@ -269,29 +254,28 @@ impl<'a> EguiWindow<'a> {
         scale_factor: f32,
         window: Arc<Window>,
         pixels: pixels::Pixels<'a>,
-        renderer: Box<dyn WindowRenderer>,
+        window_renderer: Box<dyn WindowRenderer>,
     ) -> Self {
         let egui_ctx = Context::default();
         egui_extras::install_image_loaders(&egui_ctx);
         let egui_state =
             egui_winit::State::new(egui_ctx, ViewportId::ROOT, &window, None, None);
         let screen_descriptor = ScreenDescriptor {
-            physical_width: width,
-            physical_height: height,
-            scale_factor,
+            pixels_per_point: scale_factor,
+            size_in_pixels: [width, height],
         };
-        let rpass = RenderPass::new(pixels.device(), pixels.render_texture_format(), 1);
+        let wgpu_renderer = Renderer::new(pixels.device(), pixels.render_texture_format(), None, 1);
         let textures = TexturesDelta::default();
 
         Self {
             egui_state,
             screen_descriptor,
-            rpass,
+            wgpu_renderer,
             paint_jobs: Vec::new(),
             textures,
             window,
             pixels,
-            renderer,
+            window_renderer,
         }
     }
 
@@ -301,7 +285,7 @@ impl<'a> EguiWindow<'a> {
     }
 
     fn draw(&mut self, world: &mut World) -> Result<FlowControl, String> {
-        self.renderer.render(world, &mut self.pixels);
+        self.window_renderer.render(world, &mut self.pixels);
 
         // Run the egui frame and create all paint jobs to prepare for rendering.
         let mut raw_input = self.egui_state.take_egui_input(&self.window);
@@ -313,7 +297,7 @@ impl<'a> EguiWindow<'a> {
 
         let mut result = FlowControl::CONTINUE;
         let output = self.egui_state.egui_ctx().run(raw_input, |egui_ctx| {
-            result = self.renderer.ui(egui_ctx, world);
+            result = self.window_renderer.ui(egui_ctx, world);
         });
 
         self.textures.append(output.textures_delta);
@@ -327,33 +311,44 @@ impl<'a> EguiWindow<'a> {
         self.pixels
             .render_with(|encoder, render_target, context| {
                 context.scaling_renderer.render(encoder, render_target);
-                self.rpass
-                    .add_textures(&context.device, &context.queue, &self.textures)
-                    .map_err(|err| err.to_string())?;
-                self.rpass.update_buffers(
+                for (id, delta) in &self.textures.set {
+                    self.wgpu_renderer.update_texture(&context.device, &context.queue, *id, delta);
+                }
+                self.wgpu_renderer.update_buffers(
                     &context.device,
                     &context.queue,
+                    encoder,
                     &self.paint_jobs,
                     &self.screen_descriptor,
                 );
 
-                // Record all render passes.
-                self.rpass
-                    .execute(
-                        encoder,
-                        render_target,
-                        &self.paint_jobs,
-                        &self.screen_descriptor,
-                        None,
-                    )
-                    .map_err(|err| err.to_string())?;
+                {
+                    let mut rpass = encoder.begin_render_pass(&RenderPassDescriptor {
+                        label: Some("egui"),
+                        color_attachments: &[Some(RenderPassColorAttachment {
+                            view: render_target,
+                            resolve_target: None,
+                            ops: Operations {
+                                load: LoadOp::Load,
+                                store: StoreOp::Store,
+                            },
+                        })],
+                        depth_stencil_attachment: None,
+                        timestamp_writes: None,
+                        occlusion_query_set: None,
+                    });
+
+                    // Record all render passes.
+                    self.wgpu_renderer.render(&mut rpass, &self.paint_jobs, &self.screen_descriptor);
+                }
 
                 // Cleanup
                 let textures = std::mem::take(&mut self.textures);
-                Ok(self
-                    .rpass
-                    .remove_textures(textures)
-                    .map_err(|err| err.to_string())?)
+                for id in &textures.free {
+                    self.wgpu_renderer.free_texture(id);
+                }
+
+                Ok(())
             })
             .map_err(|err| err.to_string())?;
 
@@ -415,7 +410,7 @@ impl<'a> WindowManager<'a> {
             .get_mut(&self.primary_window_id)
             .unwrap()
             .1
-            .renderer
+            .window_renderer
             .toggle_pause();
     }
 

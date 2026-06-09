@@ -67,6 +67,8 @@ impl log::Log for Logger {
                     ["wgpu_hal", ..] => false,
                     ["wgpu_core", ..] => false,
                     ["gilrs_core", ..] => true,
+                    ["egui_wgpu", ..] => true,
+                    ["naga", ..] => true,
                     _ => panic!("Unexpected logger target: {target}"),
                 }
             }
