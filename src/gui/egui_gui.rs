@@ -104,84 +104,74 @@ impl Gui for EguiGui {
         let mut world = World { nes, config, events };
         let event_loop = EventLoop::new().unwrap();
 
-        let primary_renderer = Box::new(PrimaryRenderer::new());
-        let primary_window_name = primary_renderer.name();
-        let primary_window = EguiWindow::from_event_loop(
-            &event_loop,
-            PRIMARY_WINDOW_SCALE_FACTOR as f64,
-            Position::Physical(PhysicalPosition { x: 50, y: 50 }),
-            primary_renderer,
-        );
-        let mut window_manager = WindowManager::new(primary_window, primary_window_name);
+        let mut window_manager = WindowManager::new();
+        event_loop.run(move |event, active_event_loop| {
+            //let updated = self.keyboard.update(&event);
+            window_manager.request_redraws();
 
-        event_loop
-            .run(move |event, active_event_loop| {
-                //let updated = self.keyboard.update(&event);
-                window_manager.request_redraws();
+            if event == Event::Resumed {
+                let primary_renderer = Box::new(PrimaryRenderer::new());
+                let position = Position::Physical(PhysicalPosition { x: 50, y: 50 });
+                window_manager.create_window_from_renderer(active_event_loop, primary_renderer, position, PRIMARY_WINDOW_SCALE_FACTOR as f64);
+            } else if let Event::WindowEvent { event, window_id } = event {
+                match event {
+                    WindowEvent::CloseRequested => {
+                        let primary_removed = window_manager.remove_window(window_id);
+                        if primary_removed {
+                            log::logger().flush();
+                            active_event_loop.exit();
+                        }
+                    }
+                    WindowEvent::RedrawRequested => {
+                        if let Some(nes) = &mut world.nes {
+                            if self.keyboard.key_pressed(KeyCode::F1) {
+                                info!("{}", nes.bus().oam);
+                            }
 
-                if let Event::WindowEvent { event, window_id } = event {
-                    match event {
-                        WindowEvent::CloseRequested => {
-                            let primary_removed = window_manager.remove_window(window_id);
-                            if primary_removed {
-                                log::logger().flush();
-                                active_event_loop.exit();
+                            if self.keyboard.key_pressed(KeyCode::F12) {
+                                nes.set_reset_signal();
                             }
                         }
-                        WindowEvent::RedrawRequested => {
-                            if let Some(nes) = &mut world.nes {
-                                if self.keyboard.key_pressed(KeyCode::F1) {
-                                    info!("{}", nes.bus().oam);
-                                }
 
-                                if self.keyboard.key_pressed(KeyCode::F12) {
-                                    nes.set_reset_signal();
-                                }
-                            }
-
-                            if self.keyboard.key_pressed(KeyCode::Pause)
-                                || self.keyboard.key_pressed(KeyCode::KeyP)
-                                || self.keyboard.key_pressed(KeyCode::Escape)
-                            {
-                                window_manager.toggle_pause();
-                            }
-
-                            world.events = poll_button_events(&self.keyboard, &mut self.gamepad_handler, self.active_gamepad_id);
-
-                            match window_manager.draw(&mut world, window_id) {
-                                Ok(FlowControl { window_args, should_close_window }) => {
-                                    if let Some((renderer, position, scale)) = window_args
-                                    {
-                                        window_manager.create_window_from_renderer(
-                                            active_event_loop,
-                                            renderer,
-                                            position,
-                                            scale as f64,
-                                        );
-                                    }
-
-                                    if should_close_window {
-                                        window_manager.remove_window(window_id);
-                                    }
-                                }
-                                Err(e) => {
-                                    if window_id == window_manager.primary_window_id {
-                                        info!(
-                                            "Closing REZNEZ due to redraw failure. {e}"
-                                        );
-                                        active_event_loop.exit();
-                                    }
-                                }
-                            }
+                        if self.keyboard.key_pressed(KeyCode::Pause)
+                            || self.keyboard.key_pressed(KeyCode::KeyP)
+                            || self.keyboard.key_pressed(KeyCode::Escape)
+                        {
+                            window_manager.toggle_pause();
                         }
-                        _ => {
-                            if let Some(window) = window_manager.window_mut(window_id) {
-                                window.handle_event(&event);
+
+                        world.events = poll_button_events(&self.keyboard, &mut self.gamepad_handler, self.active_gamepad_id);
+
+                        match window_manager.draw(&mut world, window_id) {
+                            Ok(FlowControl { window_args, should_close_window }) => {
+                                if let Some((renderer, position, scale)) = window_args {
+                                    window_manager.create_window_from_renderer(
+                                        active_event_loop,
+                                        renderer,
+                                        position,
+                                        scale as f64,
+                                    );
+                                }
+
+                                if should_close_window {
+                                    window_manager.remove_window(window_id);
+                                }
+                            }
+                            Err(e) => {
+                                if window_id == window_manager.primary_window_id {
+                                    info!("Closing REZNEZ due to redraw failure. {e}");
+                                    active_event_loop.exit();
+                                }
                             }
                         }
                     }
+                    _ => {
+                        if let Some(window) = window_manager.window_mut(window_id) {
+                            window.handle_event(&event);
+                        }
+                    }
                 }
-            })
+            }})
             .unwrap();
     }
 }
@@ -201,49 +191,6 @@ struct EguiWindow<'a> {
 }
 
 impl<'a> EguiWindow<'a> {
-    fn from_event_loop(
-        event_loop: &EventLoop<()>,
-        scale_factor: f64,
-        initial_position: Position,
-        renderer: Box<dyn WindowRenderer>,
-    ) -> Self {
-        let window = {
-            let size = LogicalSize::new(
-                scale_factor * renderer.width() as f64,
-                scale_factor * renderer.height() as f64,
-            );
-            let window_attributes = Window::default_attributes()
-                .with_title(renderer.name())
-                .with_window_icon(Some(window_icon()))
-                .with_inner_size(size)
-                .with_min_inner_size(size)
-                .with_resizable(false)
-                .with_position(initial_position);
-            event_loop.create_window(window_attributes).unwrap()
-        };
-
-        let window_size = window.inner_size();
-        let scale_factor = window.scale_factor() as f32;
-        let window = Arc::new(window);
-        let surface_texture =
-            SurfaceTexture::new(window_size.width, window_size.height, window.clone());
-        let pixels = Pixels::new(
-            renderer.width() as u32,
-            renderer.height() as u32,
-            surface_texture,
-        )
-        .unwrap();
-
-        EguiWindow::new(
-            window_size.width,
-            window_size.height,
-            scale_factor,
-            window.clone(),
-            pixels,
-            renderer,
-        )
-    }
-
     fn from_active_event_loop(
         event_loop: &ActiveEventLoop,
         scale_factor: f64,
@@ -404,17 +351,12 @@ struct WindowManager<'a> {
 }
 
 impl<'a> WindowManager<'a> {
-    pub fn new(primary_window: EguiWindow<'a>, name: String) -> WindowManager<'a> {
-        let mut manager = WindowManager {
-            primary_window_id: primary_window.window.id(),
+    pub fn new() -> WindowManager<'a> {
+        WindowManager {
+            primary_window_id: WindowId::dummy(),
             windows_by_id: BTreeMap::new(),
             window_names: BTreeSet::new(),
-        };
-        manager.window_names.insert(name.clone());
-        manager
-            .windows_by_id
-            .insert(primary_window.window.id(), (name, primary_window));
-        manager
+        }
     }
 
     pub fn create_window_from_renderer(
