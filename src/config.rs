@@ -63,10 +63,10 @@ impl Config {
         config
     }
 
-    pub fn gui(opt: &Opt) -> Box<dyn Gui> {
-        match opt.gui {
+    pub fn gui(self, gui_type: GuiType) -> Box<dyn Gui> {
+        match gui_type {
             GuiType::NoGui => Box::new(NoGui) as Box<dyn Gui>,
-            GuiType::Egui => Box::new(EguiGui::new()),
+            GuiType::Egui => Box::new(EguiGui::new(self)),
         }
     }
 

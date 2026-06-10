@@ -60,7 +60,6 @@ fn main() {
     }
 
     let config = Config::new(&opt);
-    let mut gui = Config::gui(&opt);
     let nes = opt.rom_path.map(|path| {
         let cartridge = Nes::load_cartridge(&path)
             .map_err(|err| format!("Failed to start REZNEZ. {err}"))
@@ -76,7 +75,8 @@ fn main() {
         nes
     });
 
-    gui.run(nes, config);
+    let mut gui = config.gui(opt.gui);
+    gui.run(nes);
 }
 
 #[allow(clippy::similar_names)]

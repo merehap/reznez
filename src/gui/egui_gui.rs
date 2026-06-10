@@ -9,8 +9,9 @@ use gilrs;
 use log::{info, warn};
 use pixels::{Pixels, SurfaceTexture};
 use pixels::wgpu::{RenderPassDescriptor, RenderPassColorAttachment, Operations, LoadOp, StoreOp};
+use winit::application::ApplicationHandler;
 use winit::dpi::{LogicalSize, PhysicalPosition, Position};
-use winit::event::{Event, WindowEvent};
+use winit::event::WindowEvent;
 use winit::event_loop::{EventLoop, ActiveEventLoop};
 use winit::keyboard::KeyCode;
 use winit::window::Icon;
@@ -73,14 +74,16 @@ static JOY_1_JOYPAD_MAPPINGS: LazyLock<HashMap<u32, Button>> = LazyLock::new(|| 
 
 const PRIMARY_WINDOW_SCALE_FACTOR: f32 = 3.0;
 
-pub struct EguiGui {
+pub struct EguiGui<'a> {
+    world: World,
+    window_manager: WindowManager<'a>,
     keyboard: WinitInputHelper,
     gamepad_handler: gilrs::Gilrs,
     active_gamepad_id: Option<gilrs::GamepadId>,
 }
 
-impl EguiGui {
-    pub fn new() -> Self {
+impl <'a> EguiGui<'a> {
+    pub fn new(config: Config) -> Self {
         let gamepad_handler = gilrs::Gilrs::new().unwrap();
         let gamepads: Vec<(gilrs::GamepadId, gilrs::Gamepad)> = gamepad_handler.gamepads().collect();
         let active_gamepad_id = gamepads.first().map(|(id, _)| *id);
@@ -89,7 +92,10 @@ impl EguiGui {
             );
         }
 
+        let events = Events::none();
         Self {
+            world: World { nes: None, config, events },
+            window_manager: WindowManager::new(),
             keyboard: WinitInputHelper::new(),
             gamepad_handler,
             active_gamepad_id,
@@ -97,82 +103,83 @@ impl EguiGui {
     }
 }
 
-impl Gui for EguiGui {
-    fn run(&mut self, nes: Option<Nes>, config: Config) {
-        let events = Events::none();
-        let mut world = World { nes, config, events };
+impl <'a> Gui for EguiGui<'a> {
+    fn run(&mut self, nes: Option<Nes>) {
+        self.world.nes = nes;
         let event_loop = EventLoop::new().unwrap();
+        event_loop.run_app(self).unwrap();
+    }
+}
 
-        let mut window_manager = WindowManager::new();
-        #[allow(deprecated)]
-        event_loop.run(move |event, active_event_loop| {
-            //let updated = self.keyboard.update(&event);
-            window_manager.request_redraws();
+impl <'a> ApplicationHandler for EguiGui<'a> {
+    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+        let primary_renderer = Box::new(PrimaryRenderer::new());
+        let position = Position::Physical(PhysicalPosition { x: 50, y: 50 });
+        self.window_manager.create_window_from_renderer(event_loop, primary_renderer, position, PRIMARY_WINDOW_SCALE_FACTOR as f64);
+    }
 
-            if event == Event::Resumed {
-                let primary_renderer = Box::new(PrimaryRenderer::new());
-                let position = Position::Physical(PhysicalPosition { x: 50, y: 50 });
-                window_manager.create_window_from_renderer(active_event_loop, primary_renderer, position, PRIMARY_WINDOW_SCALE_FACTOR as f64);
-            } else if let Event::WindowEvent { event, window_id } = event {
-                match event {
-                    WindowEvent::CloseRequested => {
-                        let primary_removed = window_manager.remove_window(window_id);
-                        if primary_removed {
-                            log::logger().flush();
-                            active_event_loop.exit();
+    fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
+        self.window_manager.request_redraws();
+    }
+
+    fn window_event(&mut self, event_loop: &ActiveEventLoop, window_id: WindowId, event: WindowEvent) {
+        match event {
+            WindowEvent::CloseRequested => {
+                let primary_removed = self.window_manager.remove_window(window_id);
+                if primary_removed {
+                    log::logger().flush();
+                    event_loop.exit();
+                }
+            }
+            WindowEvent::RedrawRequested => {
+                if let Some(nes) = &mut self.world.nes {
+                    if self.keyboard.key_pressed(KeyCode::F1) {
+                        info!("{}", nes.bus().oam);
+                    }
+
+                    if self.keyboard.key_pressed(KeyCode::F12) {
+                        nes.set_reset_signal();
+                    }
+                }
+
+                if self.keyboard.key_pressed(KeyCode::Pause)
+                    || self.keyboard.key_pressed(KeyCode::KeyP)
+                    || self.keyboard.key_pressed(KeyCode::Escape)
+                {
+                    self.window_manager.toggle_pause();
+                }
+
+                self.world.events = poll_button_events(&self.keyboard, &mut self.gamepad_handler, self.active_gamepad_id);
+
+                match self.window_manager.draw(&mut self.world, window_id) {
+                    Ok(FlowControl { window_args, should_close_window }) => {
+                        if let Some((renderer, position, scale)) = window_args {
+                            self.window_manager.create_window_from_renderer(
+                                event_loop,
+                                renderer,
+                                position,
+                                scale as f64,
+                            );
+                        }
+
+                        if should_close_window {
+                            self.window_manager.remove_window(window_id);
                         }
                     }
-                    WindowEvent::RedrawRequested => {
-                        if let Some(nes) = &mut world.nes {
-                            if self.keyboard.key_pressed(KeyCode::F1) {
-                                info!("{}", nes.bus().oam);
-                            }
-
-                            if self.keyboard.key_pressed(KeyCode::F12) {
-                                nes.set_reset_signal();
-                            }
-                        }
-
-                        if self.keyboard.key_pressed(KeyCode::Pause)
-                            || self.keyboard.key_pressed(KeyCode::KeyP)
-                            || self.keyboard.key_pressed(KeyCode::Escape)
-                        {
-                            window_manager.toggle_pause();
-                        }
-
-                        world.events = poll_button_events(&self.keyboard, &mut self.gamepad_handler, self.active_gamepad_id);
-
-                        match window_manager.draw(&mut world, window_id) {
-                            Ok(FlowControl { window_args, should_close_window }) => {
-                                if let Some((renderer, position, scale)) = window_args {
-                                    window_manager.create_window_from_renderer(
-                                        active_event_loop,
-                                        renderer,
-                                        position,
-                                        scale as f64,
-                                    );
-                                }
-
-                                if should_close_window {
-                                    window_manager.remove_window(window_id);
-                                }
-                            }
-                            Err(e) => {
-                                if window_id == window_manager.primary_window_id {
-                                    info!("Closing REZNEZ due to redraw failure. {e}");
-                                    active_event_loop.exit();
-                                }
-                            }
-                        }
-                    }
-                    _ => {
-                        if let Some(window) = window_manager.window_mut(window_id) {
-                            window.handle_event(&event);
+                    Err(e) => {
+                        if window_id == self.window_manager.primary_window_id {
+                            info!("Closing REZNEZ due to redraw failure. {e}");
+                            event_loop.exit();
                         }
                     }
                 }
-            }})
-            .unwrap();
+            }
+            _ => {
+                if let Some(window) = self.window_manager.window_mut(window_id) {
+                    window.handle_event(&event);
+                }
+            }
+        }
     }
 }
 
