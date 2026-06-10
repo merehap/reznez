@@ -251,7 +251,14 @@ impl<'a> EguiWindow<'a> {
     ) -> Self {
         let egui_ctx = Context::default();
         egui_extras::install_image_loaders(&egui_ctx);
-        let egui_state = egui_winit::State::new(egui_ctx, ViewportId::ROOT, &window, None, None, None);
+        let egui_state = egui_winit::State::new(
+            egui_ctx,
+            ViewportId::ROOT,
+            &window,
+            None,
+            None,
+            Some(pixels.device().limits().max_texture_dimension_2d as usize),
+        );
         let screen_descriptor = ScreenDescriptor {
             pixels_per_point: scale_factor,
             size_in_pixels: [width, height],
