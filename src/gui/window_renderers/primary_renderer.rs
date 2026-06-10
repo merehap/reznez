@@ -182,11 +182,9 @@ impl WindowRenderer for PrimaryRenderer {
             CentralPanel::default()
                 .frame(EguiFrame::NONE)
                 .show_inside(ui, |ui| {
-                    let available_size = ui.available_size();
-                    ui.add(
-                         Image::new(include_image!("../assets/reznez_splash.svg"))
-                            .fit_to_exact_size(available_size),
-                    );
+                    let rect = ui.available_rect_before_wrap();
+                    Image::new(include_image!("../assets/reznez_splash.svg"))
+                        .paint_at(ui, rect);
                 });
         }
 
