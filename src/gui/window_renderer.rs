@@ -1,4 +1,4 @@
-use egui::Context;
+use egui::{Context, Ui};
 use pixels::Pixels;
 use winit::dpi::Position;
 
@@ -6,7 +6,7 @@ use crate::gui::world::World;
 
 pub trait WindowRenderer {
     fn name(&self) -> String;
-    fn ui(&mut self, ctx: &Context, world: &mut World) -> FlowControl;
+    fn ui(&mut self, ctx: &Context, ui: &mut Ui, world: &mut World) -> FlowControl;
     fn render(&mut self, world: &mut World, pixels: &mut Pixels);
     fn toggle_pause(&mut self) {}
     fn width(&self) -> usize;

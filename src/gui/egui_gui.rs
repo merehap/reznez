@@ -3,8 +3,6 @@ use std::sync::{Arc, LazyLock};
 
 use gilrs::GamepadId;
 
-use crate::controller::joypad::{Button, ButtonStatus};
-
 use egui::{ClippedPrimitive, Context, TexturesDelta, ViewportId};
 use egui_wgpu::{Renderer, RendererOptions, ScreenDescriptor};
 use gilrs;
@@ -20,6 +18,7 @@ use winit::window::{Window, WindowId};
 use winit_input_helper::WinitInputHelper;
 
 use crate::config::Config;
+use crate::controller::joypad::{Button, ButtonStatus};
 use crate::gui::gui::{Gui, Events};
 use crate::gui::window_renderer::{FlowControl, WindowRenderer};
 use crate::gui::window_renderers::primary_renderer::PrimaryRenderer;
@@ -283,9 +282,8 @@ impl<'a> EguiWindow<'a> {
         });
 
         let mut result = FlowControl::CONTINUE;
-        #[allow(deprecated)]
-        let output = self.egui_state.egui_ctx().run(raw_input, |egui_ctx| {
-            result = self.window_renderer.ui(egui_ctx, world);
+        let output = self.egui_state.egui_ctx().run_ui(raw_input, |ui| {
+            result = self.window_renderer.ui(self.egui_state.egui_ctx(), ui, world);
         });
 
         self.textures.append(output.textures_delta);

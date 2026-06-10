@@ -1,4 +1,4 @@
-use egui::Context;
+use egui::{Context, Ui};
 use egui_plot::{GridMark, Line, Plot};
 use pixels::Pixels;
 
@@ -30,12 +30,12 @@ impl WindowRenderer for AudioVisualizer {
         "Audio Visualizer".to_string()
     }
 
-    fn ui(&mut self, ctx: &Context, world: &mut World) -> FlowControl {
+    fn ui(&mut self, _ctx: &Context, ui: &mut Ui, world: &mut World) -> FlowControl {
         let Some(nes) = &world.nes else {
             return FlowControl::CONTINUE;
         };
 
-        egui::CentralPanel::default().show(ctx, |ui| {
+        egui::CentralPanel::default().show_inside(ui, |ui| {
             nes.bus().apu_regs.pulse1_volumes.clone_to(&mut self.buffer);
             // Stop cloning once egui is upgraded.
             let pulse_1_line = Line::new("Pulse 1", self.buffer.clone());

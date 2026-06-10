@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use egui::Context;
+use egui::{Context, Ui};
 use pixels::Pixels;
 
 use crate::analysis::cartridge_db;
@@ -29,8 +29,8 @@ impl WindowRenderer for CartridgeQueryRenderer {
         "ROM Query".to_string()
     }
 
-    fn ui(&mut self, ctx: &Context, _world: &mut World) -> FlowControl {
-        egui::CentralPanel::default().show(ctx, |ui| {
+    fn ui(&mut self, _ctx: &Context, ui: &mut Ui, _world: &mut World) -> FlowControl {
+        egui::CentralPanel::default().show_inside(ui, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 egui::Grid::new("my_grid")
                     .num_columns(7)

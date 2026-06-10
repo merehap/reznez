@@ -1,4 +1,4 @@
-use egui::Context;
+use egui::{Context, Ui};
 use pixels::Pixels;
 
 use crate::gui::debug_screens::pattern_table::PatternTable;
@@ -25,7 +25,7 @@ impl WindowRenderer for SpritesRenderer {
         "Sprites".to_string()
     }
 
-    fn ui(&mut self, _ctx: &Context, _world: &mut World) -> FlowControl {
+    fn ui(&mut self, _ctx: &Context, _ui: &mut Ui, _world: &mut World) -> FlowControl {
         FlowControl::CONTINUE
     }
 

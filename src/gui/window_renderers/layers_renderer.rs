@@ -1,4 +1,4 @@
-use egui::Context;
+use egui::{Context, Ui};
 use pixels::Pixels;
 
 use crate::gui::window_renderer::{FlowControl, WindowRenderer};
@@ -30,7 +30,7 @@ impl WindowRenderer for LayersRenderer {
         "Layers".to_string()
     }
 
-    fn ui(&mut self, _ctx: &Context, _world: &mut World) -> FlowControl {
+    fn ui(&mut self, _ctx: &Context, _ui: &mut Ui, _world: &mut World) -> FlowControl {
         FlowControl::CONTINUE
     }
 

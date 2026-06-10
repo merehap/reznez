@@ -1,4 +1,4 @@
-use egui::Context;
+use egui::{Context, Ui};
 use pixels::Pixels;
 
 use crate::gui::window_renderer::{FlowControl, WindowRenderer};
@@ -16,8 +16,8 @@ impl WindowRenderer for ControlsRenderer {
         "Controls".to_string()
     }
 
-    fn ui(&mut self, ctx: &Context, _world: &mut World) -> FlowControl {
-        egui::CentralPanel::default().show(ctx, |ui| {
+    fn ui(&mut self, _ctx: &Context, ui: &mut Ui, _world: &mut World) -> FlowControl {
+        egui::CentralPanel::default().show_inside(ui, |ui| {
             ui.heading("Controls");
             ui.separator();
 

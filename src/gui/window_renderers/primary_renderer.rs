@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use egui::{include_image, vec2, Align2, CentralPanel, Context, Frame as EguiFrame, Image};
+use egui::{include_image, vec2, Align2, CentralPanel, Context, Ui, Frame as EguiFrame, Image};
 use egui_file::FileDialog;
 use log::error;
 use pixels::Pixels;
@@ -62,9 +62,9 @@ impl WindowRenderer for PrimaryRenderer {
         "REZNEZ".to_string()
     }
 
-    fn ui(&mut self, ctx: &Context, world: &mut World) -> FlowControl {
+    fn ui(&mut self, ctx: &Context, ui: &mut Ui, world: &mut World) -> FlowControl {
         let mut result = FlowControl::CONTINUE;
-        egui::Panel::top("menubar_container").show(ctx, |ui| {
+        egui::Panel::top("menubar_container").show_inside(ui, |ui| {
             egui::MenuBar::new().ui(ui, |ui| {
                 ui.menu_button("File", |ui| {
                     if ui.button("Open").clicked() {
@@ -181,7 +181,7 @@ impl WindowRenderer for PrimaryRenderer {
         if world.nes.is_none() {
             CentralPanel::default()
                 .frame(EguiFrame::NONE)
-                .show(ctx, |ui| {
+                .show_inside(ui, |ui| {
                     let available_size = ui.available_size();
                     ui.add(
                          Image::new(include_image!("../assets/reznez_splash.svg"))
@@ -195,7 +195,7 @@ impl WindowRenderer for PrimaryRenderer {
 
         if let Some(load_error) = &self.load_error {
             let mut choose_another_file = false;
-            CentralPanel::default().show(ctx, |ui| {
+            CentralPanel::default().show_inside(ui, |ui| {
                 ui.colored_label(egui::Color32::RED, load_error);
                 if ui.button("Choose another file").clicked() {
                     choose_another_file = true;

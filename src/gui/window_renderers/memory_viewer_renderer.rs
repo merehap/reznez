@@ -1,4 +1,4 @@
-use egui::Context;
+use egui::{Context, Ui};
 use pixels::Pixels;
 
 use crate::gui::window_renderer::{FlowControl, WindowRenderer};
@@ -18,12 +18,12 @@ impl WindowRenderer for MemoryViewerRenderer {
         "Memory Viewer".to_string()
     }
 
-    fn ui(&mut self, ctx: &Context, world: &mut World) -> FlowControl {
+    fn ui(&mut self, _ctx: &Context, ui: &mut Ui, world: &mut World) -> FlowControl {
         let Some(nes) = &world.nes else {
             return FlowControl::CONTINUE;
         };
 
-        egui::CentralPanel::default().show(ctx, |ui| {
+        egui::CentralPanel::default().show_inside(ui, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 egui::Grid::new("my_grid")
                     .num_columns(16)

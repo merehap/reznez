@@ -1,6 +1,5 @@
-use egui::Context;
+use egui::{Context, Ui};
 use pixels::Pixels;
-
 
 use crate::gui::window_renderer::{FlowControl, WindowRenderer};
 use crate::gui::world::World;
@@ -21,8 +20,8 @@ impl WindowRenderer for DisplaySettingsRenderer {
         "Display Settings".to_string()
     }
 
-    fn ui(&mut self, ctx: &Context, world: &mut World) -> FlowControl {
-        egui::CentralPanel::default().show(ctx, |ui| {
+    fn ui(&mut self, _ctx: &Context, ui: &mut Ui, world: &mut World) -> FlowControl {
+        egui::CentralPanel::default().show_inside(ui, |ui| {
             if let Some(nes) = &mut world.nes {
                 egui::Grid::new("my_grid")
                     .num_columns(2)

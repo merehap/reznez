@@ -1,4 +1,4 @@
-use egui::Context;
+use egui::{Context, Ui};
 use pixels::Pixels;
 
 use crate::cartridge::resolved_metadata::{ResolvedMetadata, Vs};
@@ -18,7 +18,7 @@ impl WindowRenderer for CartridgeMetadataRenderer {
         "Status".to_string()
     }
 
-    fn ui(&mut self, ctx: &Context, world: &mut World) -> FlowControl {
+    fn ui(&mut self, _ctx: &Context, ui: &mut Ui, world: &mut World) -> FlowControl {
         let Some(nes) = &world.nes else {
             return FlowControl::CONTINUE;
         };
@@ -45,7 +45,7 @@ impl WindowRenderer for CartridgeMetadataRenderer {
             &resolver.defaults(),
         ];
 
-        egui::CentralPanel::default().show(ctx, |ui| {
+        egui::CentralPanel::default().show_inside(ui, |ui| {
             fn kib_string(value: u32) -> String {
                 if value < KIBIBYTE {
                     value.to_string()

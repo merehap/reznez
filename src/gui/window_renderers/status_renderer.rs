@@ -1,4 +1,4 @@
-use egui::Context;
+use egui::{Context, Ui};
 use pixels::Pixels;
 
 use crate::gui::window_renderer::{FlowControl, WindowRenderer};
@@ -16,7 +16,7 @@ impl WindowRenderer for StatusRenderer {
         "Status".to_string()
     }
 
-    fn ui(&mut self, ctx: &Context, world: &mut World) -> FlowControl {
+    fn ui(&mut self, _ctx: &Context, ui: &mut Ui, world: &mut World) -> FlowControl {
         let Some(nes) = &world.nes else {
             return FlowControl::CONTINUE;
         };
@@ -25,7 +25,7 @@ impl WindowRenderer for StatusRenderer {
         let ppu_regs = &nes.bus().ppu_regs;
         let bus = nes.bus();
 
-        egui::CentralPanel::default().show(ctx, |ui| {
+        egui::CentralPanel::default().show_inside(ui, |ui| {
             egui::Grid::new("my_grid")
                 .num_columns(2)
                 .spacing([40.0, 4.0])
