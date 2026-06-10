@@ -115,7 +115,7 @@ impl <'a> ApplicationHandler for EguiGui<'a> {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         let primary_renderer = Box::new(PrimaryRenderer::new());
         let position = Position::Physical(PhysicalPosition { x: 50, y: 50 });
-        self.window_manager.create_window_from_renderer(event_loop, primary_renderer, position, PRIMARY_WINDOW_SCALE_FACTOR as f64);
+        self.window_manager.create_window_from_renderer(event_loop, primary_renderer, position, PRIMARY_WINDOW_SCALE_FACTOR as f64, true);
     }
 
     fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
@@ -159,6 +159,7 @@ impl <'a> ApplicationHandler for EguiGui<'a> {
                                 renderer,
                                 position,
                                 scale as f64,
+                                false,
                             );
                         }
 
@@ -372,6 +373,7 @@ impl<'a> WindowManager<'a> {
         renderer: Box<dyn WindowRenderer>,
         position: Position,
         scale: f64,
+        is_primary: bool,
     ) {
         let name = renderer.name();
         if self.window_names.contains(&name) {
@@ -381,6 +383,10 @@ impl<'a> WindowManager<'a> {
         self.window_names.insert(name.clone());
 
         let window = EguiWindow::from_active_event_loop(event_loop, scale, position, renderer);
+        if is_primary {
+            self.primary_window_id = window.window.id();
+        }
+
         self.windows_by_id
             .insert(window.window.id(), (name, window));
     }
