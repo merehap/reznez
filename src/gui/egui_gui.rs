@@ -105,6 +105,7 @@ impl Gui for EguiGui {
         let event_loop = EventLoop::new().unwrap();
 
         let mut window_manager = WindowManager::new();
+        #[allow(deprecated)]
         event_loop.run(move |event, active_event_loop| {
             //let updated = self.keyboard.update(&event);
             window_manager.request_redraws();
@@ -282,6 +283,7 @@ impl<'a> EguiWindow<'a> {
         });
 
         let mut result = FlowControl::CONTINUE;
+        #[allow(deprecated)]
         let output = self.egui_state.egui_ctx().run(raw_input, |egui_ctx| {
             result = self.window_renderer.ui(egui_ctx, world);
         });

@@ -64,24 +64,24 @@ impl WindowRenderer for PrimaryRenderer {
 
     fn ui(&mut self, ctx: &Context, world: &mut World) -> FlowControl {
         let mut result = FlowControl::CONTINUE;
-        egui::TopBottomPanel::top("menubar_container").show(ctx, |ui| {
-            egui::menu::bar(ui, |ui| {
+        egui::Panel::top("menubar_container").show(ctx, |ui| {
+            egui::MenuBar::new().ui(ui, |ui| {
                 ui.menu_button("File", |ui| {
                     if ui.button("Open").clicked() {
-                        ui.close_menu();
+                        ui.close();
                         self.load_error = None;
                         self.file_dialog.open();
                     }
 
                     if ui.button("ROM Query").clicked() {
-                        ui.close_menu();
+                        ui.close();
                         self.cartridge_query_dialog.open();
                     }
                 });
 
                 ui.menu_button("Settings", |ui| {
                     if ui.button("Display").clicked() {
-                        ui.close_menu();
+                        ui.close();
                         result = FlowControl::spawn_window((
                             Box::new(DisplaySettingsRenderer::new()) as Box<dyn WindowRenderer>,
                             Position::Physical(PhysicalPosition { x: 850, y: 360 }),
@@ -92,7 +92,7 @@ impl WindowRenderer for PrimaryRenderer {
 
                 ui.menu_button("Help", |ui| {
                     if ui.button("Controls").clicked() {
-                        ui.close_menu();
+                        ui.close();
                         result = FlowControl::spawn_window((
                             Box::new(ControlsRenderer) as Box<dyn WindowRenderer>,
                             Position::Physical(PhysicalPosition { x: 850, y: 360 }),
@@ -103,7 +103,7 @@ impl WindowRenderer for PrimaryRenderer {
 
                 ui.menu_button("Debug Windows", |ui| {
                     if ui.button("Status").clicked() {
-                        ui.close_menu();
+                        ui.close();
                         result = FlowControl::spawn_window((
                             Box::new(StatusRenderer) as Box<dyn WindowRenderer>,
                             Position::Physical(PhysicalPosition { x: 850, y: 360 }),
@@ -111,7 +111,7 @@ impl WindowRenderer for PrimaryRenderer {
                         ));
                     }
                     if ui.button("Layers").clicked() {
-                        ui.close_menu();
+                        ui.close();
                         result = FlowControl::spawn_window((
                             Box::new(LayersRenderer::new()),
                             Position::Physical(PhysicalPosition { x: 850, y: 50 }),
@@ -119,7 +119,7 @@ impl WindowRenderer for PrimaryRenderer {
                         ));
                     }
                     if ui.button("Name Tables").clicked() {
-                        ui.close_menu();
+                        ui.close();
                         result = FlowControl::spawn_window((
                             Box::new(NameTableRenderer::new()),
                             Position::Physical(PhysicalPosition { x: 1400, y: 50 }),
@@ -127,7 +127,7 @@ impl WindowRenderer for PrimaryRenderer {
                         ));
                     }
                     if ui.button("Sprites").clicked() {
-                        ui.close_menu();
+                        ui.close();
                         result = FlowControl::spawn_window((
                             Box::new(SpritesRenderer::new()),
                             Position::Physical(PhysicalPosition { x: 1400, y: 660 }),
@@ -135,7 +135,7 @@ impl WindowRenderer for PrimaryRenderer {
                         ));
                     }
                     if ui.button("Pattern Tables").clicked() {
-                        ui.close_menu();
+                        ui.close();
                         result = FlowControl::spawn_window((
                             Box::new(PatternTableRenderer::new()),
                             Position::Physical(PhysicalPosition { x: 850, y: 660 }),
@@ -143,7 +143,7 @@ impl WindowRenderer for PrimaryRenderer {
                         ));
                     }
                     if ui.button("Pattern Sources").clicked() {
-                        ui.close_menu();
+                        ui.close();
                         result = FlowControl::spawn_window((
                             Box::new(PatternSourceRenderer::new()),
                             Position::Physical(PhysicalPosition { x: 600, y: 200 }),
@@ -151,7 +151,7 @@ impl WindowRenderer for PrimaryRenderer {
                         ));
                     }
                     if ui.button("Memory Viewer").clicked() {
-                        ui.close_menu();
+                        ui.close();
                         result = FlowControl::spawn_window((
                             Box::new(MemoryViewerRenderer),
                             Position::Physical(PhysicalPosition { x: 600, y: 200 }),
@@ -159,7 +159,7 @@ impl WindowRenderer for PrimaryRenderer {
                         ));
                     }
                     if ui.button("Audio Visualizer").clicked() {
-                        ui.close_menu();
+                        ui.close();
                         result = FlowControl::spawn_window((
                             Box::new(AudioVisualizer::new()),
                             Position::Physical(PhysicalPosition { x: 600, y: 200 }),
@@ -167,7 +167,7 @@ impl WindowRenderer for PrimaryRenderer {
                         ));
                     }
                     if ui.button("Cartridge Metadata").clicked() {
-                        ui.close_menu();
+                        ui.close();
                         result = FlowControl::spawn_window((
                             Box::new(CartridgeMetadataRenderer),
                             Position::Physical(PhysicalPosition { x: 600, y: 200 }),
@@ -180,7 +180,7 @@ impl WindowRenderer for PrimaryRenderer {
 
         if world.nes.is_none() {
             CentralPanel::default()
-                .frame(EguiFrame::none())
+                .frame(EguiFrame::NONE)
                 .show(ctx, |ui| {
                     let available_size = ui.available_size();
                     ui.add(
