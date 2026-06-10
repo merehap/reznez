@@ -190,6 +190,7 @@ struct EguiWindow<'a> {
     wgpu_renderer: Renderer,
     paint_jobs: Vec<ClippedPrimitive>,
     textures: TexturesDelta,
+    has_presented_frame: bool,
 
     // State for the GUI
     window: Arc<Window>,
@@ -215,6 +216,7 @@ impl<'a> EguiWindow<'a> {
                 .with_inner_size(size)
                 .with_min_inner_size(size)
                 .with_resizable(false)
+                .with_visible(false)
                 .with_position(initial_position);
             event_loop.create_window(window_attributes).unwrap()
         };
@@ -273,6 +275,7 @@ impl<'a> EguiWindow<'a> {
             wgpu_renderer,
             paint_jobs: Vec::new(),
             textures,
+            has_presented_frame: false,
             window,
             pixels,
             window_renderer,
@@ -353,6 +356,10 @@ impl<'a> EguiWindow<'a> {
                 Ok(())
             })
             .map_err(|err| err.to_string())?;
+            if !self.has_presented_frame {
+                self.window.set_visible(true);
+                self.has_presented_frame = true;
+            }
 
         Ok(result)
     }
