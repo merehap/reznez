@@ -74,15 +74,15 @@ static JOY_1_JOYPAD_MAPPINGS: LazyLock<HashMap<u32, Button>> = LazyLock::new(|| 
 
 const PRIMARY_WINDOW_SCALE_FACTOR: f32 = 3.0;
 
-pub struct EguiGui<'a> {
+pub struct EguiGui {
     world: World,
-    window_manager: WindowManager<'a>,
+    window_manager: WindowManager,
     keyboard: WinitInputHelper,
     gamepad_handler: gilrs::Gilrs,
     active_gamepad_id: Option<gilrs::GamepadId>,
 }
 
-impl <'a> EguiGui<'a> {
+impl EguiGui {
     pub fn new(config: Config) -> Self {
         let gamepad_handler = gilrs::Gilrs::new().unwrap();
         let gamepads: Vec<(gilrs::GamepadId, gilrs::Gamepad)> = gamepad_handler.gamepads().collect();
@@ -103,7 +103,7 @@ impl <'a> EguiGui<'a> {
     }
 }
 
-impl <'a> Gui for EguiGui<'a> {
+impl Gui for EguiGui {
     fn run(&mut self, nes: Option<Nes>) {
         self.world.nes = nes;
         let event_loop = EventLoop::new().unwrap();
@@ -111,7 +111,7 @@ impl <'a> Gui for EguiGui<'a> {
     }
 }
 
-impl <'a> ApplicationHandler for EguiGui<'a> {
+impl ApplicationHandler for EguiGui {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         let primary_renderer = Box::new(PrimaryRenderer::new());
         let position = Position::Physical(PhysicalPosition { x: 50, y: 50 });
@@ -185,7 +185,7 @@ impl <'a> ApplicationHandler for EguiGui<'a> {
 }
 
 /// Manages all state required for rendering egui over `Pixels`.
-struct EguiWindow<'a> {
+struct EguiWindow {
     egui_state: egui_winit::State,
     screen_descriptor: ScreenDescriptor,
     wgpu_renderer: Renderer,
@@ -195,11 +195,11 @@ struct EguiWindow<'a> {
 
     // State for the GUI
     window: Arc<Window>,
-    pixels: Pixels<'a>,
+    pixels: Pixels<'static>,
     window_renderer: Box<dyn WindowRenderer>,
 }
 
-impl<'a> EguiWindow<'a> {
+impl EguiWindow {
     fn from_active_event_loop(
         event_loop: &ActiveEventLoop,
         scale_factor: f64,
@@ -249,7 +249,7 @@ impl<'a> EguiWindow<'a> {
         height: u32,
         scale_factor: f32,
         window: Arc<Window>,
-        pixels: pixels::Pixels<'a>,
+        pixels: pixels::Pixels<'static>,
         window_renderer: Box<dyn WindowRenderer>,
     ) -> Self {
         let egui_ctx = Context::default();
@@ -366,14 +366,14 @@ impl<'a> EguiWindow<'a> {
     }
 }
 
-struct WindowManager<'a> {
+struct WindowManager {
     primary_window_id: WindowId,
-    windows_by_id: BTreeMap<WindowId, (String, EguiWindow<'a>)>,
+    windows_by_id: BTreeMap<WindowId, (String, EguiWindow)>,
     window_names: BTreeSet<String>,
 }
 
-impl<'a> WindowManager<'a> {
-    pub fn new() -> WindowManager<'a> {
+impl WindowManager {
+    pub fn new() -> WindowManager {
         WindowManager {
             primary_window_id: WindowId::dummy(),
             windows_by_id: BTreeMap::new(),
@@ -441,7 +441,7 @@ impl<'a> WindowManager<'a> {
         window.draw(world)
     }
 
-    pub fn window_mut(&mut self, window_id: WindowId) -> Option<&mut EguiWindow<'a>> {
+    pub fn window_mut(&mut self, window_id: WindowId) -> Option<&mut EguiWindow> {
         self.windows_by_id
             .get_mut(&window_id)
             .map(|(_, window)| window)
