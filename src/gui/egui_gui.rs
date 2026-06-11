@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::mem::ManuallyDrop;
 use std::sync::{Arc, LazyLock};
 
 use gilrs::GamepadId;
@@ -125,13 +126,17 @@ impl <'a> ApplicationHandler for EguiGui<'a> {
     fn window_event(&mut self, event_loop: &ActiveEventLoop, window_id: WindowId, event: WindowEvent) {
         match event {
             WindowEvent::CloseRequested => {
-                let primary_removed = self.window_manager.remove_window(window_id);
-                if primary_removed {
+                self.window_manager.request_close(window_id);
+            }
+            WindowEvent::RedrawRequested => {
+                eprintln!("redraw {:?}", window_id);
+                let primary_closed = self.window_manager.close_pending();
+                eprintln!("after close_pending {:?}", window_id);
+                if primary_closed {
                     log::logger().flush();
                     event_loop.exit();
                 }
-            }
-            WindowEvent::RedrawRequested => {
+
                 if let Some(nes) = &mut self.world.nes {
                     if self.keyboard.key_pressed(KeyCode::F1) {
                         info!("{}", nes.bus().oam);
@@ -164,7 +169,7 @@ impl <'a> ApplicationHandler for EguiGui<'a> {
                         }
 
                         if should_close_window {
-                            self.window_manager.remove_window(window_id);
+                            self.window_manager.request_close(window_id);
                         }
                     }
                     Err(e) => {
@@ -188,15 +193,32 @@ impl <'a> ApplicationHandler for EguiGui<'a> {
 struct EguiWindow<'a> {
     egui_state: egui_winit::State,
     screen_descriptor: ScreenDescriptor,
-    wgpu_renderer: Renderer,
+    wgpu_renderer: ManuallyDrop<Renderer>,
     paint_jobs: Vec<ClippedPrimitive>,
     textures: TexturesDelta,
     has_presented_frame: bool,
 
     // State for the GUI
-    window: Arc<Window>,
-    pixels: Pixels<'a>,
+    pixels: ManuallyDrop<Pixels<'a>>,
+    window: ManuallyDrop<Arc<Window>>,
     window_renderer: Box<dyn WindowRenderer>,
+}
+
+impl<'a> Drop for EguiWindow<'a> {
+    fn drop(&mut self) {
+        unsafe {
+            eprintln!("MANUAL DROP: renderer");
+            ManuallyDrop::drop(&mut self.wgpu_renderer);
+
+            eprintln!("MANUAL DROP: pixels");
+            ManuallyDrop::drop(&mut self.pixels);
+
+            eprintln!("MANUAL DROP: window");
+            ManuallyDrop::drop(&mut self.window);
+
+            eprintln!("MANUAL DROP: done");
+        }
+    }
 }
 
 impl<'a> EguiWindow<'a> {
@@ -273,12 +295,12 @@ impl<'a> EguiWindow<'a> {
         Self {
             egui_state,
             screen_descriptor,
-            wgpu_renderer,
+            wgpu_renderer: ManuallyDrop::new(wgpu_renderer),
             paint_jobs: Vec::new(),
             textures,
             has_presented_frame: false,
-            window,
-            pixels,
+            window: ManuallyDrop::new(window),
+            pixels: ManuallyDrop::new(pixels),
             window_renderer,
         }
     }
@@ -312,6 +334,7 @@ impl<'a> EguiWindow<'a> {
             .egui_ctx()
             .tessellate(output.shapes, PRIMARY_WINDOW_SCALE_FACTOR);
 
+        println!("before render_with");
         self.pixels
             .render_with(|encoder, render_target, context| {
                 context.scaling_renderer.render(encoder, render_target);
@@ -357,10 +380,13 @@ impl<'a> EguiWindow<'a> {
                 Ok(())
             })
             .map_err(|err| err.to_string())?;
-            if !self.has_presented_frame {
-                self.window.set_visible(true);
-                self.has_presented_frame = true;
-            }
+
+        println!("before render_with");
+
+        if !self.has_presented_frame {
+            self.window.set_visible(true);
+            self.has_presented_frame = true;
+        }
 
         Ok(result)
     }
@@ -370,6 +396,7 @@ struct WindowManager<'a> {
     primary_window_id: WindowId,
     windows_by_id: BTreeMap<WindowId, (String, EguiWindow<'a>)>,
     window_names: BTreeSet<String>,
+    pending_closes: BTreeSet<WindowId>,
 }
 
 impl<'a> WindowManager<'a> {
@@ -378,7 +405,26 @@ impl<'a> WindowManager<'a> {
             primary_window_id: WindowId::dummy(),
             windows_by_id: BTreeMap::new(),
             window_names: BTreeSet::new(),
+            pending_closes: BTreeSet::new(),
         }
+    }
+
+    pub fn request_close(&mut self, window_id: WindowId) {
+        self.pending_closes.insert(window_id);
+    }
+
+    pub fn close_pending(&mut self) -> bool {
+        let mut primary_removed = false;
+        for window_id in self.pending_closes.clone() {
+            let is_primary = self.close(window_id);
+            if is_primary {
+                primary_removed = true;
+            }
+        }
+
+        self.pending_closes.clear();
+
+        primary_removed
     }
 
     pub fn create_window_from_renderer(
@@ -405,9 +451,12 @@ impl<'a> WindowManager<'a> {
             .insert(window.window.id(), (name, window));
     }
 
-    pub fn remove_window(&mut self, window_id: WindowId) -> bool {
+    fn close(&mut self, window_id: WindowId) -> bool {
+        eprintln!("close start");
         if let Some((name, _)) = self.windows_by_id.remove(&window_id) {
+            eprintln!("removed from map");
             self.window_names.remove(&name);
+            eprintln!("close end");
             let primary_removed = window_id == self.primary_window_id;
             return primary_removed;
         }
