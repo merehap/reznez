@@ -191,6 +191,7 @@ struct EguiWindow<'a> {
     wgpu_renderer: Renderer,
     paint_jobs: Vec<ClippedPrimitive>,
     textures: TexturesDelta,
+    has_presented_frame: bool,
 
     // State for the GUI
     window: Arc<Window>,
@@ -216,6 +217,7 @@ impl<'a> EguiWindow<'a> {
                 .with_inner_size(size)
                 .with_min_inner_size(size)
                 .with_resizable(false)
+                .with_visible(false)
                 .with_position(initial_position);
             event_loop.create_window(window_attributes).unwrap()
         };
@@ -252,7 +254,14 @@ impl<'a> EguiWindow<'a> {
     ) -> Self {
         let egui_ctx = Context::default();
         egui_extras::install_image_loaders(&egui_ctx);
-        let egui_state = egui_winit::State::new(egui_ctx, ViewportId::ROOT, &window, None, None, None);
+        let egui_state = egui_winit::State::new(
+            egui_ctx,
+            ViewportId::ROOT,
+            &window,
+            None,
+            None,
+            Some(pixels.device().limits().max_texture_dimension_2d as usize),
+        );
         let screen_descriptor = ScreenDescriptor {
             pixels_per_point: scale_factor,
             size_in_pixels: [width, height],
@@ -267,6 +276,7 @@ impl<'a> EguiWindow<'a> {
             wgpu_renderer,
             paint_jobs: Vec::new(),
             textures,
+            has_presented_frame: false,
             window,
             pixels,
             window_renderer,
@@ -347,6 +357,10 @@ impl<'a> EguiWindow<'a> {
                 Ok(())
             })
             .map_err(|err| err.to_string())?;
+            if !self.has_presented_frame {
+                self.window.set_visible(true);
+                self.has_presented_frame = true;
+            }
 
         Ok(result)
     }
