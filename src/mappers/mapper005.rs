@@ -5,7 +5,7 @@ use crate::memory::bank::bank::{PrgSource, PrgSourceRegisterId};
 use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
 use crate::memory::small_page::SmallPage;
 use crate::mappers::mmc5::frame_state::FrameState;
-use crate::ppu::constants::ATTRIBUTE_START_INDEX;
+use crate::ppu::constants::NAME_TABLE_SIZE;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
 
@@ -370,7 +370,7 @@ impl Mapper005 {
         // The fill mode name table byte is not writeable except for right now.
         bus.mapper_custom_pages[FILL_MODE_TILE_PAGE_ID].set_write_status(WriteStatus::Enabled);
         // Set the fill-mode name table bytes but not the attribute table bytes.
-        for i in 0..ATTRIBUTE_START_INDEX as u16 {
+        for i in 0..NAME_TABLE_SIZE as u16 {
             bus.mapper_custom_pages[FILL_MODE_TILE_PAGE_ID].write(i, value);
         }
 
@@ -384,7 +384,7 @@ impl Mapper005 {
 
         let attribute = value & 0b11;
         let attribute_byte = (attribute << 6) | (attribute << 4) | (attribute << 2) | attribute;
-        for i in ATTRIBUTE_START_INDEX as u16 .. 0x400 {
+        for i in NAME_TABLE_SIZE as u16 .. 0x400 {
             bus.mapper_custom_pages[FILL_MODE_TILE_PAGE_ID].write(i, attribute_byte);
         }
 

@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::memory::ppu::ppu_address::{XScroll, YScroll};
 use crate::gui::debug_screens::attribute_table::AttributeTable;
-use crate::ppu::constants::{ATTRIBUTE_START_INDEX, NAME_TABLE_SIZE};
+use crate::ppu::constants::{NAME_TABLE_SIZE, NAME_TABLE_WITH_ATTRIBUTES_SIZE};
 use crate::ppu::name_table::background_tile_index::BackgroundTileIndex;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
@@ -20,10 +20,10 @@ pub struct NameTable<'a> {
 }
 
 impl<'a> NameTable<'a> {
-    pub fn new(raw: &'a [u8; NAME_TABLE_SIZE as usize]) -> NameTable<'a> {
-        NameTable {
-            tile_numbers: raw[0..ATTRIBUTE_START_INDEX as usize].try_into().unwrap(),
-            attribute_table: AttributeTable::new(raw[ATTRIBUTE_START_INDEX as usize..].try_into().unwrap()),
+    pub fn new(raw: &'a [u8; NAME_TABLE_WITH_ATTRIBUTES_SIZE as usize]) -> NameTable<'a> {
+        Self {
+            tile_numbers: raw[0..NAME_TABLE_SIZE as usize].try_into().unwrap(),
+            attribute_table: AttributeTable::new(raw[NAME_TABLE_SIZE as usize..].try_into().unwrap()),
         }
     }
 
