@@ -118,11 +118,18 @@ impl ApplicationHandler for EguiGui {
         self.window_manager.create_window_from_renderer(event_loop, primary_renderer, position, PRIMARY_WINDOW_SCALE_FACTOR as f64, true);
     }
 
+    fn new_events(&mut self, _event_loop: &ActiveEventLoop, _cause: winit::event::StartCause) {
+        self.keyboard.step();
+    }
+
     fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
+        self.keyboard.end_step();
         self.window_manager.request_redraws();
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, window_id: WindowId, event: WindowEvent) {
+        self.keyboard.process_window_event(&event);
+
         match event {
             WindowEvent::CloseRequested => {
                 let primary_removed = self.window_manager.remove_window(window_id);
