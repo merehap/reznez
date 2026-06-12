@@ -67,7 +67,7 @@ impl log::Log for Logger {
                     ["wgpu_hal", ..] => false,
                     ["wgpu_core", ..] => false,
                     ["gilrs_core", ..] => true,
-                    ["egui_wgpu", ..] => true,
+                    ["egui_wgpu", ..] => false,
                     ["naga", ..] => true,
                     ["calloop", ..] => true,
                     _ => {
