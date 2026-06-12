@@ -33,7 +33,6 @@ Merge PrgBank into PrgWindow and ChrBank into ChrWindow.
 Expansion Audio
 
 REWRITES NEEDED
-OamAddress probably shouldn't know anything about sprite fields. Should just be a simple u8. Remove sprite 0 determination since that is a property of SecondaryOam (or PPU dot 66).
 Signals-driven refactor.
     Blocked on removing cpu_peek/cpu_read/cpu_write from Mapper
         Blocked on making on_ppu_address_change() and on_ppu_read() signal-based
