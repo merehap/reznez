@@ -70,7 +70,10 @@ impl log::Log for Logger {
                     ["egui_wgpu", ..] => true,
                     ["naga", ..] => true,
                     ["calloop", ..] => true,
-                    _ => panic!("Unexpected logger target: {target}"),
+                    _ => {
+                        eprintln!("Unexpected logger target: {target}. Allowing it.");
+                        true
+                    }
                 }
             }
         }
