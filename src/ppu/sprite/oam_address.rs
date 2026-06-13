@@ -31,7 +31,7 @@ impl OamAddress {
     pub fn corrupt_sprite_y_index(&mut self) {
         self.0 = self.0.wrapping_add(1);
         if self.0 % 4 == 0 {
-            self.0 -= 4;
+            self.0 = self.0.wrapping_sub(4);
         }
 
         info!(target: "oamaddr", "\tCorrupting OamAddress 0x{:02X}.", self.0);
