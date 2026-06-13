@@ -61,7 +61,7 @@ fn maybe_decay_internal(latch: &mut u8, scanlines_remaining: &mut Option<u16>, m
         None => { /* The bits have already decayed. */ }
         Some(0) => {
             // Decay the latch and halt the decay process.
-            *latch *= mask;
+            *latch &= mask;
             *scanlines_remaining = None;
         }
         Some(scanlines) => *scanlines_remaining = Some(scanlines - 1),
