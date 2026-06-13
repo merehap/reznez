@@ -117,7 +117,7 @@ impl PpuRegisters {
 
     // Write 0x2000
     pub fn write_ctrl(&mut self, value: u8) {
-        self.ppu_io_bus.update_from_write(value);
+        self.ppu_io_bus.update(value);
 
         let fields = splitbits!(value, "nehb siqq");
         self.nmi_enabled = fields.n;
@@ -139,7 +139,7 @@ impl PpuRegisters {
 
     // Write 0x2001
     pub fn write_mask(&mut self, value: u8) {
-        self.ppu_io_bus.update_from_write(value);
+        self.ppu_io_bus.update(value);
 
         let fields = splitbits!(value, "efgs blmz");
         self.mask.emphasize_blue = fields.e;
@@ -177,12 +177,12 @@ impl PpuRegisters {
 
     // Write 0x2002 (PPUSTATUS is readonly)
     pub fn write_status(&mut self, register_value: u8) {
-        self.ppu_io_bus.update_from_write(register_value);
+        self.ppu_io_bus.update(register_value);
     }
 
     // Write 0x2003
     pub fn write_oam_addr(&mut self, value: u8) {
-        self.ppu_io_bus.update_from_write(value);
+        self.ppu_io_bus.update(value);
         self.oam_addr = OamAddress::from_u8(value);
     }
 
@@ -194,13 +194,13 @@ impl PpuRegisters {
     // Read 0x2004
     pub fn read_oam_data(&mut self, oam: &mut Oam, clock: &PpuClock) -> ReadResult {
         let value = oam.read(clock, self.oam_addr, self.rendering_enabled);
-        self.ppu_io_bus.update_from_read(value);
+        self.ppu_io_bus.update(value);
         ReadResult::full(value)
     }
 
     // Write 0x2004
     pub fn write_oam_data(&mut self, oam: &mut Oam, clock: &PpuClock, value: u8) {
-        self.ppu_io_bus.update_from_write(value);
+        self.ppu_io_bus.update(value);
 
         // TODO: What happens if this causes OAMADDR to wrap during sprite evaluation? Is all_sprites_evaluated set prematurely?
         // Forcing all_sprites_evaluated to true here didn't seem to break any tests, so maybe this is untested.
@@ -214,7 +214,7 @@ impl PpuRegisters {
 
     // Write 0x2005
     pub fn write_scroll(&mut self, dimension: u8) {
-        self.ppu_io_bus.update_from_write(dimension);
+        self.ppu_io_bus.update(dimension);
 
         match self.write_toggle {
             WriteToggle::FirstByte => {
@@ -233,7 +233,7 @@ impl PpuRegisters {
 
     // Write 0x2006
     pub fn write_ppu_addr(&mut self, value: u8) {
-        self.ppu_io_bus.update_from_write(value);
+        self.ppu_io_bus.update(value);
         match self.write_toggle {
             WriteToggle::FirstByte => self.next_address.set_high_byte(value),
             WriteToggle::SecondByte => {
@@ -263,7 +263,7 @@ impl PpuRegisters {
     // Read 0x2007
     pub fn read_ppu_data(&mut self, old_data: u8) -> ReadResult {
         let value_read = self.peek_ppu_data(old_data);
-        self.ppu_io_bus.update_from_read(value_read.unmasked_value());
+        self.ppu_io_bus.update(value_read.unmasked_value());
         value_read
     }
 
@@ -281,7 +281,7 @@ impl PpuRegisters {
 
     // Write 0x2007
     pub fn write_ppu_data(&mut self, value: u8) {
-        self.ppu_io_bus.update_from_write(value);
+        self.ppu_io_bus.update(value);
         self.current_address.advance(self.current_address_increment);
     }
 
