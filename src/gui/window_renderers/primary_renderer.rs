@@ -1,6 +1,7 @@
 use std::path::Path;
 
-use egui::{include_image, vec2, Align2, CentralPanel, Context, Ui, Frame as EguiFrame, Image, Button, Key, KeyboardShortcut, Modifiers};
+use egui::containers::menu;
+use egui::{Align2, Button, CentralPanel, Color32, Context, Frame as EguiFrame, Image, Key, KeyboardShortcut, Modifiers, Ui, include_image, vec2};
 use egui_phosphor::regular::{BUG, FOLDER_OPEN, SLIDERS_HORIZONTAL, INFO};
 use egui_file::FileDialog;
 use log::error;
@@ -28,6 +29,11 @@ pub use crate::gui::world::World;
 use crate::ppu::pixel_index::{PixelColumn, PixelRow};
 use crate::ppu::render::frame::Frame;
 
+const MENU_HOVER_BLUE: Color32 = Color32::from_rgb(70, 90, 140);
+const PAUSED_VERMILION_RED: Color32 = Color32::from_rgb(250, 60, 60);
+const OPEN_ROM_SHORTCUT: KeyboardShortcut =
+    KeyboardShortcut::new(Modifiers::COMMAND, Key::O);
+
 pub struct PrimaryRenderer {
     pub paused: bool,
     file_dialog: FileDialog,
@@ -36,24 +42,19 @@ pub struct PrimaryRenderer {
 }
 
 fn menu_hover_style(style: &mut egui::Style) {
-    egui::containers::menu::menu_style(style);
-
-    style.visuals.widgets.hovered.weak_bg_fill =
-        egui::Color32::from_rgb(70, 90, 140);
+    menu::menu_style(style);
+    style.visuals.widgets.hovered.weak_bg_fill = MENU_HOVER_BLUE;
 }
 
-fn menu_config() -> egui::containers::menu::MenuConfig {
-    egui::containers::menu::MenuConfig::new().style(menu_hover_style)
+fn menu_config() -> menu::MenuConfig {
+    menu::MenuConfig::new().style(menu_hover_style)
 }
 
 fn show_paused_indicator(ui: &mut Ui) {
     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-        ui.colored_label(egui::Color32::from_rgb(250, 60, 60), "PAUSED");
+        ui.colored_label(PAUSED_VERMILION_RED, "PAUSED");
     });
 }
-
-const OPEN_ROM_SHORTCUT: KeyboardShortcut =
-    KeyboardShortcut::new(Modifiers::COMMAND, Key::O);
 
 impl PrimaryRenderer {
     pub fn new() -> Self {

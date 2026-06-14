@@ -3,7 +3,7 @@ use std::sync::{Arc, LazyLock};
 
 use gilrs::GamepadId;
 
-use egui::{ClippedPrimitive, Context, TexturesDelta, ViewportId};
+use egui::{ClippedPrimitive, Context, FontDefinitions, TexturesDelta, ViewportId};
 use egui_wgpu::{Renderer, RendererOptions, ScreenDescriptor};
 use gilrs;
 use log::{info, warn};
@@ -207,7 +207,7 @@ struct EguiWindow {
 }
 
 fn install_fonts(ctx: &Context) {
-    let mut fonts = egui::FontDefinitions::default();
+    let mut fonts = FontDefinitions::default();
 
     egui_phosphor::add_to_fonts(
         &mut fonts,
