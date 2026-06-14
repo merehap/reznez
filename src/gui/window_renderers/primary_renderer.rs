@@ -90,6 +90,7 @@ impl WindowRenderer for PrimaryRenderer {
 
     fn ui(&mut self, ctx: &Context, ui: &mut Ui, world: &mut World) -> FlowControl {
         let mut result = FlowControl::CONTINUE;
+        let rom_loaded = world.nes.is_some();
 
         if ctx.input_mut(|input| input.consume_shortcut(&OPEN_ROM_SHORTCUT)) {
             self.open_rom_dialog();
@@ -115,14 +116,16 @@ impl WindowRenderer for PrimaryRenderer {
                     });
 
                     ui.menu_button(format!("{SLIDERS_HORIZONTAL} Settings"), |ui| {
-                        if ui.button("Display").clicked() {
-                            ui.close();
-                            result = FlowControl::spawn_window((
-                                Box::new(DisplaySettingsRenderer::new()) as Box<dyn WindowRenderer>,
-                                Position::Physical(PhysicalPosition { x: 850, y: 360 }),
-                                2,
-                            ));
-                        }
+                        ui.add_enabled_ui(rom_loaded, |ui| {
+                            if ui.button("Display").clicked() {
+                                ui.close();
+                                result = FlowControl::spawn_window((
+                                    Box::new(DisplaySettingsRenderer::new()) as Box<dyn WindowRenderer>,
+                                    Position::Physical(PhysicalPosition { x: 850, y: 360 }),
+                                    2,
+                                ));
+                            }
+                        });
                     });
 
                     ui.menu_button(format!("{INFO} Help"), |ui| {
@@ -137,85 +140,87 @@ impl WindowRenderer for PrimaryRenderer {
                     });
 
                     ui.menu_button(format!("{BUG} Debug Windows"), |ui| {
-                        if ui.button("Status").clicked() {
-                            ui.close();
-                            result = FlowControl::spawn_window((
-                                Box::new(StatusRenderer) as Box<dyn WindowRenderer>,
-                                Position::Physical(PhysicalPosition { x: 850, y: 360 }),
-                                2,
-                            ));
-                        }
-                        if ui.button("Layers").clicked() {
-                            ui.close();
-                            result = FlowControl::spawn_window((
-                                Box::new(LayersRenderer::new()),
-                                Position::Physical(PhysicalPosition { x: 850, y: 50 }),
-                                1,
-                            ));
-                        }
-                        if ui.button("Name Tables").clicked() {
-                            ui.close();
-                            result = FlowControl::spawn_window((
-                                Box::new(NameTableRenderer::new()),
-                                Position::Physical(PhysicalPosition { x: 1400, y: 50 }),
-                                1,
-                            ));
-                        }
-                        if ui.button("Sprites").clicked() {
-                            ui.close();
-                            result = FlowControl::spawn_window((
-                                Box::new(SpritesRenderer::new()),
-                                Position::Physical(PhysicalPosition { x: 1400, y: 660 }),
-                                6,
-                            ));
-                        }
-                        if ui.button("Pattern Tables").clicked() {
-                            ui.close();
-                            result = FlowControl::spawn_window((
-                                Box::new(PatternTableRenderer::new()),
-                                Position::Physical(PhysicalPosition { x: 850, y: 660 }),
-                                3,
-                            ));
-                        }
-                        if ui.button("Pattern Sources").clicked() {
-                            ui.close();
-                            result = FlowControl::spawn_window((
-                                Box::new(PatternSourceRenderer::new()),
-                                Position::Physical(PhysicalPosition { x: 600, y: 200 }),
-                                1,
-                            ));
-                        }
-                        if ui.button("Memory Viewer").clicked() {
-                            ui.close();
-                            result = FlowControl::spawn_window((
-                                Box::new(MemoryViewerRenderer),
-                                Position::Physical(PhysicalPosition { x: 600, y: 200 }),
-                                1,
-                            ));
-                        }
-                        if ui.button("Audio Visualizer").clicked() {
-                            ui.close();
-                            result = FlowControl::spawn_window((
-                                Box::new(AudioVisualizer::new()),
-                                Position::Physical(PhysicalPosition { x: 600, y: 200 }),
-                                2,
-                            ));
-                        }
-                        if ui.button("Cartridge Metadata").clicked() {
-                            ui.close();
-                            result = FlowControl::spawn_window((
-                                Box::new(CartridgeMetadataRenderer),
-                                Position::Physical(PhysicalPosition { x: 600, y: 200 }),
-                                2,
-                            ));
-                        }
+                        ui.add_enabled_ui(rom_loaded, |ui| {
+                            if ui.button("Status").clicked() {
+                                ui.close();
+                                result = FlowControl::spawn_window((
+                                    Box::new(StatusRenderer) as Box<dyn WindowRenderer>,
+                                    Position::Physical(PhysicalPosition { x: 850, y: 360 }),
+                                    2,
+                                ));
+                            }
+                            if ui.button("Layers").clicked() {
+                                ui.close();
+                                result = FlowControl::spawn_window((
+                                    Box::new(LayersRenderer::new()),
+                                    Position::Physical(PhysicalPosition { x: 850, y: 50 }),
+                                    1,
+                                ));
+                            }
+                            if ui.button("Name Tables").clicked() {
+                                ui.close();
+                                result = FlowControl::spawn_window((
+                                    Box::new(NameTableRenderer::new()),
+                                    Position::Physical(PhysicalPosition { x: 1400, y: 50 }),
+                                    1,
+                                ));
+                            }
+                            if ui.button("Sprites").clicked() {
+                                ui.close();
+                                result = FlowControl::spawn_window((
+                                    Box::new(SpritesRenderer::new()),
+                                    Position::Physical(PhysicalPosition { x: 1400, y: 660 }),
+                                    6,
+                                ));
+                            }
+                            if ui.button("Pattern Tables").clicked() {
+                                ui.close();
+                                result = FlowControl::spawn_window((
+                                    Box::new(PatternTableRenderer::new()),
+                                    Position::Physical(PhysicalPosition { x: 850, y: 660 }),
+                                    3,
+                                ));
+                            }
+                            if ui.button("Pattern Sources").clicked() {
+                                ui.close();
+                                result = FlowControl::spawn_window((
+                                    Box::new(PatternSourceRenderer::new()),
+                                    Position::Physical(PhysicalPosition { x: 600, y: 200 }),
+                                    1,
+                                ));
+                            }
+                            if ui.button("Memory Viewer").clicked() {
+                                ui.close();
+                                result = FlowControl::spawn_window((
+                                    Box::new(MemoryViewerRenderer),
+                                    Position::Physical(PhysicalPosition { x: 600, y: 200 }),
+                                    1,
+                                ));
+                            }
+                            if ui.button("Audio Visualizer").clicked() {
+                                ui.close();
+                                result = FlowControl::spawn_window((
+                                    Box::new(AudioVisualizer::new()),
+                                    Position::Physical(PhysicalPosition { x: 600, y: 200 }),
+                                    2,
+                                ));
+                            }
+                            if ui.button("Cartridge Metadata").clicked() {
+                                ui.close();
+                                result = FlowControl::spawn_window((
+                                    Box::new(CartridgeMetadataRenderer),
+                                    Position::Physical(PhysicalPosition { x: 600, y: 200 }),
+                                    2,
+                                ));
+                            }
+                        });
                     });
 
-                    if self.paused {
-                        show_paused_indicator(ui);
-                    }
-                });
+                if self.paused {
+                    show_paused_indicator(ui);
+                }
             });
+        });
 
         if world.nes.is_none() {
             CentralPanel::default()
