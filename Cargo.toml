@@ -36,6 +36,7 @@ walkdir = "2.5.0"
 ux = "0.1.6"
 
 egui = "0.34.1"
+egui-phosphor = "0.12"
 egui-wgpu = "0.34.1"
 egui_extras = { version = "0.34.1", features = ["svg"] }
 egui-winit = { version = "0.34.1", default-features = false, features = ["links"] }

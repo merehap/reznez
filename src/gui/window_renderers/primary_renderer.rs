@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use egui::{include_image, vec2, Align2, CentralPanel, Context, Ui, Frame as EguiFrame, Image};
+use egui_phosphor::regular::{BUG, FOLDER_OPEN, SLIDERS_HORIZONTAL, INFO};
 use egui_file::FileDialog;
 use log::error;
 use pixels::Pixels;
@@ -34,6 +35,17 @@ pub struct PrimaryRenderer {
     cartridge_query_dialog: FileDialog,
 }
 
+fn menu_hover_style(style: &mut egui::Style) {
+    egui::containers::menu::menu_style(style);
+
+    style.visuals.widgets.hovered.weak_bg_fill =
+        egui::Color32::from_rgb(70, 90, 140);
+}
+
+fn menu_config() -> egui::containers::menu::MenuConfig {
+    egui::containers::menu::MenuConfig::new().style(menu_hover_style)
+}
+
 impl PrimaryRenderer {
     pub fn new() -> Self {
         let nes_file_filter = Box::new(|path: &Path| {
@@ -65,118 +77,121 @@ impl WindowRenderer for PrimaryRenderer {
     fn ui(&mut self, ctx: &Context, ui: &mut Ui, world: &mut World) -> FlowControl {
         let mut result = FlowControl::CONTINUE;
         egui::Panel::top("menubar_container").show_inside(ui, |ui| {
-            egui::MenuBar::new().ui(ui, |ui| {
-                ui.menu_button("File", |ui| {
-                    if ui.button("Open").clicked() {
-                        ui.close();
-                        self.load_error = None;
-                        self.file_dialog.open();
-                    }
+            egui::MenuBar::new()
+                .style(menu_hover_style)
+                .config(menu_config())
+                .ui(ui, |ui| {
+                    ui.menu_button(format!("{FOLDER_OPEN} File"), |ui| {
+                        if ui.button("Open ROM").clicked() {
+                            ui.close();
+                            self.load_error = None;
+                            self.file_dialog.open();
+                        }
 
-                    if ui.button("ROM Query").clicked() {
-                        ui.close();
-                        self.cartridge_query_dialog.open();
-                    }
+                        if ui.button("ROM Query").clicked() {
+                            ui.close();
+                            self.cartridge_query_dialog.open();
+                        }
+                    });
+
+                    ui.menu_button(format!("{SLIDERS_HORIZONTAL} Settings"), |ui| {
+                        if ui.button("Display").clicked() {
+                            ui.close();
+                            result = FlowControl::spawn_window((
+                                Box::new(DisplaySettingsRenderer::new()) as Box<dyn WindowRenderer>,
+                                Position::Physical(PhysicalPosition { x: 850, y: 360 }),
+                                2,
+                            ));
+                        }
+                    });
+
+                    ui.menu_button(format!("{INFO} Help"), |ui| {
+                        if ui.button("Controls").clicked() {
+                            ui.close();
+                            result = FlowControl::spawn_window((
+                                Box::new(ControlsRenderer) as Box<dyn WindowRenderer>,
+                                Position::Physical(PhysicalPosition { x: 850, y: 360 }),
+                                2,
+                            ));
+                        }
+                    });
+
+                    ui.menu_button(format!("{BUG} Debug Windows"), |ui| {
+                        if ui.button("Status").clicked() {
+                            ui.close();
+                            result = FlowControl::spawn_window((
+                                Box::new(StatusRenderer) as Box<dyn WindowRenderer>,
+                                Position::Physical(PhysicalPosition { x: 850, y: 360 }),
+                                2,
+                            ));
+                        }
+                        if ui.button("Layers").clicked() {
+                            ui.close();
+                            result = FlowControl::spawn_window((
+                                Box::new(LayersRenderer::new()),
+                                Position::Physical(PhysicalPosition { x: 850, y: 50 }),
+                                1,
+                            ));
+                        }
+                        if ui.button("Name Tables").clicked() {
+                            ui.close();
+                            result = FlowControl::spawn_window((
+                                Box::new(NameTableRenderer::new()),
+                                Position::Physical(PhysicalPosition { x: 1400, y: 50 }),
+                                1,
+                            ));
+                        }
+                        if ui.button("Sprites").clicked() {
+                            ui.close();
+                            result = FlowControl::spawn_window((
+                                Box::new(SpritesRenderer::new()),
+                                Position::Physical(PhysicalPosition { x: 1400, y: 660 }),
+                                6,
+                            ));
+                        }
+                        if ui.button("Pattern Tables").clicked() {
+                            ui.close();
+                            result = FlowControl::spawn_window((
+                                Box::new(PatternTableRenderer::new()),
+                                Position::Physical(PhysicalPosition { x: 850, y: 660 }),
+                                3,
+                            ));
+                        }
+                        if ui.button("Pattern Sources").clicked() {
+                            ui.close();
+                            result = FlowControl::spawn_window((
+                                Box::new(PatternSourceRenderer::new()),
+                                Position::Physical(PhysicalPosition { x: 600, y: 200 }),
+                                1,
+                            ));
+                        }
+                        if ui.button("Memory Viewer").clicked() {
+                            ui.close();
+                            result = FlowControl::spawn_window((
+                                Box::new(MemoryViewerRenderer),
+                                Position::Physical(PhysicalPosition { x: 600, y: 200 }),
+                                1,
+                            ));
+                        }
+                        if ui.button("Audio Visualizer").clicked() {
+                            ui.close();
+                            result = FlowControl::spawn_window((
+                                Box::new(AudioVisualizer::new()),
+                                Position::Physical(PhysicalPosition { x: 600, y: 200 }),
+                                2,
+                            ));
+                        }
+                        if ui.button("Cartridge Metadata").clicked() {
+                            ui.close();
+                            result = FlowControl::spawn_window((
+                                Box::new(CartridgeMetadataRenderer),
+                                Position::Physical(PhysicalPosition { x: 600, y: 200 }),
+                                2,
+                            ));
+                        }
+                    })
                 });
-
-                ui.menu_button("Settings", |ui| {
-                    if ui.button("Display").clicked() {
-                        ui.close();
-                        result = FlowControl::spawn_window((
-                            Box::new(DisplaySettingsRenderer::new()) as Box<dyn WindowRenderer>,
-                            Position::Physical(PhysicalPosition { x: 850, y: 360 }),
-                            2,
-                        ));
-                    }
-                });
-
-                ui.menu_button("Help", |ui| {
-                    if ui.button("Controls").clicked() {
-                        ui.close();
-                        result = FlowControl::spawn_window((
-                            Box::new(ControlsRenderer) as Box<dyn WindowRenderer>,
-                            Position::Physical(PhysicalPosition { x: 850, y: 360 }),
-                            2,
-                        ));
-                    }
-                });
-
-                ui.menu_button("Debug Windows", |ui| {
-                    if ui.button("Status").clicked() {
-                        ui.close();
-                        result = FlowControl::spawn_window((
-                            Box::new(StatusRenderer) as Box<dyn WindowRenderer>,
-                            Position::Physical(PhysicalPosition { x: 850, y: 360 }),
-                            2,
-                        ));
-                    }
-                    if ui.button("Layers").clicked() {
-                        ui.close();
-                        result = FlowControl::spawn_window((
-                            Box::new(LayersRenderer::new()),
-                            Position::Physical(PhysicalPosition { x: 850, y: 50 }),
-                            1,
-                        ));
-                    }
-                    if ui.button("Name Tables").clicked() {
-                        ui.close();
-                        result = FlowControl::spawn_window((
-                            Box::new(NameTableRenderer::new()),
-                            Position::Physical(PhysicalPosition { x: 1400, y: 50 }),
-                            1,
-                        ));
-                    }
-                    if ui.button("Sprites").clicked() {
-                        ui.close();
-                        result = FlowControl::spawn_window((
-                            Box::new(SpritesRenderer::new()),
-                            Position::Physical(PhysicalPosition { x: 1400, y: 660 }),
-                            6,
-                        ));
-                    }
-                    if ui.button("Pattern Tables").clicked() {
-                        ui.close();
-                        result = FlowControl::spawn_window((
-                            Box::new(PatternTableRenderer::new()),
-                            Position::Physical(PhysicalPosition { x: 850, y: 660 }),
-                            3,
-                        ));
-                    }
-                    if ui.button("Pattern Sources").clicked() {
-                        ui.close();
-                        result = FlowControl::spawn_window((
-                            Box::new(PatternSourceRenderer::new()),
-                            Position::Physical(PhysicalPosition { x: 600, y: 200 }),
-                            1,
-                        ));
-                    }
-                    if ui.button("Memory Viewer").clicked() {
-                        ui.close();
-                        result = FlowControl::spawn_window((
-                            Box::new(MemoryViewerRenderer),
-                            Position::Physical(PhysicalPosition { x: 600, y: 200 }),
-                            1,
-                        ));
-                    }
-                    if ui.button("Audio Visualizer").clicked() {
-                        ui.close();
-                        result = FlowControl::spawn_window((
-                            Box::new(AudioVisualizer::new()),
-                            Position::Physical(PhysicalPosition { x: 600, y: 200 }),
-                            2,
-                        ));
-                    }
-                    if ui.button("Cartridge Metadata").clicked() {
-                        ui.close();
-                        result = FlowControl::spawn_window((
-                            Box::new(CartridgeMetadataRenderer),
-                            Position::Physical(PhysicalPosition { x: 600, y: 200 }),
-                            2,
-                        ));
-                    }
-                })
             });
-        });
 
         if world.nes.is_none() {
             CentralPanel::default()
