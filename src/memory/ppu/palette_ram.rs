@@ -7,15 +7,19 @@ const INITIAL_PALETTE_DATA: [u8; PALETTE_RAM_SIZE] = [
     0x09, 0x01, 0x34, 0x03, 0x00, 0x04, 0x00, 0x14, 0x08, 0x3A, 0x00, 0x02, 0x00, 0x20, 0x2C, 0x08,
 ];
 
-pub struct PaletteRam([u8; PALETTE_RAM_SIZE]);
+pub struct PaletteRam {
+    ram: [u8; PALETTE_RAM_SIZE],
+}
 
 impl PaletteRam {
     pub fn new() -> PaletteRam {
-        PaletteRam(INITIAL_PALETTE_DATA)
+        PaletteRam {
+            ram: INITIAL_PALETTE_DATA,
+        }
     }
 
     pub fn peek(&self, regs: &PpuRegisters, index: u32) -> PpuPeek {
-        let mut value = self.0[index as usize];
+        let mut value = self.ram[index as usize];
         if regs.mask().greyscale_enabled() {
             value &= 0b1111_0000;
         }
@@ -26,11 +30,11 @@ impl PaletteRam {
     pub fn write(&mut self, index: u32, value: u8) {
         // First two bits are always 0 for palette RAM bytes.
         // See https://wiki.nesdev.org/w/index.php?title=PPU_palettes#Memory_Map
-        self.0[index as usize] = value & 0b0011_1111;
+        self.ram[index as usize] = value & 0b0011_1111;
     }
 
     pub fn to_slice(&self) -> &[u8; PALETTE_RAM_SIZE] {
-        &self.0
+        &self.ram
     }
 }
 
