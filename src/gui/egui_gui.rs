@@ -206,6 +206,17 @@ struct EguiWindow {
     window_renderer: Box<dyn WindowRenderer>,
 }
 
+fn install_fonts(ctx: &Context) {
+    let mut fonts = egui::FontDefinitions::default();
+
+    egui_phosphor::add_to_fonts(
+        &mut fonts,
+        egui_phosphor::Variant::Regular,
+    );
+
+    ctx.set_fonts(fonts);
+}
+
 impl EguiWindow {
     fn from_active_event_loop(
         event_loop: &ActiveEventLoop,
@@ -260,6 +271,7 @@ impl EguiWindow {
         window_renderer: Box<dyn WindowRenderer>,
     ) -> Self {
         let egui_ctx = Context::default();
+        install_fonts(&egui_ctx);
         egui_extras::install_image_loaders(&egui_ctx);
         let egui_state = egui_winit::State::new(
             egui_ctx,

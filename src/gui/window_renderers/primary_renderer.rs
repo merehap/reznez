@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use egui::{include_image, vec2, Align2, CentralPanel, Context, Ui, Frame as EguiFrame, Image};
+use egui_phosphor::regular::{BUG, FOLDER_OPEN, SLIDERS_HORIZONTAL, INFO};
 use egui_file::FileDialog;
 use log::error;
 use pixels::Pixels;
@@ -66,8 +67,8 @@ impl WindowRenderer for PrimaryRenderer {
         let mut result = FlowControl::CONTINUE;
         egui::Panel::top("menubar_container").show_inside(ui, |ui| {
             egui::MenuBar::new().ui(ui, |ui| {
-                ui.menu_button("File", |ui| {
-                    if ui.button("Open").clicked() {
+                ui.menu_button(format!("{FOLDER_OPEN} File"), |ui| {
+                    if ui.button("Open ROM").clicked() {
                         ui.close();
                         self.load_error = None;
                         self.file_dialog.open();
@@ -79,7 +80,7 @@ impl WindowRenderer for PrimaryRenderer {
                     }
                 });
 
-                ui.menu_button("Settings", |ui| {
+                ui.menu_button(format!("{SLIDERS_HORIZONTAL} Settings"), |ui| {
                     if ui.button("Display").clicked() {
                         ui.close();
                         result = FlowControl::spawn_window((
@@ -90,7 +91,7 @@ impl WindowRenderer for PrimaryRenderer {
                     }
                 });
 
-                ui.menu_button("Help", |ui| {
+                ui.menu_button(format!("{INFO} Help"), |ui| {
                     if ui.button("Controls").clicked() {
                         ui.close();
                         result = FlowControl::spawn_window((
@@ -101,7 +102,7 @@ impl WindowRenderer for PrimaryRenderer {
                     }
                 });
 
-                ui.menu_button("Debug Windows", |ui| {
+                ui.menu_button(format!("{BUG} Debug Windows"), |ui| {
                     if ui.button("Status").clicked() {
                         ui.close();
                         result = FlowControl::spawn_window((
