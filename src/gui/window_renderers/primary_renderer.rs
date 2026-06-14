@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use egui::{include_image, vec2, Align2, CentralPanel, Context, Ui, Frame as EguiFrame, Image};
+use egui::{include_image, vec2, Align2, CentralPanel, Context, Ui, Frame as EguiFrame, Image, Button, Key, KeyboardShortcut, Modifiers};
 use egui_phosphor::regular::{BUG, FOLDER_OPEN, SLIDERS_HORIZONTAL, INFO};
 use egui_file::FileDialog;
 use log::error;
@@ -46,6 +46,15 @@ fn menu_config() -> egui::containers::menu::MenuConfig {
     egui::containers::menu::MenuConfig::new().style(menu_hover_style)
 }
 
+fn show_paused_indicator(ui: &mut Ui) {
+    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+        ui.colored_label(egui::Color32::from_rgb(250, 60, 60), "PAUSED");
+    });
+}
+
+const OPEN_ROM_SHORTCUT: KeyboardShortcut =
+    KeyboardShortcut::new(Modifiers::COMMAND, Key::O);
+
 impl PrimaryRenderer {
     pub fn new() -> Self {
         let nes_file_filter = Box::new(|path: &Path| {
@@ -67,6 +76,11 @@ impl PrimaryRenderer {
             cartridge_query_dialog,
         }
     }
+
+    fn open_rom_dialog(&mut self) {
+        self.load_error = None;
+        self.file_dialog.open();
+    }
 }
 
 impl WindowRenderer for PrimaryRenderer {
@@ -76,16 +90,22 @@ impl WindowRenderer for PrimaryRenderer {
 
     fn ui(&mut self, ctx: &Context, ui: &mut Ui, world: &mut World) -> FlowControl {
         let mut result = FlowControl::CONTINUE;
+
+        if ctx.input_mut(|input| input.consume_shortcut(&OPEN_ROM_SHORTCUT)) {
+            self.open_rom_dialog();
+        }
         egui::Panel::top("menubar_container").show_inside(ui, |ui| {
             egui::MenuBar::new()
                 .style(menu_hover_style)
                 .config(menu_config())
                 .ui(ui, |ui| {
                     ui.menu_button(format!("{FOLDER_OPEN} File"), |ui| {
-                        if ui.button("Open ROM").clicked() {
+                        let open_rom_button = Button::new("Open ROM")
+                            .shortcut_text(ctx.format_shortcut(&OPEN_ROM_SHORTCUT));
+
+                        if ui.add(open_rom_button).clicked() {
                             ui.close();
-                            self.load_error = None;
-                            self.file_dialog.open();
+                            self.open_rom_dialog();
                         }
 
                         if ui.button("ROM Query").clicked() {
@@ -189,7 +209,11 @@ impl WindowRenderer for PrimaryRenderer {
                                 2,
                             ));
                         }
-                    })
+                    });
+
+                    if self.paused {
+                        show_paused_indicator(ui);
+                    }
                 });
             });
 
