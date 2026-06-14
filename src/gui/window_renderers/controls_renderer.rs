@@ -79,10 +79,13 @@ impl WindowRenderer for ControlsRenderer {
                 .spacing([40.0, 4.0])
                 .striped(true)
                 .show(ui, |ui| {
-                    ui.label("Pause / Resume");
-                    ui.label("Esc or P");
+                    ui.label("Load ROM");
+                    ui.label("Ctrl+O / Cmd+O");
                     ui.end_row();
-                    ui.label("Reload Game");
+                    ui.label("Pause / Resume");
+                    ui.label("Esc or P, Pause");
+                    ui.end_row();
+                    ui.label("Reload ROM");
                     ui.label("F12");
                     ui.end_row();
                 });
