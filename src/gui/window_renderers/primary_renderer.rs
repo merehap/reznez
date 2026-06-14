@@ -46,6 +46,12 @@ fn menu_config() -> egui::containers::menu::MenuConfig {
     egui::containers::menu::MenuConfig::new().style(menu_hover_style)
 }
 
+fn show_paused_indicator(ui: &mut Ui) {
+    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+        ui.colored_label(egui::Color32::from_rgb(250, 60, 60), "PAUSED");
+    });
+}
+
 impl PrimaryRenderer {
     pub fn new() -> Self {
         let nes_file_filter = Box::new(|path: &Path| {
@@ -189,7 +195,11 @@ impl WindowRenderer for PrimaryRenderer {
                                 2,
                             ));
                         }
-                    })
+                    });
+
+                    if self.paused {
+                        show_paused_indicator(ui);
+                    }
                 });
             });
 
