@@ -30,7 +30,6 @@ use crate::ppu::render::frame::Frame;
 
 pub struct PrimaryRenderer {
     pub paused: bool,
-    menu_open: bool,
     file_dialog: FileDialog,
     load_error: Option<String>,
     cartridge_query_dialog: FileDialog,
@@ -72,7 +71,6 @@ impl PrimaryRenderer {
 
         Self {
             paused: false,
-            menu_open: false,
             file_dialog,
             load_error: None,
             cartridge_query_dialog,
@@ -227,13 +225,15 @@ impl WindowRenderer for PrimaryRenderer {
 
                     menu_open |= debug_menu.inner.is_some();
 
-                    if self.paused || menu_open {
+                    if rom_loaded && (self.paused || menu_open) {
                         show_paused_indicator(ui);
                     }
                 });
             });
 
-        self.menu_open = menu_open;
+        if menu_open && rom_loaded {
+            self.paused = true;
+        }
 
         if world.nes.is_none() {
             CentralPanel::default()
@@ -292,7 +292,7 @@ impl WindowRenderer for PrimaryRenderer {
     }
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
-        if self.paused || self.menu_open {
+        if self.paused {
             return;
         }
 
