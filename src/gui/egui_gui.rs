@@ -149,9 +149,10 @@ impl ApplicationHandler for EguiGui {
                     }
                 }
 
-                if self.keyboard.key_pressed(KeyCode::Pause)
-                    || self.keyboard.key_pressed(KeyCode::KeyP)
-                    || self.keyboard.key_pressed(KeyCode::Escape)
+                if window_id == self.window_manager.primary_window_id
+                    && (self.keyboard.key_pressed(KeyCode::Pause)
+                        || self.keyboard.key_pressed(KeyCode::KeyP)
+                        || self.keyboard.key_pressed(KeyCode::Escape))
                 {
                     self.window_manager.toggle_pause();
                 }

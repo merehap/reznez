@@ -91,6 +91,7 @@ impl WindowRenderer for PrimaryRenderer {
 
     fn ui(&mut self, ctx: &Context, ui: &mut Ui, world: &mut World) -> FlowControl {
         let mut result = FlowControl::CONTINUE;
+        let mut menu_open = false;
         let rom_loaded = world.nes.is_some();
 
         if ctx.input_mut(|input| input.consume_shortcut(&OPEN_ROM_SHORTCUT)) {
@@ -101,7 +102,7 @@ impl WindowRenderer for PrimaryRenderer {
                 .style(menu_hover_style)
                 .config(menu_config())
                 .ui(ui, |ui| {
-                    ui.menu_button(format!("{FOLDER_OPEN} File"), |ui| {
+                    let file_menu = ui.menu_button(format!("{FOLDER_OPEN} File"), |ui| {
                         let open_rom_button = Button::new("Open ROM")
                             .shortcut_text(ctx.format_shortcut(&OPEN_ROM_SHORTCUT));
 
@@ -116,7 +117,9 @@ impl WindowRenderer for PrimaryRenderer {
                         }
                     });
 
-                    ui.menu_button(format!("{SLIDERS_HORIZONTAL} Settings"), |ui| {
+                    menu_open |= file_menu.inner.is_some();
+
+                    let settings_menu = ui.menu_button(format!("{SLIDERS_HORIZONTAL} Settings"), |ui| {
                         ui.add_enabled_ui(rom_loaded, |ui| {
                             if ui.button("Display").clicked() {
                                 ui.close();
@@ -129,7 +132,9 @@ impl WindowRenderer for PrimaryRenderer {
                         });
                     });
 
-                    ui.menu_button(format!("{INFO} Help"), |ui| {
+                    menu_open |= settings_menu.inner.is_some();
+
+                    let help_menu = ui.menu_button(format!("{INFO} Help"), |ui| {
                         if ui.button("Controls").clicked() {
                             ui.close();
                             result = FlowControl::spawn_window((
@@ -140,7 +145,9 @@ impl WindowRenderer for PrimaryRenderer {
                         }
                     });
 
-                    ui.menu_button(format!("{BUG} Debug Windows"), |ui| {
+                    menu_open |= help_menu.inner.is_some();
+
+                    let debug_menu = ui.menu_button(format!("{BUG} Debug Windows"), |ui| {
                         ui.add_enabled_ui(rom_loaded, |ui| {
                             if ui.button("Status").clicked() {
                                 ui.close();
@@ -217,11 +224,17 @@ impl WindowRenderer for PrimaryRenderer {
                         });
                     });
 
-                if self.paused {
-                    show_paused_indicator(ui);
-                }
+                    menu_open |= debug_menu.inner.is_some();
+
+                    if rom_loaded && (self.paused || menu_open) {
+                        show_paused_indicator(ui);
+                    }
+                });
             });
-        });
+
+        if menu_open && rom_loaded {
+            self.paused = true;
+        }
 
         if world.nes.is_none() {
             CentralPanel::default()
