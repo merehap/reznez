@@ -1,4 +1,5 @@
 use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
+use crate::memory::primitives::masked_byte::MaskedByte;
 use crate::ppu::register::ppu_registers::PpuRegisters;
 
 const PALETTE_RAM_SIZE: usize = 0x20;
@@ -8,18 +9,20 @@ const INITIAL_PALETTE_DATA: [u8; PALETTE_RAM_SIZE] = [
 ];
 
 pub struct PaletteRam {
-    ram: [u8; PALETTE_RAM_SIZE],
+    // First two bits are always 0 for palette RAM bytes.
+    // See https://wiki.nesdev.org/w/index.php?title=PPU_palettes#Memory_Map
+    ram: [MaskedByte<0b0011_1111>; PALETTE_RAM_SIZE],
 }
 
 impl PaletteRam {
     pub fn new() -> PaletteRam {
         PaletteRam {
-            ram: INITIAL_PALETTE_DATA,
+            ram: INITIAL_PALETTE_DATA.map(MaskedByte::new),
         }
     }
 
     pub fn peek(&self, regs: &PpuRegisters, index: u32) -> PpuPeek {
-        let mut value = self.ram[index as usize];
+        let mut value = self.ram[index as usize].peek();
         if regs.mask().greyscale_enabled() {
             value &= 0b1111_0000;
         }
@@ -28,12 +31,10 @@ impl PaletteRam {
     }
 
     pub fn write(&mut self, index: u32, value: u8) {
-        // First two bits are always 0 for palette RAM bytes.
-        // See https://wiki.nesdev.org/w/index.php?title=PPU_palettes#Memory_Map
-        self.ram[index as usize] = value & 0b0011_1111;
+        self.ram[index as usize].write(value);
     }
 
-    pub fn to_slice(&self) -> &[u8; PALETTE_RAM_SIZE] {
+    pub fn to_slice(&self) -> &[MaskedByte<0b0011_1111>; PALETTE_RAM_SIZE] {
         &self.ram
     }
 }

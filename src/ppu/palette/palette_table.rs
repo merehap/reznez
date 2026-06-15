@@ -1,3 +1,4 @@
+use crate::memory::primitives::masked_byte::MaskedByte;
 use crate::ppu::palette::color::Color;
 use crate::ppu::palette::palette::Palette;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
@@ -15,9 +16,9 @@ pub struct PaletteTable {
 
 impl PaletteTable {
     // FIXME: This is called once per frame, but there should be a way to cache the lookup_rgb calls.
-    pub fn new(raw: &[u8; 0x20], system_palette: &SystemPalette, mask: Mask) -> PaletteTable {
-        let rgb = |raw_color: u8| -> Rgb {
-            system_palette.lookup_rgb(Color::from_u8(raw_color), mask)
+    pub fn new(raw: &[MaskedByte<0b0011_1111>; 0x20], system_palette: &SystemPalette, mask: Mask) -> PaletteTable {
+        let rgb = |raw_color: MaskedByte<0b0011_1111>| -> Rgb {
+            system_palette.lookup_rgb(Color::from_u8(raw_color.peek()), mask)
         };
 
         let background_palettes = [
