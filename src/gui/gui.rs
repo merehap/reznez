@@ -10,7 +10,6 @@ use log::{info, warn};
 use crate::config::{Config, Event};
 use crate::controller::joypad::{Button, ButtonStatus};
 use crate::nes::Nes;
-use crate::ppu::register::ppu_registers::Mask;
 use crate::ppu::render::frame::Frame;
 use crate::ppu::render::frame_rate::TargetFrameRate;
 
@@ -22,7 +21,7 @@ pub trait Gui {
 
 pub fn execute_frame<F>(nes: &mut Nes, config: &Config, mut events: Events, display_frame: F)
 where
-    F: FnOnce(&Frame, Mask, i64),
+    F: FnOnce(&Frame, i64),
 {
     let frame_index = nes.bus().ppu_clock().frame();
     let start_time = SystemTime::now();
@@ -38,11 +37,10 @@ where
 
     nes.process_gui_events(&events);
     nes.step_frame();
-    let mask = nes.bus().ppu_regs.mask();
-    display_frame(nes.frame(), mask, frame_index);
+    display_frame(nes.frame(), frame_index);
 
     if config.frame_dump {
-        dump_frame(nes.frame(), mask, frame_index);
+        dump_frame(nes.frame(), frame_index);
     }
 
     log::logger().flush();
@@ -55,7 +53,7 @@ where
     }
 }
 
-fn dump_frame(frame: &Frame, mask: Mask, frame_index: i64) {
+fn dump_frame(frame: &Frame, frame_index: i64) {
     let mut frame = frame.clone();
     *frame.show_overscan_mut() = true;
 
@@ -64,7 +62,7 @@ fn dump_frame(frame: &Frame, mask: Mask, frame_index: i64) {
     }
     let file_name = format!("{FRAME_DUMP_DIRECTORY}/frame{frame_index:03}.ppm");
     let mut file = File::create(file_name).unwrap();
-    file.write_all(&frame.to_ppm(mask).to_bytes()).unwrap();
+    file.write_all(&frame.to_ppm().to_bytes()).unwrap();
 }
 
 #[inline]

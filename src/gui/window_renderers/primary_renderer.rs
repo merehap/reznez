@@ -297,8 +297,8 @@ impl WindowRenderer for PrimaryRenderer {
             return;
         }
 
-        let display_frame = |frame: &Frame, mask, _frame_index| {
-            frame.copy_to_rgba_buffer(mask, pixels.frame_mut().try_into().unwrap());
+        let display_frame = |frame: &Frame, _frame_index| {
+            frame.copy_to_rgba_buffer(pixels.frame_mut().try_into().unwrap());
         };
 
         if let Some(nes) = &mut world.nes {

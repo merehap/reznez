@@ -14,7 +14,9 @@ use crate::ppu::sprite::sprite_attributes::Priority;
 
 #[derive(Clone)]
 pub struct Frame {
-    buffer: FrameBuffer<Rgbt>,
+    buffer: FrameBuffer<(Rgb, bool)>,
+
+    background_buffer: FrameBuffer<Rgbt>,
     sprite_buffer: FrameBuffer<(Rgbt, Priority, bool)>,
     universal_background_rgb: Rgb,
 
@@ -24,7 +26,9 @@ pub struct Frame {
 impl Frame {
     pub fn new() -> Frame {
         Frame {
-            buffer: FrameBuffer::filled(Rgbt::Transparent),
+            buffer: FrameBuffer::filled((Rgb::BLACK, true)),
+
+            background_buffer: FrameBuffer::filled(Rgbt::Transparent),
             sprite_buffer: FrameBuffer::filled((
                 Rgbt::Transparent,
                 Priority::Behind,
@@ -49,9 +53,9 @@ impl Frame {
         &mut self.show_overscan
     }
 
-    pub fn pixel(&self, mask: Mask, column: PixelColumn, row: PixelRow) -> (Rgb, Sprite0Hit) {
+    pub fn set_pixel(&mut self, mask: Mask, column: PixelColumn, row: PixelRow) -> Sprite0Hit {
         use Rgbt::{Opaque, Transparent};
-        let mut background_pixel = self.buffer[(column, row)];
+        let mut background_pixel = self.background_buffer[(column, row)];
         if !mask.left_background_columns_enabled() && column.is_in_left_margin() {
             background_pixel = Transparent;
         }
@@ -62,7 +66,7 @@ impl Frame {
         }
 
         use Priority::{Behind, InFront};
-        let mut rgb = match (background_pixel, sprite_pixel, sprite_priority) {
+        let rgb = match (background_pixel, sprite_pixel, sprite_priority) {
             (Transparent, Transparent, _) => self.universal_background_rgb,
             (Transparent, Opaque(rgb), _) => rgb,
             (Opaque(rgb), Transparent, _) => rgb,
@@ -70,9 +74,8 @@ impl Frame {
             (Opaque(rgb), Opaque(_)  , Behind ) => rgb,
         };
 
-        if !self.show_overscan && (column.is_in_overscan_region() || row.is_in_overscan_region()) {
-            rgb = Rgb::BLACK;
-        }
+        let visible = self.show_overscan || (!column.is_in_overscan_region() && !row.is_in_overscan_region());
+        self.buffer[(column, row)] = (rgb, visible);
 
         // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Sprite_zero_hits
         let sprite0_hit =
@@ -81,8 +84,11 @@ impl Frame {
             row <= PixelRow::MAX &&
             background_pixel.is_opaque() &&
             sprite_pixel.is_opaque();
-        let sprite0_hit = if sprite0_hit { Sprite0Hit::Hit } else { Sprite0Hit::Miss };
-        (rgb, sprite0_hit)
+        if sprite0_hit { Sprite0Hit::Hit } else { Sprite0Hit::Miss }
+    }
+
+    pub fn pixel(&self, column: PixelColumn, row: PixelRow) -> (Rgb, bool) {
+        self.buffer[(column, row)]
     }
 
     pub fn set_universal_background_rgb(&mut self, rgb: Rgb) {
@@ -90,7 +96,9 @@ impl Frame {
     }
 
     pub fn clear(&mut self) {
-        self.buffer = FrameBuffer::filled(Rgbt::Transparent);
+        // FIXME: Don't allocate new FrameBuffers to do this.
+        self.buffer = FrameBuffer::filled((Rgb::BLACK, true));
+        self.background_buffer = FrameBuffer::filled(Rgbt::Transparent);
         self.sprite_buffer = FrameBuffer::filled((Rgbt::Transparent, Priority::Behind, false));
         self.universal_background_rgb = Rgb::BLACK;
     }
@@ -108,7 +116,7 @@ impl Frame {
         pixel_row: PixelRow,
         rgbt: Rgbt,
     ) {
-        self.buffer[(pixel_column, pixel_row)] = rgbt;
+        self.background_buffer[(pixel_column, pixel_row)] = rgbt;
     }
 
     #[inline]
@@ -123,10 +131,10 @@ impl Frame {
         self.sprite_buffer[(column, row)] = (rgbt, priority, is_sprite_0);
     }
 
-    pub fn write_all_pixel_data(&self, mask: Mask, data: &mut [u8]) {
+    pub fn write_all_pixel_data(&self, data: &mut [u8]) {
         for pixel_index in PixelIndex::iter() {
             let (column, row) = pixel_index.to_column_row();
-            let (pixel, _) = self.pixel(mask, column, row);
+            let (pixel, _visible) = self.pixel(column, row);
 
             let index = 3 * pixel_index.to_usize();
             data[index] = pixel.red();
@@ -135,14 +143,13 @@ impl Frame {
         }
     }
 
-    pub fn copy_to_rgba_buffer(
-        &self,
-        mask: Mask,
-        buffer: &mut [u8; 4 * PixelIndex::PIXEL_COUNT],
-    ) {
+    pub fn copy_to_rgba_buffer(&self, buffer: &mut [u8; 4 * PixelIndex::PIXEL_COUNT]) {
         for pixel_index in PixelIndex::iter() {
             let (column, row) = pixel_index.to_column_row();
-            let (pixel, _) = self.pixel(mask, column, row);
+            let (mut pixel, visible) = self.pixel(column, row);
+            if !visible {
+                pixel = Rgb::BLACK;
+            }
 
             let index = 4 * pixel_index.to_usize();
             buffer[index] = pixel.red();
@@ -153,9 +160,9 @@ impl Frame {
         }
     }
 
-    pub fn to_ppm(&self, mask: Mask) -> Ppm {
+    pub fn to_ppm(&self) -> Ppm {
         let mut data = vec![0; 3 * PixelIndex::PIXEL_COUNT];
-        self.write_all_pixel_data(mask, &mut data);
+        self.write_all_pixel_data(&mut data);
         Ppm::new(data)
     }
 }
@@ -211,10 +218,9 @@ impl<const WIDTH: usize, const HEIGHT: usize> DebugBuffer<WIDTH, HEIGHT> {
     }
 
     pub fn place_frame(&mut self, left_column: usize, top_row: usize, frame: &Frame) {
-        let mask = Mask::full_screen_enabled();
         for pixel_index in PixelIndex::iter() {
             let (column, row) = pixel_index.to_column_row();
-            let (pixel, _) = frame.pixel(mask, column, row);
+            let (pixel, _visible) = frame.pixel(column, row);
             self.write(
                 left_column + column.to_usize(),
                 top_row + row.to_usize(),
