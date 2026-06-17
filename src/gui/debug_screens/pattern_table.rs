@@ -6,6 +6,7 @@ use enum_iterator::all;
 use crate::bus::Bus;
 use crate::ppu::palette::palette::Palette;
 use crate::ppu::palette::rgbt::Rgbt;
+use crate::ppu::palette::system_palette::SystemPaletteSection;
 use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::ppu::pixel_index::{ColumnInTile, RowInTile};
 use crate::ppu::tile_number::TileNumber;
@@ -42,6 +43,7 @@ impl<'a> PatternTable<'a> {
 
     pub fn render_pixel(
         &self,
+        system_palette_section: &SystemPaletteSection,
         tile_number: TileNumber,
         column_in_tile: ColumnInTile,
         row_in_tile: RowInTile,
@@ -58,7 +60,8 @@ impl<'a> PatternTable<'a> {
         let mask = 0b1000_0000 >> (column_in_tile as u32);
         let low_bit = low_byte & mask != 0;
         let high_bit = high_byte & mask != 0;
-        *pixel = palette.rgbt_from_low_high(low_bit, high_bit);
+        let color = palette.color_t_from_low_high(low_bit, high_bit);
+        *pixel = system_palette_section.lookup_rgbt(color);
     }
 
     fn read(&self, index: u32) -> u8 {
@@ -72,12 +75,14 @@ impl<'a> PatternTable<'a> {
 
     pub fn render_background_tile(
         &self,
+        system_palette_section: &SystemPaletteSection,
         tile_number: TileNumber,
         palette: Palette,
         tile: &mut Tile,
     ) {
         for row_in_tile in all::<RowInTile>() {
             self.render_pixel_sliver(
+                system_palette_section,
                 tile_number,
                 row_in_tile,
                 palette,
@@ -90,6 +95,7 @@ impl<'a> PatternTable<'a> {
     #[rustfmt::skip]
     pub fn render_pixel_sliver(
         &self,
+        system_palette_section: &SystemPaletteSection,
         tile_number: TileNumber,
         row_in_tile: RowInTile,
         palette: Palette,
@@ -106,7 +112,8 @@ impl<'a> PatternTable<'a> {
             let mask = 0b1000_0000 >> (column_in_tile as u32);
             let low_bit = low_byte & mask != 0;
             let high_bit = high_byte & mask != 0;
-            *pixel = palette.rgbt_from_low_high(low_bit, high_bit);
+            let color_t = palette.color_t_from_low_high(low_bit, high_bit);
+            *pixel = system_palette_section.lookup_rgbt(color_t);
         }
     }
 }

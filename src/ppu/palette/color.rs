@@ -1,29 +1,33 @@
 use enum_iterator::Sequence;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
+use splitbits::{combinebits, splitbits};
 
 #[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct Color {
-    hue: Hue,
     brightness: Brightness,
+    hue: Hue,
 }
 
 impl Color {
-    pub const fn new(hue: Hue, brightness: Brightness) -> Color {
-        Color { hue, brightness }
-    }
-
-    pub fn from_u8(value: u8) -> Color {
-        debug_assert_eq!(value & 0b1100_0000, 0, "First two bits must be 0.");
-
-        Color {
-            hue: FromPrimitive::from_u8(value & 0b0000_1111).unwrap(),
-            brightness: FromPrimitive::from_u8((value & 0b0011_0000) >> 4).unwrap(),
-        }
+    pub const fn new(hue: Hue, brightness: Brightness) -> Self {
+        Self { hue, brightness }
     }
 
     pub fn to_usize(self) -> usize {
-        ((self.brightness as usize) << 4) | (self.hue as usize)
+        combinebits!(self.brightness as u8, self.hue as u8, "00bb hhhh") as usize
+    }
+}
+
+impl From<u8> for Color {
+    fn from(value: u8) -> Self {
+        debug_assert_eq!(value & 0b1100_0000, 0, "First two bits must be 0.");
+
+        let fields = splitbits!(value, "..bb hhhh");
+        Self {
+            hue: FromPrimitive::from_u8(fields.h).unwrap(),
+            brightness: FromPrimitive::from_u8(fields.b).unwrap(),
+        }
     }
 }
 

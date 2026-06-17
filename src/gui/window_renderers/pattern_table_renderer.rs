@@ -55,6 +55,7 @@ impl WindowRenderer for PatternTableRenderer {
             };
             for index in 0..=255 {
                 PatternTable::from_mem(bus, side).render_background_tile(
+                    bus.system_palette.emphasis_section(bus.ppu_regs.mask().emphasis_index()),
                     TileNumber::new(index),
                     palette,
                     &mut self.tile,

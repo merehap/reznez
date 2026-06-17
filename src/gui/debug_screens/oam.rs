@@ -78,6 +78,8 @@ impl Oam {
         let mut pattern_table = PatternTable::from_mem(bus, sprite_table_side);
         let sprite_height = bus.ppu_regs.sprite_height();
 
+        let sps = bus.system_palette.emphasis_section(bus.ppu_regs.mask().emphasis_index());
+
         // FIXME: No more sprites will be found once the end of OAM is reached,
         // effectively hiding any sprites before OAM[OAMADDR].
         let sprites = self.sprites();
@@ -90,6 +92,7 @@ impl Oam {
             }
 
             sprite.render_sliver(
+                sps,
                 pixel_row,
                 sprite_height,
                 &pattern_table,

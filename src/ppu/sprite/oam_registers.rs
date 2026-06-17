@@ -2,7 +2,7 @@ use std::ops::{Index, IndexMut};
 
 use crate::memory::ppu::chr_memory::PpuPeek;
 use crate::memory::ppu::palette_ram::PaletteRam;
-use crate::ppu::palette::rgbt::Rgbt;
+use crate::ppu::palette::color_t::ColorT;
 use crate::ppu::sprite::sprite_attributes::{SpriteAttributes, Priority};
 
 pub struct OamRegisters {
@@ -20,11 +20,11 @@ impl OamRegisters {
         self.registers[0].is_sprite_0 = present;
     }
 
-    pub fn step(&mut self, palette_ram: &PaletteRam, should_shift: bool) -> (Rgbt, Priority, bool, PpuPeek) {
-        let mut result = (Rgbt::Transparent, Priority::Behind, false, PpuPeek::VOID);
+    pub fn step(&mut self, palette_ram: &PaletteRam, should_shift: bool) -> (ColorT, Priority, bool, PpuPeek) {
+        let mut result = (ColorT::Transparent, Priority::Behind, false, PpuPeek::VOID);
         for register in self.registers.iter_mut().rev() {
-            let candidate@(rgbt, _, _, _) = register.step(palette_ram, should_shift);
-            if let Rgbt::Opaque(_) = rgbt {
+            let candidate@(color_t, _, _, _) = register.step(palette_ram, should_shift);
+            if let ColorT::Opaque(_) = color_t {
                 result = candidate;
             }
         }
@@ -93,12 +93,12 @@ impl SpriteRegisters {
         self.x_counter = initial_value;
     }
 
-    pub fn step(&mut self, palette_ram: &PaletteRam, should_shift: bool) -> (Rgbt, Priority, bool, PpuPeek) {
+    pub fn step(&mut self, palette_ram: &PaletteRam, should_shift: bool) -> (ColorT, Priority, bool, PpuPeek) {
         if self.x_counter > 0 {
             // This sprite is still inactive.
             self.x_counter -= 1;
 
-            return (Rgbt::Transparent, Priority::Behind, false, self.low_pattern_info);
+            return (ColorT::Transparent, Priority::Behind, false, self.low_pattern_info);
         }
 
         // Ugly :-(
@@ -121,7 +121,7 @@ impl SpriteRegisters {
         }
 
         let palette = palette_ram.sprite_palette(self.attributes.palette_table_index());
-        let rgbt = palette.rgbt_from_low_high(low_bit, high_bit);
-        (rgbt, self.attributes.priority(), self.is_sprite_0, self.low_pattern_info)
+        let color_t = palette.color_t_from_low_high(low_bit, high_bit);
+        (color_t, self.attributes.priority(), self.is_sprite_0, self.low_pattern_info)
     }
 }

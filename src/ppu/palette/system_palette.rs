@@ -2,7 +2,9 @@ use enum_iterator::all;
 use num_traits::FromPrimitive;
 
 use crate::ppu::palette::color::{Brightness, Color, Hue};
+use crate::ppu::palette::color_t::ColorT;
 use crate::ppu::palette::rgb::Rgb;
+use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::register::ppu_registers::Mask;
 
 // Good enough emphasis for now.
@@ -32,11 +34,11 @@ const ALL_EMPHASIS_FACTORS: [[f32; 3]; 8] =
  *     All emphasis,
  * ]
  */
-#[derive(Clone)]
-pub struct SystemPalette([[Rgb; 64]; 8]);
+#[derive(Clone, Debug)]
+pub struct SystemPalette([SystemPaletteSection; 8]);
 
 impl SystemPalette {
-    pub const ALL_BLACK: Self = Self([[Rgb::BLACK; 64]; 8]);
+    pub const ALL_BLACK: Self = Self([SystemPaletteSection::ALL_BLACK; 8]);
 
     pub fn parse(raw: &str) -> Result<SystemPalette, String> {
         let lines: Vec<&str> = raw
@@ -63,18 +65,25 @@ impl SystemPalette {
             let emphasized_palette = unemphasized_palette.map(|rgb| {
                 rgb.emphasized(emphasis_factors)
             });
-            emphasized_palettes.push(emphasized_palette);
+            emphasized_palettes.push(SystemPaletteSection(emphasized_palette));
         }
 
         Ok(SystemPalette(emphasized_palettes.try_into().unwrap()))
     }
 
     pub fn lookup_rgb(&self, color: Color, mask: Mask) -> Rgb {
-        self.0[mask.emphasis_index()][color.to_usize()]
+        self.0[mask.emphasis_index()].0[color.to_usize()]
     }
 
-    pub fn lookup_unemphasized_rgb(&self, color: Color) -> Rgb {
-        self.0[0][color.to_usize()]
+    pub fn lookup_rgbt(&self, color_t: ColorT, mask: Mask) -> Rgbt {
+        match color_t {
+            ColorT::Transparent => Rgbt::Transparent,
+            ColorT::Opaque(color) => Rgbt::Opaque(self.lookup_rgb(color, mask)),
+        }
+    }
+
+    pub fn emphasis_section(&self, emphasis_index: usize) -> &SystemPaletteSection {
+        &self.0[emphasis_index]
     }
 
     fn parse_line(
@@ -110,5 +119,23 @@ impl SystemPalette {
         }
 
         Ok(())
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct SystemPaletteSection([Rgb; 64]);
+
+impl SystemPaletteSection {
+    pub const ALL_BLACK: Self = Self([Rgb::BLACK; 64]);
+
+    pub fn lookup_rgb(&self, color: Color) -> Rgb {
+        self.0[color.to_usize()]
+    }
+
+    pub fn lookup_rgbt(&self, color_t: ColorT) -> Rgbt {
+        match color_t {
+            ColorT::Transparent => Rgbt::Transparent,
+            ColorT::Opaque(color) => Rgbt::Opaque(self.lookup_rgb(color)),
+        }
     }
 }

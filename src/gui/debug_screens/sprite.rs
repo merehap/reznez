@@ -4,6 +4,7 @@ use num_traits::FromPrimitive;
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::gui::debug_screens::pattern_table::{PatternTable, Tile};
+use crate::ppu::palette::system_palette::SystemPaletteSection;
 use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
 use crate::ppu::render::frame::Frame;
 use crate::ppu::sprite::sprite_attributes::{SpriteAttributes, Priority};
@@ -48,10 +49,12 @@ impl Sprite {
     // For debug screens only.
     pub fn render_normal_height(
         self,
+        system_palette_section: &SystemPaletteSection,
         pattern_table: &PatternTable,
         palette_ram: &PaletteRam,
     ) -> Tile {
         self.render_tile(
+            system_palette_section,
             SpriteHeight::Normal,
             SpriteHalf::Top,
             pattern_table,
@@ -62,19 +65,21 @@ impl Sprite {
     // For debug screens only.
     pub fn render_tall(
         self,
+        system_palette_section: &SystemPaletteSection,
         pattern_table: &PatternTable,
         palette_ram: &PaletteRam,
     ) -> (Tile, Tile) {
         use SpriteHalf::*;
         use SpriteHeight::Tall;
         (
-            self.render_tile(Tall, Top, pattern_table, palette_ram),
-            self.render_tile(Tall, Bottom, pattern_table, palette_ram),
+            self.render_tile(system_palette_section, Tall, Top, pattern_table, palette_ram),
+            self.render_tile(system_palette_section, Tall, Bottom, pattern_table, palette_ram),
         )
     }
 
     pub fn render_sliver(
         self,
+        system_palette_section: &SystemPaletteSection,
         row: PixelRow,
         sprite_height: SpriteHeight,
         pattern_table: &PatternTable,
@@ -90,6 +95,7 @@ impl Sprite {
 
         let mut sprite_sliver = [Rgbt::Transparent; 8];
         self.render_sliver_from_sprite_half(
+            system_palette_section,
             sprite_height,
             sprite_half,
             row_in_half,
@@ -114,6 +120,7 @@ impl Sprite {
 
     fn render_tile(
         self,
+        system_palette_section: &SystemPaletteSection,
         sprite_height: SpriteHeight,
         sprite_half: SpriteHalf,
         pattern_table: &PatternTable,
@@ -122,6 +129,7 @@ impl Sprite {
         let mut tile = Tile::new();
         for row in all::<RowInTile>() {
             self.render_sliver_from_sprite_half(
+                system_palette_section,
                 sprite_height,
                 sprite_half,
                 row,
@@ -136,6 +144,7 @@ impl Sprite {
 
     fn render_sliver_from_sprite_half(
         self,
+        system_palette_section: &SystemPaletteSection,
         sprite_height: SpriteHeight,
         sprite_half: SpriteHalf,
         mut row_in_half: RowInTile,
@@ -157,6 +166,7 @@ impl Sprite {
 
         let sprite_palette = palette_ram.sprite_palette(self.attributes.palette_table_index());
         pattern_table.render_pixel_sliver(
+            system_palette_section,
             tile_number,
             row_in_half,
             sprite_palette,

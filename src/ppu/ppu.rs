@@ -9,6 +9,7 @@ use crate::memory::signal_level::SignalLevel;
 use crate::ppu::cycle_action::cycle_action::CycleAction;
 use crate::ppu::cycle_action::frame_actions::{FrameActions, NTSC_FRAME_ACTIONS};
 use crate::ppu::palette::rgbt::Rgbt;
+use crate::ppu::palette::color_t::ColorT;
 use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::ppu::pixel_index::PixelIndex;
 use crate::ppu::register::ppu_registers::Toggle;
@@ -141,6 +142,8 @@ impl Ppu {
     }
 
     fn execute_cycle_action(bus: &mut Bus, mapper: &mut dyn Mapper, frame: &mut Frame, cycle_action: CycleAction) {
+        let ppumask = bus.ppu_regs.mask();
+
         use CycleAction::*;
         match cycle_action {
             SetPatternIndexAddress => {
@@ -208,8 +211,9 @@ impl Ppu {
 
                 let mut background_pixel = Rgbt::Transparent;
                 if bus.ppu_regs.background_enabled() {
-                    // TODO: Figure out where this goes. Maybe have frame call palette_table when displaying.
-                    frame.set_universal_background_rgb(bus.palette_ram().universal_background_rgb());
+                    // TODO: Figure out where this goes.
+                    let ubc = bus.palette_ram().universal_background_color();
+                    frame.set_universal_background_rgb(bus.system_palette.lookup_rgb(ubc, ppumask));
 
                     let column_in_tile = bus.ppu_regs.fine_x_scroll;
                     let palette_table_index = bus.ppu.attribute_register.palette_table_index(column_in_tile);
@@ -217,7 +221,10 @@ impl Ppu {
 
                     background_pixel = bus.ppu.pattern_register
                         .palette_index(column_in_tile)
-                        .map_or(Rgbt::Transparent, |palette_index| Rgbt::Opaque(palette[palette_index]));
+                        .map_or(Rgbt::Transparent, |palette_index| {
+                            let rgb = bus.system_palette.lookup_rgb(palette[palette_index], bus.ppu_regs.mask());
+                            Rgbt::Opaque(rgb)
+                        });
                 }
 
                 frame.set_background_pixel(pixel_column, pixel_row, background_pixel);
@@ -235,8 +242,10 @@ impl Ppu {
                 let (mut sprite_pixel, priority, is_sprite_0, ppu_peek) = bus.ppu.oam_registers.step(&bus.palette_ram, rendering_enabled);
                 if rendering_enabled {
                     if !bus.ppu_regs.sprites_enabled() {
-                        sprite_pixel = Rgbt::Transparent;
+                        sprite_pixel = ColorT::Transparent;
                     }
+
+                    let sprite_pixel = bus.system_palette.lookup_rgbt(sprite_pixel, ppumask);
 
                     let bank_pixel = if sprite_pixel.is_transparent() {
                         Rgbt::Transparent

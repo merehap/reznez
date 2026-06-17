@@ -65,6 +65,8 @@ pub struct Bus {
     // Miscellaneous
     pub name_table_mirrorings: &'static [NameTableMirroring], // TODO: Move into ChrMemory.
     pub dip_switch: u8,
+
+    pub system_palette: SystemPalette,
 }
 
 impl Bus {
@@ -96,7 +98,7 @@ impl Bus {
 
             cpu_internal_ram: CpuInternalRam::new(),
             ciram: Ciram::new(),
-            palette_ram: PaletteRam::new(system_palette),
+            palette_ram: PaletteRam::new(),
             oam: Oam::new(),
             prg_memory,
             chr_memory,
@@ -109,6 +111,8 @@ impl Bus {
 
             name_table_mirrorings,
             dip_switch,
+
+            system_palette,
         }
     }
 
