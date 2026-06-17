@@ -20,6 +20,10 @@ impl Palette {
         PaletteIndex::from_low_high(low, high)
             .map_or(Rgbt::Transparent, |index| Rgbt::Opaque(self.0[index as usize]))
     }
+
+    pub fn set_rgb(&mut self, index: usize, rgb: Rgb) {
+        self.0[index] = rgb;
+    }
 }
 
 impl Index<PaletteIndex> for Palette {

@@ -1,10 +1,10 @@
 use std::fmt;
 
 use crate::memory::ppu::ppu_address::{XScroll, YScroll};
+use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::gui::debug_screens::attribute_table::AttributeTable;
 use crate::ppu::constants::{NAME_TABLE_SIZE, NAME_TABLE_WITH_ATTRIBUTES_SIZE};
 use crate::ppu::name_table::background_tile_index::BackgroundTileIndex;
-use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::gui::debug_screens::pattern_table::PatternTable;
@@ -27,12 +27,12 @@ impl<'a> NameTable<'a> {
         }
     }
 
-    pub fn render(&self, pattern_table: &PatternTable, palette_table: &PaletteTable, frame: &mut Frame) {
+    pub fn render(&self, pattern_table: &PatternTable, palette_ram: &PaletteRam, frame: &mut Frame) {
         for pixel_row in PixelRow::iter() {
             self.render_scanline(
                 pixel_row,
                 pattern_table,
-                palette_table,
+                palette_ram,
                 XScroll::ZERO,
                 YScroll::ZERO,
                 frame,
@@ -45,7 +45,7 @@ impl<'a> NameTable<'a> {
         &self,
         pixel_row: PixelRow,
         pattern_table: &PatternTable,
-        palette_table: &PaletteTable,
+        palette_ram: &PaletteRam,
         x_scroll: XScroll,
         y_scroll: YScroll,
         frame: &mut Frame,
@@ -55,7 +55,7 @@ impl<'a> NameTable<'a> {
                 pixel_column,
                 pixel_row,
                 pattern_table,
-                palette_table,
+                palette_ram,
                 x_scroll,
                 y_scroll,
                 frame,
@@ -69,7 +69,7 @@ impl<'a> NameTable<'a> {
         pixel_column: PixelColumn,
         pixel_row: PixelRow,
         pattern_table: &PatternTable,
-        palette_table: &PaletteTable,
+        palette_ram: &PaletteRam,
         x_scroll: XScroll,
         y_scroll: YScroll,
         frame: &mut Frame,
@@ -83,7 +83,7 @@ impl<'a> NameTable<'a> {
         pattern_table.render_pixel_sliver(
             tile_number,
             row_in_tile,
-            palette_table.background_palette(palette_table_index),
+            palette_ram.background_palette(palette_table_index),
             &mut tile_sliver,
         );
         frame.set_background_pixel(

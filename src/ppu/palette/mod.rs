@@ -2,7 +2,6 @@ pub mod bank_color_assigner;
 pub mod color;
 pub mod palette;
 pub mod palette_index;
-pub mod palette_table;
 pub mod palette_table_index;
 pub mod rgb;
 pub mod rgbt;

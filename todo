@@ -57,6 +57,7 @@ Arkanoid: Extra sprite.
 UNTESTED BY EXISTING TEST ROMS
 IRQ behavior for the vast majority of IRQ mappers
 Race conditions between is_in_frame_irq_window and $4017 writes
+PPUMask emphasis (Visual-only test: needs to be very creative since no register reads back emphasis)
 
 FAILING TESTS
 SHX/SXA: https://forums.nesdev.org/viewtopic.php?p=297765

@@ -18,7 +18,6 @@ use crate::memory::ppu::ciram::Ciram;
 use crate::memory::ppu::ppu_pinout::PpuPinout;
 use crate::memory::small_page::SmallPage;
 use crate::ppu::ppu_clock::PpuClock;
-use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::ppu::Ppu;
 use crate::ppu::register::ppu_registers::{PpuRegisters, WriteToggle};
@@ -66,7 +65,6 @@ pub struct Bus {
     // Miscellaneous
     pub name_table_mirrorings: &'static [NameTableMirroring], // TODO: Move into ChrMemory.
     pub dip_switch: u8,
-    system_palette: SystemPalette,
 }
 
 impl Bus {
@@ -98,7 +96,7 @@ impl Bus {
 
             cpu_internal_ram: CpuInternalRam::new(),
             ciram: Ciram::new(),
-            palette_ram: PaletteRam::new(),
+            palette_ram: PaletteRam::new(system_palette),
             oam: Oam::new(),
             prg_memory,
             chr_memory,
@@ -111,7 +109,6 @@ impl Bus {
 
             name_table_mirrorings,
             dip_switch,
-            system_palette,
         }
     }
 
@@ -131,9 +128,8 @@ impl Bus {
     pub fn chr_ram_bank_count(&self) -> u16 { self.chr_memory.ram_bank_count() }
     pub fn name_table_mirroring(&self) -> NameTableMirroring { self.chr_memory().name_table_mirroring() }
 
-    #[inline]
-    pub fn palette_table(&self) -> PaletteTable {
-        PaletteTable::new(self.palette_ram.to_slice(), &self.system_palette, self.ppu_regs.mask())
+    pub fn palette_ram(&self) -> &PaletteRam {
+        &self.palette_ram
     }
 
     pub fn cpu_address_bus(&self, address_bus_type: AddressBusType) -> CpuAddress {

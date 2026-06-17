@@ -67,7 +67,7 @@ impl Oam {
 
     pub fn render(&self, bus: &Bus, frame: &mut Frame) {
         for pixel_row in PixelRow::iter() {
-            self.render_scanline(pixel_row, bus,frame);
+            self.render_scanline(pixel_row, bus, frame);
         }
     }
 
@@ -76,7 +76,6 @@ impl Oam {
 
         let sprite_table_side = bus.ppu_regs.sprite_table_side();
         let mut pattern_table = PatternTable::from_mem(bus, sprite_table_side);
-        let palette_table = bus.palette_table();
         let sprite_height = bus.ppu_regs.sprite_height();
 
         // FIXME: No more sprites will be found once the end of OAM is reached,
@@ -94,7 +93,7 @@ impl Oam {
                 pixel_row,
                 sprite_height,
                 &pattern_table,
-                &palette_table,
+                bus.palette_ram(),
                 is_sprite_0,
                 frame,
             );

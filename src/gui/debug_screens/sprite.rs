@@ -1,7 +1,7 @@
 use enum_iterator::all;
 use num_traits::FromPrimitive;
 
-use crate::ppu::palette::palette_table::PaletteTable;
+use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::gui::debug_screens::pattern_table::{PatternTable, Tile};
 use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
@@ -49,13 +49,13 @@ impl Sprite {
     pub fn render_normal_height(
         self,
         pattern_table: &PatternTable,
-        palette_table: &PaletteTable,
+        palette_ram: &PaletteRam,
     ) -> Tile {
         self.render_tile(
             SpriteHeight::Normal,
             SpriteHalf::Top,
             pattern_table,
-            palette_table,
+            palette_ram,
         )
     }
 
@@ -63,13 +63,13 @@ impl Sprite {
     pub fn render_tall(
         self,
         pattern_table: &PatternTable,
-        palette_table: &PaletteTable,
+        palette_ram: &PaletteRam,
     ) -> (Tile, Tile) {
         use SpriteHalf::*;
         use SpriteHeight::Tall;
         (
-            self.render_tile(Tall, Top, pattern_table, palette_table),
-            self.render_tile(Tall, Bottom, pattern_table, palette_table),
+            self.render_tile(Tall, Top, pattern_table, palette_ram),
+            self.render_tile(Tall, Bottom, pattern_table, palette_ram),
         )
     }
 
@@ -78,7 +78,7 @@ impl Sprite {
         row: PixelRow,
         sprite_height: SpriteHeight,
         pattern_table: &PatternTable,
-        palette_table: &PaletteTable,
+        palette_ram: &PaletteRam,
         is_sprite_0: bool,
         frame: &mut Frame,
     ) {
@@ -94,7 +94,7 @@ impl Sprite {
             sprite_half,
             row_in_half,
             pattern_table,
-            palette_table,
+            palette_ram,
             &mut sprite_sliver,
         );
 
@@ -117,7 +117,7 @@ impl Sprite {
         sprite_height: SpriteHeight,
         sprite_half: SpriteHalf,
         pattern_table: &PatternTable,
-        palette_table: &PaletteTable,
+        palette_ram: &PaletteRam,
     ) -> Tile {
         let mut tile = Tile::new();
         for row in all::<RowInTile>() {
@@ -126,7 +126,7 @@ impl Sprite {
                 sprite_half,
                 row,
                 pattern_table,
-                palette_table,
+                palette_ram,
                 tile.row_mut(row),
             );
         }
@@ -140,7 +140,7 @@ impl Sprite {
         sprite_half: SpriteHalf,
         mut row_in_half: RowInTile,
         pattern_table: &PatternTable,
-        palette_table: &PaletteTable,
+        palette_ram: &PaletteRam,
         sprite_sliver: &mut [Rgbt; 8],
     ) {
         #[rustfmt::skip]
@@ -155,7 +155,7 @@ impl Sprite {
             row_in_half = row_in_half.flip();
         }
 
-        let sprite_palette = palette_table.sprite_palette(self.attributes.palette_table_index());
+        let sprite_palette = palette_ram.sprite_palette(self.attributes.palette_table_index());
         pattern_table.render_pixel_sliver(
             tile_number,
             row_in_half,

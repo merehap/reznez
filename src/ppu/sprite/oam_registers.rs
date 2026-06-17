@@ -1,7 +1,7 @@
 use std::ops::{Index, IndexMut};
 
 use crate::memory::ppu::chr_memory::PpuPeek;
-use crate::ppu::palette::palette_table::PaletteTable;
+use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::sprite::sprite_attributes::{SpriteAttributes, Priority};
 
@@ -20,10 +20,10 @@ impl OamRegisters {
         self.registers[0].is_sprite_0 = present;
     }
 
-    pub fn step(&mut self, palette_table: &PaletteTable, should_shift: bool) -> (Rgbt, Priority, bool, PpuPeek) {
+    pub fn step(&mut self, palette_ram: &PaletteRam, should_shift: bool) -> (Rgbt, Priority, bool, PpuPeek) {
         let mut result = (Rgbt::Transparent, Priority::Behind, false, PpuPeek::VOID);
         for register in self.registers.iter_mut().rev() {
-            let candidate@(rgbt, _, _, _) = register.step(palette_table, should_shift);
+            let candidate@(rgbt, _, _, _) = register.step(palette_ram, should_shift);
             if let Rgbt::Opaque(_) = rgbt {
                 result = candidate;
             }
@@ -93,7 +93,7 @@ impl SpriteRegisters {
         self.x_counter = initial_value;
     }
 
-    pub fn step(&mut self, palette_table: &PaletteTable, should_shift: bool) -> (Rgbt, Priority, bool, PpuPeek) {
+    pub fn step(&mut self, palette_ram: &PaletteRam, should_shift: bool) -> (Rgbt, Priority, bool, PpuPeek) {
         if self.x_counter > 0 {
             // This sprite is still inactive.
             self.x_counter -= 1;
@@ -120,7 +120,7 @@ impl SpriteRegisters {
             }
         }
 
-        let palette = palette_table.sprite_palette(self.attributes.palette_table_index());
+        let palette = palette_ram.sprite_palette(self.attributes.palette_table_index());
         let rgbt = palette.rgbt_from_low_high(low_bit, high_bit);
         (rgbt, self.attributes.priority(), self.is_sprite_0, self.low_pattern_info)
     }

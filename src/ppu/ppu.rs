@@ -206,15 +206,14 @@ impl Ppu {
                 let clock = bus.ppu_clock();
                 let (pixel_column, pixel_row) = PixelIndex::try_from_clock(clock).unwrap().to_column_row();
 
-                let palette_table = bus.palette_table();
                 let mut background_pixel = Rgbt::Transparent;
                 if bus.ppu_regs.background_enabled() {
                     // TODO: Figure out where this goes. Maybe have frame call palette_table when displaying.
-                    frame.set_universal_background_rgb(palette_table.universal_background_rgb());
+                    frame.set_universal_background_rgb(bus.palette_ram().universal_background_rgb());
 
                     let column_in_tile = bus.ppu_regs.fine_x_scroll;
                     let palette_table_index = bus.ppu.attribute_register.palette_table_index(column_in_tile);
-                    let palette = palette_table.background_palette(palette_table_index);
+                    let palette = bus.palette_ram().background_palette(palette_table_index);
 
                     background_pixel = bus.ppu.pattern_register
                         .palette_index(column_in_tile)
@@ -233,7 +232,7 @@ impl Ppu {
 
                 // This is not delayed, unlike ppu_regs.rendering_enabled()
                 let rendering_enabled = bus.ppu_regs.background_enabled() || bus.ppu_regs.sprites_enabled();
-                let (mut sprite_pixel, priority, is_sprite_0, ppu_peek) = bus.ppu.oam_registers.step(&palette_table, rendering_enabled);
+                let (mut sprite_pixel, priority, is_sprite_0, ppu_peek) = bus.ppu.oam_registers.step(&bus.palette_ram, rendering_enabled);
                 if rendering_enabled {
                     if !bus.ppu_regs.sprites_enabled() {
                         sprite_pixel = Rgbt::Transparent;

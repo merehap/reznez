@@ -12,6 +12,20 @@ use crate::ppu::register::ppu_registers::Mask;
 use crate::ppu::render::ppm::Ppm;
 use crate::ppu::sprite::sprite_attributes::Priority;
 
+// Good enough emphasis for now.
+// Taken from https://forums.nesdev.org/viewtopic.php?p=4634
+const ALL_EMPHASIS_FACTORS: [[f32; 3]; 8] =
+[
+	[1.00, 1.00, 1.00],
+	[1.00, 0.80, 0.81],
+	[0.78, 0.94, 0.66],
+	[0.79, 0.77, 0.63],
+	[0.82, 0.83, 1.12],
+	[0.81, 0.71, 0.87],
+	[0.68, 0.79, 0.79],
+	[0.70, 0.70, 0.70],
+];
+
 #[derive(Clone)]
 pub struct Frame {
     buffer: FrameBuffer<(Rgb, bool)>,
@@ -74,6 +88,7 @@ impl Frame {
             (Opaque(rgb), Opaque(_)  , Behind ) => rgb,
         };
 
+        let rgb = rgb.emphasized(ALL_EMPHASIS_FACTORS[mask.emphasis_index()]);
         let visible = self.show_overscan || (!column.is_in_overscan_region() && !row.is_in_overscan_region());
         self.buffer[(column, row)] = (rgb, visible);
 

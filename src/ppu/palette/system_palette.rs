@@ -36,6 +36,8 @@ const ALL_EMPHASIS_FACTORS: [[f32; 3]; 8] =
 pub struct SystemPalette([[Rgb; 64]; 8]);
 
 impl SystemPalette {
+    pub const ALL_BLACK: Self = Self([[Rgb::BLACK; 64]; 8]);
+
     pub fn parse(raw: &str) -> Result<SystemPalette, String> {
         let lines: Vec<&str> = raw
             .lines()
@@ -69,6 +71,10 @@ impl SystemPalette {
 
     pub fn lookup_rgb(&self, color: Color, mask: Mask) -> Rgb {
         self.0[mask.emphasis_index()][color.to_usize()]
+    }
+
+    pub fn lookup_unemphasized_rgb(&self, color: Color) -> Rgb {
+        self.0[0][color.to_usize()]
     }
 
     fn parse_line(

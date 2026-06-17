@@ -3,10 +3,10 @@
 
 use enum_iterator::all;
 
-use crate::mapper::PatternTableSide;
 use crate::bus::Bus;
 use crate::ppu::palette::palette::Palette;
 use crate::ppu::palette::rgbt::Rgbt;
+use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::ppu::pixel_index::{ColumnInTile, RowInTile};
 use crate::ppu::tile_number::TileNumber;
 use crate::util::unit::KIBIBYTE;
