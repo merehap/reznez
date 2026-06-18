@@ -111,7 +111,6 @@ impl Ppu {
             ppu.attribute_register.push_next_palette_table_index();
         }
 
-
         let Some((next_rendering_field_to_set, cycles_remaining)) = ppu.next_rendering_field_to_set.take() else {
             return;
         };
@@ -129,14 +128,28 @@ impl Ppu {
                 let index = ppu_regs.current_address.to_palette_table_index(ppu.next_register_value.value());
                 ppu.attribute_register.set_pending_palette_table_index(index);
             }
-            RenderingRegisterField::PatternLow => {
+            RenderingRegisterField::BackgroundPatternLow => {
                 ppu.pattern_register.set_pending_low_byte(ppu.next_register_value);
             }
-            RenderingRegisterField::PatternHighAndNextTile => {
+            RenderingRegisterField::BackgroundPatternHighAndNextTile => {
                 ppu.pattern_register.set_pending_high_byte(ppu.next_register_value);
                 ppu.attribute_register.prepare_next_palette_table_index();
                 ppu.pattern_register.load_next_palette_indexes();
                 ppu_regs.current_address.increment_coarse_x_scroll();
+            }
+            RenderingRegisterField::SpritePatternLow => {
+                // TODO: Determine if this check should happen at the same time as rendering_enabled()
+                if ppu.sprite_visible {
+                    ppu.oam_registers[ppu.oam_register_index].set_pattern_low(ppu.next_register_value);
+                }
+            }
+            RenderingRegisterField::SpritePatternHighAndNextSprite => {
+                // TODO: Determine if this check should happen at the same time as rendering_enabled()
+                if ppu.sprite_visible {
+                    ppu.oam_registers[ppu.oam_register_index].set_pattern_high(ppu.next_register_value);
+                }
+
+                ppu.oam_register_index += 1;
             }
         }
     }
@@ -165,7 +178,7 @@ impl Ppu {
                 );
                 bus.set_ppu_address_bus(mapper, addr);
                 if bus.ppu_regs.rendering_enabled() {
-                    bus.ppu.next_rendering_field_to_set = Some((RenderingRegisterField::PatternLow, 2));
+                    bus.ppu.next_rendering_field_to_set = Some((RenderingRegisterField::BackgroundPatternLow, 2));
                 }
             }
             SetPatternHighAddress => {
@@ -177,7 +190,7 @@ impl Ppu {
                 );
                 bus.set_ppu_address_bus(mapper, addr);
                 if bus.ppu_regs.rendering_enabled() {
-                    bus.ppu.next_rendering_field_to_set = Some((RenderingRegisterField::PatternHighAndNextTile, 2));
+                    bus.ppu.next_rendering_field_to_set = Some((RenderingRegisterField::BackgroundPatternHighAndNextTile, 2));
                 }
             }
 
@@ -328,27 +341,20 @@ impl Ppu {
                 let addr;
                 (addr, bus.ppu.sprite_visible) = bus.ppu.current_sprite_pattern_address(bus, select_high);
                 bus.set_ppu_address_bus(mapper, addr);
+
+                if bus.ppu_regs.rendering_enabled() {
+                    bus.ppu.next_rendering_field_to_set = Some((RenderingRegisterField::SpritePatternLow, 2));
+                }
             }
             SetSpritePatternHighAddress => {
                 let select_high = true;
                 let addr;
                 (addr, bus.ppu.sprite_visible) = bus.ppu.current_sprite_pattern_address(bus, select_high);
                 bus.set_ppu_address_bus(mapper, addr);
-            }
-            GetSpritePatternLowByte => {
-                let pattern_low = bus.ppu_read(mapper);
-                if bus.ppu_regs.rendering_enabled() && bus.ppu.sprite_visible {
-                    bus.ppu.oam_registers[bus.ppu.oam_register_index].set_pattern_low(pattern_low);
+
+                if bus.ppu_regs.rendering_enabled() {
+                    bus.ppu.next_rendering_field_to_set = Some((RenderingRegisterField::SpritePatternHighAndNextSprite, 2));
                 }
-            }
-            GetSpritePatternHighByte => {
-                let pattern_high = bus.ppu_read(mapper);
-                if bus.ppu_regs.rendering_enabled() && bus.ppu.sprite_visible {
-                    bus.ppu.oam_registers[bus.ppu.oam_register_index].set_pattern_high(pattern_high);
-                }
-            }
-            IncrementOamRegisterIndex => {
-                bus.ppu.oam_register_index += 1;
             }
 
             // TODO: Remove this section in favor of using EdgeDetectors.
@@ -451,6 +457,8 @@ impl Ppu {
 enum RenderingRegisterField {
     PatternIndex,
     PaletteIndex,
-    PatternLow,
-    PatternHighAndNextTile,
+    BackgroundPatternLow,
+    BackgroundPatternHighAndNextTile,
+    SpritePatternLow,
+    SpritePatternHighAndNextSprite,
 }

@@ -7,9 +7,6 @@ pub enum CycleAction {
     SetPatternHighAddress,
     SetSpritePatternLowAddress,
     SetSpritePatternHighAddress,
-    GetSpritePatternLowByte,
-    GetSpritePatternHighByte,
-    IncrementOamRegisterIndex,
 
     GotoNextPixelRow,
     ResetTileColumn,
