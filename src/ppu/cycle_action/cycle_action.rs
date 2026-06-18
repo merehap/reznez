@@ -1,13 +1,10 @@
 #[derive(Clone, Copy, Debug)]
 pub enum CycleAction {
+    Read,
     SetPatternIndexAddress,
-    GetPatternIndex,
     SetPaletteIndexAddress,
-    GetPaletteIndex,
     SetPatternLowAddress,
     SetPatternHighAddress,
-    GetPatternLowByte,
-    GetPatternHighByte,
     SetSpritePatternLowAddress,
     SetSpritePatternHighAddress,
     GetSpritePatternLowByte,

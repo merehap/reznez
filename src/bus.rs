@@ -472,7 +472,7 @@ impl Bus {
         }
     }
 
-    pub fn ppu_internal_read(&mut self, mapper: &mut dyn Mapper) -> PpuPeek {
+    pub fn ppu_read(&mut self, mapper: &mut dyn Mapper) -> PpuPeek {
         let result = mapper.ppu_peek(self, self.ppu_pinout.address());
         mapper.on_ppu_read(self, self.ppu_pinout.address(), result.value());
         result

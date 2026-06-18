@@ -24,25 +24,25 @@ pub static VISIBLE_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(|
     for tile in 0..31 {
         let cycle = 8 * tile + 1;
         line.add(cycle + 0, vec![SetPatternIndexAddress     ,                     ReadOamByte          , SetPixel, PrepareForNextPixel]);
-        line.add(cycle + 1, vec![GetPatternIndex            ,                     WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
+        line.add(cycle + 1, vec![Read                       ,                     WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
         line.add(cycle + 2, vec![SetPaletteIndexAddress     ,                     ReadOamByte          , SetPixel, PrepareForNextPixel]);
-        line.add(cycle + 3, vec![GetPaletteIndex            ,                     WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
+        line.add(cycle + 3, vec![Read                       ,                     WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
         line.add(cycle + 4, vec![SetPatternLowAddress       ,                     ReadOamByte          , SetPixel, PrepareForNextPixel]);
-        line.add(cycle + 5, vec![GetPatternLowByte          ,                     WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
+        line.add(cycle + 5, vec![Read                       ,                     WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
         line.add(cycle + 6, vec![SetPatternHighAddress      ,                     ReadOamByte          , SetPixel, PrepareForNextPixel]);
-        line.add(cycle + 7, vec![GetPatternHighByte         ,                     WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
+        line.add(cycle + 7, vec![Read                       ,                     WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
     }
 
     // Fetch a final unused background tile and get ready for the next ROW of tiles.
     // Complete the sprite evaluation.
     line.add(          249, vec![SetPatternIndexAddress     ,                     ReadOamByte          , SetPixel, PrepareForNextPixel]);
-    line.add(          250, vec![GetPatternIndex            ,                     WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
+    line.add(          250, vec![Read                       ,                     WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
     line.add(          251, vec![SetPaletteIndexAddress     ,                     ReadOamByte          , SetPixel, PrepareForNextPixel]);
-    line.add(          252, vec![GetPaletteIndex            ,                     WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
+    line.add(          252, vec![Read                       ,                     WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
     line.add(          253, vec![SetPatternLowAddress       ,                     ReadOamByte          , SetPixel, PrepareForNextPixel]);
-    line.add(          254, vec![GetPatternLowByte          ,                     WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
+    line.add(          254, vec![Read                       ,                     WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
     line.add(          255, vec![SetPatternHighAddress      ,                     ReadOamByte          , SetPixel, PrepareForNextPixel]);
-    line.add(          256, vec![GetPatternHighByte         , GotoNextPixelRow  , WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
+    line.add(          256, vec![Read                       , GotoNextPixelRow  , WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
     line.add(          257, vec![                             ResetTileColumn                                                         ]);
 
     // Transfer secondary OAM to OAM registers and fetch sprite pattern data.
@@ -50,9 +50,9 @@ pub static VISIBLE_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(|
     for sprite in 0..8 {
         let cycle = 8 * sprite + 257;
         line.add(cycle + 0, vec![SetPatternIndexAddress     ,                     ReadSpriteY           , ResetOamAddress             ]);
-        line.add(cycle + 1, vec![GetPatternIndex            ,                     ReadSpritePatternIndex, ResetOamAddress             ]);
+        line.add(cycle + 1, vec![Read                       ,                     ReadSpritePatternIndex, ResetOamAddress             ]);
         line.add(cycle + 2, vec![SetPaletteIndexAddress     ,                     ReadSpriteAttributes  , ResetOamAddress             ]);
-        line.add(cycle + 3, vec![GetPaletteIndex            ,                     ReadSpriteX           , ResetOamAddress             ]);
+        line.add(cycle + 3, vec![Read                       ,                     ReadSpriteX           , ResetOamAddress             ]);
         line.add(cycle + 4, vec![SetSpritePatternLowAddress ,                     DummyReadSpriteX      , ResetOamAddress             ]);
         line.add(cycle + 5, vec![GetSpritePatternLowByte    ,                     DummyReadSpriteX      , ResetOamAddress             ]);
         line.add(cycle + 6, vec![SetSpritePatternHighAddress,                     DummyReadSpriteX      , ResetOamAddress             ]);
@@ -61,28 +61,28 @@ pub static VISIBLE_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(|
 
     // Fetch the first background tile for the next scanline.
     line.add(          321, vec![SetPatternIndexAddress     ,                     ReadSpriteY                    , PrepareForNextPixel]);
-    line.add(          322, vec![GetPatternIndex            ,                     ReadSpriteY                    , PrepareForNextPixel]);
+    line.add(          322, vec![Read                       ,                     ReadSpriteY                    , PrepareForNextPixel]);
     line.add(          323, vec![SetPaletteIndexAddress     ,                     ReadSpriteY                    , PrepareForNextPixel]);
-    line.add(          324, vec![GetPaletteIndex            ,                     ReadSpriteY                    , PrepareForNextPixel]);
+    line.add(          324, vec![Read                       ,                     ReadSpriteY                    , PrepareForNextPixel]);
     line.add(          325, vec![SetPatternLowAddress       ,                     ReadSpriteY                    , PrepareForNextPixel]);
-    line.add(          326, vec![GetPatternLowByte          ,                     ReadSpriteY                    , PrepareForNextPixel]);
+    line.add(          326, vec![Read                       ,                     ReadSpriteY                    , PrepareForNextPixel]);
     line.add(          327, vec![SetPatternHighAddress      ,                     ReadSpriteY                    , PrepareForNextPixel]);
-    line.add(          328, vec![GetPatternHighByte         ,                     ReadSpriteY                    , PrepareForNextPixel]);
+    line.add(          328, vec![Read                       ,                     ReadSpriteY                    , PrepareForNextPixel]);
     line.add(          329, vec![SetPatternIndexAddress     ,                     ReadSpriteY                    , PrepareForNextPixel]);
     // Fetch the second background tile for the next scanline.
-    line.add(          330, vec![GetPatternIndex            ,                     ReadSpriteY                    , PrepareForNextPixel]);
+    line.add(          330, vec![Read                       ,                     ReadSpriteY                    , PrepareForNextPixel]);
     line.add(          331, vec![SetPaletteIndexAddress     ,                     ReadSpriteY                    , PrepareForNextPixel]);
-    line.add(          332, vec![GetPaletteIndex            ,                     ReadSpriteY                    , PrepareForNextPixel]);
+    line.add(          332, vec![Read                       ,                     ReadSpriteY                    , PrepareForNextPixel]);
     line.add(          333, vec![SetPatternLowAddress       ,                     ReadSpriteY                    , PrepareForNextPixel]);
-    line.add(          334, vec![GetPatternLowByte          ,                     ReadSpriteY                    , PrepareForNextPixel]);
+    line.add(          334, vec![Read                       ,                     ReadSpriteY                    , PrepareForNextPixel]);
     line.add(          335, vec![SetPatternHighAddress      ,                     ReadSpriteY                    , PrepareForNextPixel]);
-    line.add(          336, vec![GetPatternHighByte         ,                     ReadSpriteY                    , PrepareForNextPixel]);
+    line.add(          336, vec![Read                       ,                     ReadSpriteY                    , PrepareForNextPixel]);
     line.add(          337, vec![SetPatternIndexAddress     ,                     ReadSpriteY                                         ]);
 
     // Unused name table fetches.
-    line.add(          338, vec![GetPatternIndex            ,                     ReadSpriteY                                         ]);
+    line.add(          338, vec![Read                       ,                     ReadSpriteY                                         ]);
     line.add(          339, vec![SetPatternIndexAddress     ,                     ReadSpriteY, MaybeClearSpriteX                      ]);
-    line.add(          340, vec![GetPatternIndex            ,                     ReadSpriteY                                         ]);
+    line.add(          340, vec![Read                       ,                     ReadSpriteY                                         ]);
 
     line
 });
@@ -125,24 +125,24 @@ pub static PRE_RENDER_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::ne
     for tile in 0..31 {
         let cycle = 8 * tile + 1;
         scanline.add(cycle + 0, vec![SetPatternIndexAddress                                              ]);
-        scanline.add(cycle + 1, vec![GetPatternIndex                                                     ]);
+        scanline.add(cycle + 1, vec![Read                                                                ]);
         scanline.add(cycle + 2, vec![SetPaletteIndexAddress                                              ]);
-        scanline.add(cycle + 3, vec![GetPaletteIndex                                                     ]);
+        scanline.add(cycle + 3, vec![Read                                                                ]);
         scanline.add(cycle + 4, vec![SetPatternLowAddress                                                ]);
-        scanline.add(cycle + 5, vec![GetPatternLowByte                                                   ]);
+        scanline.add(cycle + 5, vec![Read                                                                ]);
         scanline.add(cycle + 6, vec![SetPatternHighAddress                                               ]);
-        scanline.add(cycle + 7, vec![GetPatternHighByte       ,                                          ]);
+        scanline.add(cycle + 7, vec![Read                     ,                                          ]);
     }
 
     // Fetch a final unused background tile and get ready for the next ROW of tiles.
     scanline.add(          249, vec![SetPatternIndexAddress                                              ]);
-    scanline.add(          250, vec![GetPatternIndex                                                     ]);
+    scanline.add(          250, vec![Read                                                                ]);
     scanline.add(          251, vec![SetPaletteIndexAddress                                              ]);
-    scanline.add(          252, vec![GetPaletteIndex                                                     ]);
+    scanline.add(          252, vec![Read                                                                ]);
     scanline.add(          253, vec![SetPatternLowAddress                                                ]);
-    scanline.add(          254, vec![GetPatternLowByte                                                   ]);
+    scanline.add(          254, vec![Read                                                                ]);
     scanline.add(          255, vec![SetPatternHighAddress                                               ]);
-    scanline.add(          256, vec![GetPatternHighByte         , GotoNextPixelRow                       ]);
+    scanline.add(          256, vec![Read                       , GotoNextPixelRow                       ]);
     scanline.add(          257, vec![                             ResetTileColumn                        ]);
 
     // Dummy sprite pattern fetches.
@@ -150,9 +150,9 @@ pub static PRE_RENDER_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::ne
     for sprite in 0..8 {
         let cycle = 8 * sprite + 257;
         scanline.add(cycle + 0, vec![SetPatternIndexAddress     , ReadSpriteY           , ResetOamAddress]);
-        scanline.add(cycle + 1, vec![GetPatternIndex            , ReadSpritePatternIndex, ResetOamAddress]);
+        scanline.add(cycle + 1, vec![Read                       , ReadSpritePatternIndex, ResetOamAddress]);
         scanline.add(cycle + 2, vec![SetPaletteIndexAddress     , ReadSpriteAttributes  , ResetOamAddress]);
-        scanline.add(cycle + 3, vec![GetPaletteIndex            , ReadSpriteX           , ResetOamAddress]);
+        scanline.add(cycle + 3, vec![Read                       , ReadSpriteX           , ResetOamAddress]);
         scanline.add(cycle + 4, vec![SetSpritePatternLowAddress , DummyReadSpriteX      , ResetOamAddress]);
         scanline.add(cycle + 5, vec![GetSpritePatternLowByte    , DummyReadSpriteX      , ResetOamAddress]);
         scanline.add(cycle + 6, vec![SetSpritePatternHighAddress, DummyReadSpriteX      , ResetOamAddress]);
@@ -168,28 +168,28 @@ pub static PRE_RENDER_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::ne
 
     // Fetch the first background tile for the next scanline.
     scanline.add(          321, vec![SetPatternIndexAddress   ,                       PrepareForNextPixel]);
-    scanline.add(          322, vec![GetPatternIndex          ,                       PrepareForNextPixel]);
+    scanline.add(          322, vec![Read                     ,                       PrepareForNextPixel]);
     scanline.add(          323, vec![SetPaletteIndexAddress   ,                       PrepareForNextPixel]);
-    scanline.add(          324, vec![GetPaletteIndex          ,                       PrepareForNextPixel]);
+    scanline.add(          324, vec![Read                     ,                       PrepareForNextPixel]);
     scanline.add(          325, vec![SetPatternLowAddress     ,                       PrepareForNextPixel]);
-    scanline.add(          326, vec![GetPatternLowByte        ,                       PrepareForNextPixel]);
+    scanline.add(          326, vec![Read                     ,                       PrepareForNextPixel]);
     scanline.add(          327, vec![SetPatternHighAddress    ,                       PrepareForNextPixel]);
-    scanline.add(          328, vec![GetPatternHighByte       ,                       PrepareForNextPixel]);
+    scanline.add(          328, vec![Read                     ,                       PrepareForNextPixel]);
     // Fetch the second background tile for the next scanline.
     scanline.add(          329, vec![SetPatternIndexAddress   ,                       PrepareForNextPixel]);
-    scanline.add(          330, vec![GetPatternIndex          ,                       PrepareForNextPixel]);
+    scanline.add(          330, vec![Read                     ,                       PrepareForNextPixel]);
     scanline.add(          331, vec![SetPaletteIndexAddress   ,                       PrepareForNextPixel]);
-    scanline.add(          332, vec![GetPaletteIndex          ,                       PrepareForNextPixel]);
+    scanline.add(          332, vec![Read                     ,                       PrepareForNextPixel]);
     scanline.add(          333, vec![SetPatternLowAddress     ,                       PrepareForNextPixel]);
-    scanline.add(          334, vec![GetPatternLowByte        ,                       PrepareForNextPixel]);
+    scanline.add(          334, vec![Read                     ,                       PrepareForNextPixel]);
     scanline.add(          335, vec![SetPatternHighAddress    ,                       PrepareForNextPixel]);
-    scanline.add(          336, vec![GetPatternHighByte       ,                       PrepareForNextPixel]);
+    scanline.add(          336, vec![Read                     ,                       PrepareForNextPixel]);
 
     // Dummy name table fetches.
     scanline.add(          337, vec![SetPatternIndexAddress                                              ]);
-    scanline.add(          338, vec![GetPatternIndex                                                     ]);
+    scanline.add(          338, vec![Read                                                                ]);
     scanline.add(          339, vec![SetPatternIndexAddress                                              ]);
-    scanline.add(          340, vec![GetPatternIndex                                                     ]);
+    scanline.add(          340, vec![Read                                                                ]);
 
     scanline
 });

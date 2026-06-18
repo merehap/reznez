@@ -95,20 +95,6 @@ impl Frame {
         self.universal_background_rgb = rgb;
     }
 
-    pub fn clear(&mut self) {
-        // FIXME: Don't allocate new FrameBuffers to do this.
-        self.buffer = FrameBuffer::filled((Rgb::BLACK, true));
-        self.background_buffer = FrameBuffer::filled(Rgbt::Transparent);
-        self.sprite_buffer = FrameBuffer::filled((Rgbt::Transparent, Priority::Behind, false));
-        self.universal_background_rgb = Rgb::BLACK;
-    }
-
-    pub fn clear_sprite_line(&mut self, row: PixelRow) {
-        for column in PixelColumn::iter() {
-            self.sprite_buffer[(column, row)] = (Rgbt::Transparent, Priority::Behind, false);
-        }
-    }
-
     #[inline]
     pub fn set_background_pixel(
         &mut self,
@@ -164,6 +150,24 @@ impl Frame {
         let mut data = vec![0; 3 * PixelIndex::PIXEL_COUNT];
         self.write_all_pixel_data(&mut data);
         Ppm::new(data)
+    }
+}
+
+// Debug window methods.
+impl Frame {
+    // Used for debug windows only
+    pub fn clear(&mut self) {
+        // FIXME: Don't allocate new FrameBuffers to do this.
+        self.buffer = FrameBuffer::filled((Rgb::BLACK, true));
+        self.background_buffer = FrameBuffer::filled(Rgbt::Transparent);
+        self.sprite_buffer = FrameBuffer::filled((Rgbt::Transparent, Priority::Behind, false));
+        self.universal_background_rgb = Rgb::BLACK;
+    }
+
+    pub fn clear_sprite_line(&mut self, row: PixelRow) {
+        for column in PixelColumn::iter() {
+            self.sprite_buffer[(column, row)] = (Rgbt::Transparent, Priority::Behind, false);
+        }
     }
 }
 

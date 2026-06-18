@@ -181,17 +181,8 @@ impl Ppu {
                 }
             }
 
-            GetPatternIndex => {
-                bus.ppu.next_register_value = bus.ppu_internal_read(mapper);
-            }
-            GetPatternLowByte => {
-                bus.ppu.next_register_value = bus.ppu_internal_read(mapper);
-            }
-            GetPatternHighByte => {
-                bus.ppu.next_register_value = bus.ppu_internal_read(mapper);
-            }
-            GetPaletteIndex => {
-                bus.ppu.next_register_value = bus.ppu_internal_read(mapper);
+            Read => {
+                bus.ppu.next_register_value = bus.ppu_read(mapper);
             }
             PrepareForNextPixel => {
                 bus.ppu.pending_register_shift = true;
@@ -345,13 +336,13 @@ impl Ppu {
                 bus.set_ppu_address_bus(mapper, addr);
             }
             GetSpritePatternLowByte => {
-                let pattern_low = bus.ppu_internal_read(mapper);
+                let pattern_low = bus.ppu_read(mapper);
                 if bus.ppu_regs.rendering_enabled() && bus.ppu.sprite_visible {
                     bus.ppu.oam_registers[bus.ppu.oam_register_index].set_pattern_low(pattern_low);
                 }
             }
             GetSpritePatternHighByte => {
-                let pattern_high = bus.ppu_internal_read(mapper);
+                let pattern_high = bus.ppu_read(mapper);
                 if bus.ppu_regs.rendering_enabled() && bus.ppu.sprite_visible {
                     bus.ppu.oam_registers[bus.ppu.oam_register_index].set_pattern_high(pattern_high);
                 }
