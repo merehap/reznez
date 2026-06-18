@@ -10,6 +10,8 @@ pub struct Color {
 }
 
 impl Color {
+    pub const BLACK: Self = Self { hue: Hue::Black, brightness: Brightness::Low };
+
     pub const fn new(hue: Hue, brightness: Brightness) -> Self {
         Self { hue, brightness }
     }

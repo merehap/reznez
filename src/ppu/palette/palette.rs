@@ -8,6 +8,8 @@ use crate::ppu::palette::color_t::ColorT;
 pub struct Palette([Color; 3]);
 
 impl Palette {
+    pub const ALL_BLACK: Self = Self([Color::BLACK; 3]);
+
     pub fn new(raw: [Color; 3]) -> Palette {
         Palette(raw)
     }

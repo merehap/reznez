@@ -23,23 +23,18 @@ pub struct PaletteRam {
 
 impl PaletteRam {
     pub fn new() -> Self {
-        let ram = INITIAL_PALETTE_DATA.map(MaskedByte::new);
+        let mut palette_ram = PaletteRam {
+            ram: [MaskedByte::new(0); PALETTE_RAM_SIZE],
+            universal_background_color: Color::BLACK,
+            background_palettes: [Palette::ALL_BLACK; 4],
+            sprite_palettes: [Palette::ALL_BLACK; 4],
+        };
 
-        let universal_background_color = ram[0x00].peek().into();
-        let background_palettes = [
-            Palette::new([ram[0x01].peek().into(), ram[0x02].peek().into(), ram[0x03].peek().into()]),
-            Palette::new([ram[0x05].peek().into(), ram[0x06].peek().into(), ram[0x07].peek().into()]),
-            Palette::new([ram[0x09].peek().into(), ram[0x0A].peek().into(), ram[0x0B].peek().into()]),
-            Palette::new([ram[0x0D].peek().into(), ram[0x0E].peek().into(), ram[0x0F].peek().into()]),
-        ];
-        let sprite_palettes = [
-            Palette::new([ram[0x11].peek().into(), ram[0x12].peek().into(), ram[0x13].peek().into()]),
-            Palette::new([ram[0x15].peek().into(), ram[0x16].peek().into(), ram[0x17].peek().into()]),
-            Palette::new([ram[0x19].peek().into(), ram[0x1A].peek().into(), ram[0x1B].peek().into()]),
-            Palette::new([ram[0x1D].peek().into(), ram[0x1E].peek().into(), ram[0x1F].peek().into()]),
-        ];
+        for (i, &data) in INITIAL_PALETTE_DATA.iter().enumerate() {
+            palette_ram.write(i as u32, data);
+        }
 
-        Self { ram, universal_background_color, background_palettes, sprite_palettes }
+        palette_ram
     }
 
     pub fn peek(&self, regs: &PpuRegisters, index: u32) -> PpuPeek {
