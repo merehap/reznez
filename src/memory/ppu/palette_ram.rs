@@ -51,7 +51,7 @@ impl PaletteRam {
         self.ram[index].write(value);
 
         match index {
-            0x00 => self.universal_background_color = self.ram[index].peek().into(),
+            0x00 | 0x10 => self.universal_background_color = self.ram[index].peek().into(),
             0x01..=0x03 => self.background_palettes[0].set_color(index - 0x01, self.ram[index].peek().into()),
             0x05..=0x07 => self.background_palettes[1].set_color(index - 0x05, self.ram[index].peek().into()),
             0x09..=0x0B => self.background_palettes[2].set_color(index - 0x09, self.ram[index].peek().into()),
@@ -60,8 +60,7 @@ impl PaletteRam {
             0x15..=0x17 => self.sprite_palettes[1].set_color(index - 0x15, self.ram[index].peek().into()),
             0x19..=0x1B => self.sprite_palettes[2].set_color(index - 0x19, self.ram[index].peek().into()),
             0x1D..=0x1F => self.sprite_palettes[3].set_color(index - 0x1D, self.ram[index].peek().into()),
-            // TODO: Verify if any of these do anything. 0x10 may be a mirror of 0x00.
-            0x04 | 0x08 | 0x0C | 0x10 | 0x14 | 0x18 | 0x1C => {}
+            0x04 | 0x08 | 0x0C | 0x14 | 0x18 | 0x1C => {}
             0x20.. => unreachable!(),
         }
     }
