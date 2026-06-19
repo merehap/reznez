@@ -3,6 +3,7 @@ use std::marker::ConstParamTy;
 
 use num_traits::FromPrimitive;
 use splitbits::{splitbits_named, splitbits_named_into_ux, splitbits_named_ux, combinebits, replacebits};
+use ux::u5;
 
 use crate::mapper::KIBIBYTE_U16;
 use crate::ppu::name_table::background_tile_index::{TileColumn, TileRow};
@@ -12,6 +13,8 @@ use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
 use crate::ppu::register::ppu_registers::AddressIncrement;
 use crate::ppu::tile_number::TileNumber;
+
+const PALETTE_TABLE_START: u16 = 0x3F00;
 
 /*
  * 0 123 45 6789A BCDEF
@@ -268,27 +271,55 @@ impl PpuAddress {
         (name_table_quadrant, index)
     }
 
-    pub fn to_palette_ram_index(self) -> u32 {
-        const PALETTE_TABLE_START: u32 = 0x3F00;
-        const HIGH_ADDRESS_START: u32 = 0x4000;
-
-        let mut address = self.to_u32();
-        assert!(address >= PALETTE_TABLE_START);
-        assert!(address < HIGH_ADDRESS_START);
-
-        // Mirror address down.
-        address %= 0x20;
-        if matches!(address, 0x10 | 0x14 | 0x18 | 0x1C) {
-            address -= 0x10;
+    pub fn to_section(self) -> PpuAddressSection {
+        match self.to_u16() {
+            0x0000..=0x3EFF => PpuAddressSection::Chr(ChrIndex::new(self.to_u16())),
+            0x3F00..=0x3FFF => PpuAddressSection::Palette(PaletteRamIndex::new(u5::new((self.to_u16() % 0x20) as u8))),
+            0x4000..=0xFFFF => unreachable!(),
         }
-
-        address
     }
 }
 
 impl fmt::Display for PpuAddress {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "${:04X}", self.to_u16())
+    }
+}
+
+pub enum PpuAddressSection {
+    Chr(ChrIndex),
+    Palette(PaletteRamIndex)
+}
+
+pub struct ChrIndex(u16);
+
+impl ChrIndex {
+    fn new(index: u16) -> Self {
+        assert!(index < PALETTE_TABLE_START);
+        Self(index)
+    }
+
+    // TODO: Remove this temporary hack.
+    pub fn to_ppu_address(self) -> PpuAddress {
+        PpuAddress::from_u16(self.0)
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct PaletteRamIndex(u8);
+
+impl PaletteRamIndex {
+    pub fn new(index: u5) -> Self {
+        let mut index: u8 = index.into();
+        if matches!(index, 0x10 | 0x14 | 0x18 | 0x1C) {
+            index -= 0x10;
+        }
+
+        Self(index)
+    }
+
+    pub fn to_usize(self) -> usize {
+        self.0.into()
     }
 }
 

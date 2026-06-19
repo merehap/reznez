@@ -15,6 +15,7 @@ use crate::mapper::{ChrBankRegisterId, ChrMemory, CiramSide, KIBIBYTE, Mapper, M
 use crate::memory::ppu::chr_memory::PpuPeek;
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ciram::Ciram;
+use crate::memory::ppu::ppu_address::PpuAddressSection;
 use crate::memory::ppu::ppu_pinout::PpuPinout;
 use crate::memory::small_page::SmallPage;
 use crate::ppu::ppu_clock::PpuClock;
@@ -465,10 +466,9 @@ impl Bus {
     }
 
     pub fn ppu_peek(&self, address: PpuAddress) -> PpuPeek {
-        match address.to_u16() {
-            0x0000..=0x3EFF => self.peek_chr(address),
-            0x3F00..=0x3FFF => self.palette_ram.peek(&self.ppu_regs, address.to_palette_ram_index()),
-            0x4000..=0xFFFF => unreachable!(),
+        match address.to_section() {
+            PpuAddressSection::Chr(chr_index) => self.peek_chr(chr_index.to_ppu_address()),
+            PpuAddressSection::Palette(paletted_ram_index) => self.palette_ram.peek(&self.ppu_regs, paletted_ram_index),
         }
     }
 
@@ -480,10 +480,9 @@ impl Bus {
 
     #[inline]
     pub fn ppu_write(&mut self, addr: PpuAddress, value: u8) {
-        match addr.to_u16() {
-            0x0000..=0x3EFF => self.chr_memory.write(&mut self.ciram, &mut self.mapper_custom_pages, addr, value),
-            0x3F00..=0x3FFF => self.palette_ram.write(addr.to_palette_ram_index(), value),
-            0x4000..=0xFFFF => unreachable!(),
+        match addr.to_section() {
+            PpuAddressSection::Chr(_) => self.chr_memory.write(&mut self.ciram, &mut self.mapper_custom_pages, addr, value),
+            PpuAddressSection::Palette(palette_ram_index) => self.palette_ram.write(palette_ram_index, value),
         }
     }
 

@@ -3,6 +3,7 @@ use crate::mapper::*;
 use crate::bus::Bus;
 use crate::memory::bank::bank::{PrgSource, PrgSourceRegisterId};
 use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
+use crate::memory::ppu::ppu_address::PpuAddressSection;
 use crate::memory::small_page::SmallPage;
 use crate::mappers::mmc5::frame_state::FrameState;
 use crate::ppu::constants::NAME_TABLE_SIZE;
@@ -147,22 +148,27 @@ impl Mapper for Mapper005 {
             && self.extended_ram_mode == ExtendedRamMode::ExtendedAttributes
             && !self.frame_state.sprite_fetching();
 
-        match address.to_u16() {
-            0x0000..=0x1FFF if should_substitute => {
-                let lower_chr_bank_bits = Self::peek_ext_rom(bus, self.name_table_index) & 0b0011_1111;
-                let pattern_bank = (self.upper_chr_bank_bits << 6) | lower_chr_bank_bits;
-                let raw_chr_index = 4 * KIBIBYTE * u32::from(pattern_bank) * KIBIBYTE + u32::from(address.to_u16() % 0x1000);
-                bus.chr_memory().peek_raw(raw_chr_index)
+        match address.to_section() {
+            PpuAddressSection::Chr(_) => {
+                if matches!(address.to_u16(), 0x0000..=0x1FFF) && should_substitute {
+                    let lower_chr_bank_bits = Self::peek_ext_rom(bus, self.name_table_index) & 0b0011_1111;
+                    let pattern_bank = (self.upper_chr_bank_bits << 6) | lower_chr_bank_bits;
+                    let raw_chr_index = 4 * KIBIBYTE * u32::from(pattern_bank) * KIBIBYTE + u32::from(address.to_u16() % 0x1000);
+                    bus.chr_memory().peek_raw(raw_chr_index)
+                } else {
+                    bus.chr_memory().peek(&bus.ciram, &bus.mapper_custom_pages, address)
+                }
             }
-            0x0000..=0x3EFF => bus.chr_memory().peek(&bus.ciram, &bus.mapper_custom_pages, address),
-            0x3F00..=0x3FFF if should_substitute => {
-                let palette = Self::peek_ext_rom(bus, self.name_table_index) >> 6;
-                // The same palette is used for all 4 corners.
-                let palette_byte = palette << 6 | palette << 4 | palette << 2 | palette;
-                PpuPeek::new(palette_byte, EXT_RAM_PEEK_SOURCE)
+            PpuAddressSection::Palette(palette_ram_index) => {
+                if should_substitute {
+                    let palette = Self::peek_ext_rom(bus, self.name_table_index) >> 6;
+                    // The same palette is used for all 4 corners.
+                    let palette_byte = palette << 6 | palette << 4 | palette << 2 | palette;
+                    PpuPeek::new(palette_byte, EXT_RAM_PEEK_SOURCE)
+                } else {
+                    bus.palette_ram.peek(&bus.ppu_regs, palette_ram_index)
+                }
             }
-            0x3F00..=0x3FFF => bus.palette_ram.peek(&bus.ppu_regs, address.to_palette_ram_index()),
-            0x4000..=0xFFFF => unreachable!(),
         }
     }
 

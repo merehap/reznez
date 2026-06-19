@@ -1,4 +1,7 @@
+use ux::u5;
+
 use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
+use crate::memory::ppu::ppu_address::PaletteRamIndex;
 use crate::memory::primitives::masked_byte::MaskedByte;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::register::ppu_registers::PpuRegisters;
@@ -31,14 +34,15 @@ impl PaletteRam {
         };
 
         for (i, &data) in INITIAL_PALETTE_DATA.iter().enumerate() {
-            palette_ram.write(i as u32, data);
+            let i = PaletteRamIndex::new(u5::new(i as u8));
+            palette_ram.write(i, data);
         }
 
         palette_ram
     }
 
-    pub fn peek(&self, regs: &PpuRegisters, index: u32) -> PpuPeek {
-        let mut value = self.ram[index as usize].peek();
+    pub fn peek(&self, regs: &PpuRegisters, index: PaletteRamIndex) -> PpuPeek {
+        let mut value = self.ram[index.to_usize()].peek();
         if regs.mask().greyscale_enabled() {
             value &= 0b1111_0000;
         }
@@ -46,8 +50,8 @@ impl PaletteRam {
         PpuPeek::new(value, PeekSource::PaletteTable)
     }
 
-    pub fn write(&mut self, index: u32, value: u8) {
-        let index = index as usize;
+    pub fn write(&mut self, index: PaletteRamIndex, value: u8) {
+        let index = index.to_usize();
         self.ram[index].write(value);
         let color = self.ram[index].peek().into();
 
@@ -97,8 +101,9 @@ mod tests {
     fn blank_first_bits() {
         let ppu_regs = PpuRegisters::new();
         let mut palette_ram = PaletteRam::new();
-        assert_eq!(palette_ram.peek(&ppu_regs, 12).value(), 0b0000_0000);
-        palette_ram.write(12, 0b1110_1010);
-        assert_eq!(palette_ram.peek(&ppu_regs, 12).value(), 0b0010_1010);
+        let index = PaletteRamIndex::new(u5::new(12));
+        assert_eq!(palette_ram.peek(&ppu_regs, index).value(), 0b0000_0000);
+        palette_ram.write(index                              , 0b1110_1010);
+        assert_eq!(palette_ram.peek(&ppu_regs, index).value(), 0b0010_1010);
     }
 }
