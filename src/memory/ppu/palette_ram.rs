@@ -49,19 +49,23 @@ impl PaletteRam {
     pub fn write(&mut self, index: u32, value: u8) {
         let index = index as usize;
         self.ram[index].write(value);
+        let color = self.ram[index].peek().into();
 
-        match index {
-            0x00 | 0x10 => self.universal_background_color = self.ram[index].peek().into(),
-            0x01..=0x03 => self.background_palettes[0].set_color(index - 0x01, self.ram[index].peek().into()),
-            0x05..=0x07 => self.background_palettes[1].set_color(index - 0x05, self.ram[index].peek().into()),
-            0x09..=0x0B => self.background_palettes[2].set_color(index - 0x09, self.ram[index].peek().into()),
-            0x0D..=0x0F => self.background_palettes[3].set_color(index - 0x0D, self.ram[index].peek().into()),
-            0x11..=0x13 => self.sprite_palettes[0].set_color(index - 0x11, self.ram[index].peek().into()),
-            0x15..=0x17 => self.sprite_palettes[1].set_color(index - 0x15, self.ram[index].peek().into()),
-            0x19..=0x1B => self.sprite_palettes[2].set_color(index - 0x19, self.ram[index].peek().into()),
-            0x1D..=0x1F => self.sprite_palettes[3].set_color(index - 0x1D, self.ram[index].peek().into()),
-            0x04 | 0x08 | 0x0C | 0x14 | 0x18 | 0x1C => {}
-            0x20.. => unreachable!(),
+        let palettes = if index < 0x10 {
+            &mut self.background_palettes
+        } else {
+            &mut self.sprite_palettes
+        };
+
+        let offset = index & 0b1111;
+        match offset {
+            0x00 => self.universal_background_color = color,
+            0x04 | 0x08 | 0x0C => { /* Seemingly do nothing. */ }
+            0x01..=0x03 => palettes[0].set_color(offset - 0x01, color),
+            0x05..=0x07 => palettes[1].set_color(offset - 0x05, color),
+            0x09..=0x0B => palettes[2].set_color(offset - 0x09, color),
+            0x0D..=0x0F => palettes[3].set_color(offset - 0x0D, color),
+            0x10.. => unreachable!(),
         }
     }
 
