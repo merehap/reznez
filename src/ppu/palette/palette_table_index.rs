@@ -35,7 +35,7 @@ impl PaletteTableIndex {
         ]
     }
 
-    fn from_low_bits(value: u8) -> PaletteTableIndex {
+    pub fn from_low_bits(value: u8) -> PaletteTableIndex {
         match value & 0b0000_0011 {
             0 => PaletteTableIndex::Zero,
             1 => PaletteTableIndex::One,
@@ -43,5 +43,11 @@ impl PaletteTableIndex {
             3 => PaletteTableIndex::Three,
             _ => unreachable!(),
         }
+    }
+}
+
+impl From<PaletteTableIndex> for u8 {
+    fn from(value: PaletteTableIndex) -> Self {
+        value as u8
     }
 }

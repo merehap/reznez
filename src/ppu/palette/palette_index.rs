@@ -25,3 +25,9 @@ impl PaletteIndex {
         }
     }
 }
+
+impl From<PaletteIndex> for u8 {
+    fn from(value: PaletteIndex) -> Self {
+        value as u8
+    }
+}

@@ -8,6 +8,7 @@ use ux::u5;
 use crate::mapper::KIBIBYTE_U16;
 use crate::ppu::name_table::background_tile_index::{TileColumn, TileRow};
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
+use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
@@ -306,20 +307,44 @@ impl ChrIndex {
 }
 
 #[derive(Clone, Copy)]
-pub struct PaletteRamIndex(u8);
+pub enum PaletteRamIndex {
+    BackdropColor,
+    Unused1,
+    Unused2,
+    Unused3,
+    Background(PaletteTableIndex, PaletteIndex),
+    Sprite(PaletteTableIndex, PaletteIndex),
+}
 
 impl PaletteRamIndex {
     pub fn new(index: u5) -> Self {
-        let mut index: u8 = index.into();
-        if matches!(index, 0x10 | 0x14 | 0x18 | 0x1C) {
-            index -= 0x10;
+        let index: u8 = index.into();
+        let table_index = PaletteTableIndex::from_low_bits(index >> 2);
+        if let Some(palette_index) = PaletteIndex::from_two_low_bits(index) {
+            if index < 0x10 {
+                Self::Background(table_index, palette_index)
+            } else {
+                Self::Sprite(table_index, palette_index)
+            }
+        } else {
+            match table_index {
+                PaletteTableIndex::Zero => Self::BackdropColor,
+                PaletteTableIndex::One => Self::Unused1,
+                PaletteTableIndex::Two => Self::Unused2,
+                PaletteTableIndex::Three => Self::Unused3,
+            }
         }
-
-        Self(index)
     }
 
     pub fn to_usize(self) -> usize {
-        self.0.into()
+        match self {
+            Self::BackdropColor => 0x00,
+            Self::Unused1 => 0x04,
+            Self::Unused2 => 0x08,
+            Self::Unused3 => 0x0C,
+            Self::Background(table_index, palette_index) => (combinebits!(table_index, palette_index, "0000 ttpp") + 1).into(),
+            Self::Sprite(table_index, palette_index) => (combinebits!(table_index, palette_index, "0001 ttpp") + 1).into(),
+        }
     }
 }
 
