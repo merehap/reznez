@@ -113,7 +113,7 @@ impl SystemPalette {
 
         for hue in all::<Hue>() {
             let i = hue as usize;
-            let color = Color::new(hue, brightness);
+            let color = Color::new(brightness, hue);
             let rgb = Rgb::new(nums[3 * i], nums[3 * i + 1], nums[3 * i + 2]);
             palette[color.to_usize()] = rgb;
         }
