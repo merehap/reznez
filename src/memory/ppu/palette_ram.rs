@@ -2,7 +2,6 @@ use ux::u5;
 
 use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
 use crate::memory::ppu::ppu_address::PaletteRamIndex;
-use crate::memory::primitives::masked_byte::MaskedByte;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::ppu::palette::color::Color;
@@ -14,21 +13,19 @@ const INITIAL_PALETTE_DATA: [u8; PALETTE_RAM_SIZE] = [
     0x09, 0x01, 0x34, 0x03, 0x00, 0x04, 0x00, 0x14, 0x08, 0x3A, 0x00, 0x02, 0x00, 0x20, 0x2C, 0x08,
 ];
 
+// See https://wiki.nesdev.org/w/index.php?title=PPU_palettes#Memory_Map
 pub struct PaletteRam {
-    // First two bits are always 0 for palette RAM bytes.
-    // See https://wiki.nesdev.org/w/index.php?title=PPU_palettes#Memory_Map
-    ram: [MaskedByte<0b0011_1111>; PALETTE_RAM_SIZE],
-
-    universal_background_color: Color,
-    background_palettes: [Palette; 4],
-    sprite_palettes: [Palette; 4],
+    backdrop_color: Color,             // 0x00 and 0x10
+    unused_colors: [Color; 3],         // 0x04, 0x08, 0x0C (and their mirrors: 0x14, 0x18, 0x1C)
+    background_palettes: [Palette; 4], // 0x01..=0x0F (except unpaletted values)
+    sprite_palettes: [Palette; 4],     // 0x11..=0x1F (except unpaletted values)
 }
 
 impl PaletteRam {
     pub fn new() -> Self {
         let mut palette_ram = PaletteRam {
-            ram: [MaskedByte::new(0); PALETTE_RAM_SIZE],
-            universal_background_color: Color::BLACK,
+            backdrop_color: Color::BLACK,
+            unused_colors: [Color::BLACK; 3],
             background_palettes: [Palette::ALL_BLACK; 4],
             sprite_palettes: [Palette::ALL_BLACK; 4],
         };
@@ -42,44 +39,44 @@ impl PaletteRam {
     }
 
     pub fn peek(&self, regs: &PpuRegisters, index: PaletteRamIndex) -> PpuPeek {
-        let mut value = self.ram[index.to_usize()].peek();
+        let mut color = match index {
+            PaletteRamIndex::BackdropColor => self.backdrop_color,
+            PaletteRamIndex::Unused1 => self.unused_colors[0],
+            PaletteRamIndex::Unused2 => self.unused_colors[1],
+            PaletteRamIndex::Unused3 => self.unused_colors[2],
+            PaletteRamIndex::Background(table_index, palette_index) => {
+                self.background_palette(table_index).color(palette_index as usize)
+            }
+            PaletteRamIndex::Sprite(table_index, palette_index) => {
+                self.sprite_palette(table_index).color(palette_index as usize)
+            }
+        };
         if regs.mask().greyscale_enabled() {
-            value &= 0b1111_0000;
+            color = color.to_greyscale();
         }
 
-        PpuPeek::new(value, PeekSource::PaletteTable)
+        PpuPeek::new(color.to_u6().into(), PeekSource::PaletteTable)
     }
 
     pub fn write(&mut self, index: PaletteRamIndex, value: u8) {
-        let index = index.to_usize();
-        self.ram[index].write(value);
-        let color = self.ram[index].peek().into();
-
-        let palettes = if index < 0x10 {
-            &mut self.background_palettes
-        } else {
-            &mut self.sprite_palettes
-        };
-
-        let offset = index & 0b1111;
-        match offset {
-            0x00 => self.universal_background_color = color,
-            0x04 | 0x08 | 0x0C => { /* Seemingly do nothing. */ }
-            0x01..=0x03 => palettes[0].set_color(offset - 0x01, color),
-            0x05..=0x07 => palettes[1].set_color(offset - 0x05, color),
-            0x09..=0x0B => palettes[2].set_color(offset - 0x09, color),
-            0x0D..=0x0F => palettes[3].set_color(offset - 0x0D, color),
-            0x10.. => unreachable!(),
+        let color: Color = (value & 0b0011_1111).into();
+        match index {
+            PaletteRamIndex::BackdropColor => self.backdrop_color = color,
+            PaletteRamIndex::Unused1 => self.unused_colors[0] = color,
+            PaletteRamIndex::Unused2 => self.unused_colors[1] = color,
+            PaletteRamIndex::Unused3 => self.unused_colors[2] = color,
+            PaletteRamIndex::Background(table_index, palette_index) => {
+                self.background_palettes[table_index as usize].set_color(palette_index as usize, color);
+            }
+            PaletteRamIndex::Sprite(table_index, palette_index) => {
+                self.sprite_palettes[table_index as usize].set_color(palette_index as usize, color);
+            }
         }
     }
 
-    pub fn to_slice(&self) -> &[MaskedByte<0b0011_1111>; PALETTE_RAM_SIZE] {
-        &self.ram
-    }
-
     #[inline]
-    pub fn universal_background_color(&self) -> Color {
-        self.universal_background_color
+    pub fn backdrop_color(&self) -> Color {
+        self.backdrop_color
     }
 
     #[inline]

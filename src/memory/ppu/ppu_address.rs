@@ -320,7 +320,7 @@ impl PaletteRamIndex {
     pub fn new(index: u5) -> Self {
         let index: u8 = index.into();
         let table_index = PaletteTableIndex::from_low_bits(index >> 2);
-        if let Some(palette_index) = PaletteIndex::from_two_low_bits(index) {
+        if let Some(palette_index) = PaletteIndex::from_low_bits(index) {
             if index < 0x10 {
                 Self::Background(table_index, palette_index)
             } else {

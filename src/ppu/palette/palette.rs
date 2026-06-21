@@ -23,6 +23,10 @@ impl Palette {
             .map_or(ColorT::Transparent, |index| ColorT::Opaque(self.0[index as usize]))
     }
 
+    pub fn color(self, index: usize) -> Color {
+        self.0[index]
+    }
+
     pub fn set_color(&mut self, index: usize, color: Color) {
         self.0[index] = color;
     }

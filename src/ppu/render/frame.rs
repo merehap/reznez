@@ -91,7 +91,7 @@ impl Frame {
         self.buffer[(column, row)]
     }
 
-    pub fn set_universal_background_rgb(&mut self, rgb: Rgb) {
+    pub fn set_backdrop_color(&mut self, rgb: Rgb) {
         self.universal_background_rgb = rgb;
     }
 

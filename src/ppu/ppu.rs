@@ -216,8 +216,8 @@ impl Ppu {
                 let mut background_pixel = Rgbt::Transparent;
                 if bus.ppu_regs.background_enabled() {
                     // TODO: Figure out where this goes.
-                    let ubc = bus.palette_ram().universal_background_color();
-                    frame.set_universal_background_rgb(bus.system_palette.lookup_rgb(ubc, ppumask));
+                    let ubc = bus.palette_ram().backdrop_color();
+                    frame.set_backdrop_color(bus.system_palette.lookup_rgb(ubc, ppumask));
 
                     let column_in_tile = bus.ppu_regs.fine_x_scroll;
                     let palette_table_index = bus.ppu.attribute_register.palette_table_index(column_in_tile);

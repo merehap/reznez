@@ -6,7 +6,7 @@ pub enum PaletteIndex {
 }
 
 impl PaletteIndex {
-    pub fn from_two_low_bits(value: u8) -> Option<PaletteIndex> {
+    pub fn from_low_bits(value: u8) -> Option<PaletteIndex> {
         match value & 0b11 {
             0b00 => None,
             0b01 => Some(PaletteIndex::One),

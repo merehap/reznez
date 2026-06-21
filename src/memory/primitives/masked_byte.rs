@@ -1,7 +1,10 @@
+
 // Some memory sources do not power every bit in their bytes, instead leaving them as always zero.
+#[allow(dead_code)]
 #[derive(Clone, Copy, Debug)]
 pub struct MaskedByte<const MASK: u8>(u8);
 
+#[allow(dead_code)]
 impl <const MASK: u8> MaskedByte<MASK> {
     pub const ZERO: Self = Self(0);
 

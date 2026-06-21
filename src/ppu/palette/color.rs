@@ -2,6 +2,7 @@ use enum_iterator::Sequence;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use splitbits::{combinebits, splitbits};
+use ux::u6;
 
 #[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct Color {
@@ -16,8 +17,16 @@ impl Color {
         Self { hue, brightness }
     }
 
+    pub fn to_greyscale(self) -> Self {
+        Self { hue: Hue::Gray, brightness: self.brightness }
+    }
+
+    pub fn to_u6(self) -> u6 {
+        u6::new(combinebits!(self.brightness as u8, self.hue as u8, "00bb hhhh"))
+    }
+
     pub fn to_usize(self) -> usize {
-        combinebits!(self.brightness as u8, self.hue as u8, "00bb hhhh") as usize
+        u8::from(self.to_u6()).into()
     }
 }
 
