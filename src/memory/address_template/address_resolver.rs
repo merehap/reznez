@@ -4,9 +4,9 @@ use crate::memory::address_template::bank_sizes::BankSizes;
 use crate::memory::address_template::bit_template::BitTemplate;
 use crate::memory::address_template::segment::{Label, Segment};
 use crate::memory::bank::bank_number::RegisterId;
-use crate::memory::bank::bank::{PrgBankNumberProvider, ChrBankNumberProvider};
+use crate::memory::bank::bank::ChrBankNumberProvider;
 use crate::memory::bank::bank_number::{PrgBankRegisters, PrgBankRegisterId, ChrBankRegisters, ChrBankRegisterId};
-use crate::memory::window::{ChrWindowSize, PrgWindow};
+use crate::memory::window::{ChrWindowSize, PrgWindow, PrgBankNumberProvider};
 use crate::util::const_vec::ConstVec;
 
 const MAX_WIDTH: u8 = 32;
@@ -79,7 +79,7 @@ impl AddressResolver<PrgBankRegisterId> {
     pub const fn prg(window: &PrgWindow, bank_sizes: &BankSizes, work_ram_start_inner_bank_number: u16) -> Self {
         let inner_bank_width = bank_sizes.inner_bank_width();
         let address_bus_segment = Segment::labeled(Label::AddressBus, inner_bank_width);
-        let inner_bank_segment = match window.bank().prg_bank_number_provider() {
+        let inner_bank_segment = match window.prg_bank_number_provider() {
             PrgBankNumberProvider::Fixed(bank_number) => {
                 // o₀₁o₀₀1₁₆1₁₅1₁₄1₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
                 Segment::constant_inner_bank(bank_number.to_raw(), bank_sizes.inner_bank_number_width())

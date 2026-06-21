@@ -9,33 +9,33 @@ pub const LAYOUT: Layout = Layout::builder()
     // $10000-$1FFFF (64kiB outer bank)
     // $30000-$3FFFF (64kiB outer bank)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁o₀₀p₀₂p₀₁p₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁o₀₀q₀₂q₀₁q₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁o₀₀1₀₂1₀₁0₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁o₀₀1₀₂1₀₁1₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Prg::ABSENT),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Prg::ROM).rom_address_template("o₀₁o₀₀p₀₂p₀₁p₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Prg::ROM).rom_address_template("o₀₁o₀₀q₀₂q₀₁q₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Prg::ROM).rom_address_template("o₀₁o₀₀1₀₂1₀₁0₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Prg::ROM).rom_address_template("o₀₁o₀₀1₀₂1₀₁1₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
     ])
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁o₀₀1₀₂1₀₁0₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁o₀₀p₀₂p₀₁p₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁o₀₀q₀₂q₀₁q₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁o₀₀1₀₂1₀₁1₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Prg::ABSENT),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Prg::ROM).rom_address_template("o₀₁o₀₀1₀₂1₀₁0₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Prg::ROM).rom_address_template("o₀₁o₀₀p₀₂p₀₁p₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Prg::ROM).rom_address_template("o₀₁o₀₀q₀₂q₀₁q₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Prg::ROM).rom_address_template("o₀₁o₀₀1₀₂1₀₁1₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
     ])
     // $20000-$3FFFF (128kiB outer bank)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁p₀₃p₀₂p₀₁p₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁q₀₃q₀₂q₀₁q₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁1₀₃1₀₂1₀₁0₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁1₀₃1₀₂1₀₁1₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Prg::ABSENT),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Prg::ROM).rom_address_template("o₀₁p₀₃p₀₂p₀₁p₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Prg::ROM).rom_address_template("o₀₁q₀₃q₀₂q₀₁q₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Prg::ROM).rom_address_template("o₀₁1₀₃1₀₂1₀₁0₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Prg::ROM).rom_address_template("o₀₁1₀₃1₀₂1₀₁1₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
     ])
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁1₀₃1₀₂1₀₁0₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁p₀₃p₀₂p₀₁p₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁q₀₃q₀₂q₀₁q₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₁1₀₃1₀₂1₀₁1₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Prg::ABSENT),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Prg::ROM).rom_address_template("o₀₁1₀₃1₀₂1₀₁0₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Prg::ROM).rom_address_template("o₀₁p₀₃p₀₂p₀₁p₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Prg::ROM).rom_address_template("o₀₁q₀₃q₀₂q₀₁q₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Prg::ROM).rom_address_template("o₀₁1₀₃1₀₂1₀₁1₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_rom_outer_bank_size(128 * KIBIBYTE)

@@ -3,11 +3,11 @@ use crate::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-2)),
-        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Prg::ABSENT),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Prg::ROM).switchable(P),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Prg::ROM).switchable(Q),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Prg::ROM).fixed_number(-2),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Prg::ROM).fixed_number(-1),
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(&[
@@ -24,8 +24,8 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .build();
 
-use RegId::{Chr, Prg};
-const BANK_REGISTER_IDS: [RegId; 8] = [Prg(P), Prg(Q), Chr(C), Chr(D), Chr(E), Chr(F), Chr(G), Chr(H)];
+use RegId::{CHR, PRG};
+const BANK_REGISTER_IDS: [RegId; 8] = [PRG(P), PRG(Q), CHR(C), CHR(D), CHR(E), CHR(F), CHR(G), CHR(H)];
 
 // Huang Di and San Guo Zhi - Qun Xiong Zheng Ba
 // Similar to mapper 206.
@@ -40,8 +40,8 @@ impl Mapper for Mapper112 {
             0x8000 => self.selected_register_id = BANK_REGISTER_IDS[value as usize & 0b11],
             0xA000 => {
                 match self.selected_register_id {
-                    Prg(px) => bus.set_prg_register(px, value),
-                    Chr(cx) => bus.set_chr_register(cx, value),
+                    PRG(px) => bus.set_prg_register(px, value),
+                    CHR(cx) => bus.set_chr_register(cx, value),
                 }
             }
             0xE000 => bus.set_name_table_mirroring(value & 1),
@@ -56,12 +56,12 @@ impl Mapper for Mapper112 {
 
 impl Mapper112 {
     pub fn new() -> Self {
-        Self { selected_register_id: Prg(P) }
+        Self { selected_register_id: PRG(P) }
     }
 }
 
 #[derive(Clone, Copy)]
 enum RegId {
-    Prg(PrgBankRegisterId),
-    Chr(ChrBankRegisterId),
+    PRG(PrgBankRegisterId),
+    CHR(ChrBankRegisterId),
 }

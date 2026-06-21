@@ -9,11 +9,11 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 pub const PRG_WINDOWS: &[PrgWindow] = &[
-    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ABSENT),
-    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
-    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
-    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-2)),
-    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
+    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Prg::ABSENT),
+    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Prg::ROM).switchable(P),
+    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Prg::ROM).switchable(Q),
+    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Prg::ROM).fixed_number(-2),
+    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Prg::ROM).fixed_number(-1),
 ];
 
 pub const CHR_WINDOWS: &[ChrWindow] = &[
@@ -25,8 +25,8 @@ pub const CHR_WINDOWS: &[ChrWindow] = &[
     ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(H)),
 ];
 
-use RegId::{Chr, Prg};
-const BANK_NUMBER_REGISTER_IDS: [RegId; 8] = [Chr(C), Chr(D), Chr(E), Chr(F), Chr(G), Chr(H), Prg(P), Prg(Q)];
+use RegId::{CHR, PRG};
+const BANK_NUMBER_REGISTER_IDS: [RegId; 8] = [CHR(C), CHR(D), CHR(E), CHR(F), CHR(G), CHR(H), PRG(P), PRG(Q)];
 
 // Similar to Mapper206, but allows up to 128KiB of CHR,
 // and selects the second half of CHR for C2, C3, C4, and C5 for over-sized CHR.
@@ -45,10 +45,10 @@ impl Mapper for Mapper088 {
             0x8000..=0x9FFF => {
                 match self.selected_register_id {
                     // Always use only the first 64KiB of CHR for the left pattern table.
-                    Chr(id@(C | D)) => bus.set_chr_register(id, value & 0b0011_1110),
+                    CHR(id@(C | D)) => bus.set_chr_register(id, value & 0b0011_1110),
                     // If it is available, use the second 64KiB half of CHR for the right pattern table.
-                    Chr(id@(E | F | G | H)) => bus.set_chr_register(id, (value & 0b0011_1111) | 0b0100_0000),
-                    Prg(id@(P | Q)) => bus.set_prg_register(id, value & 0b0000_1111),
+                    CHR(id@(E | F | G | H)) => bus.set_chr_register(id, (value & 0b0011_1111) | 0b0100_0000),
+                    PRG(id@(P | Q)) => bus.set_prg_register(id, value & 0b0000_1111),
                     _ => unreachable!(),
                 }
             }
@@ -63,12 +63,12 @@ impl Mapper for Mapper088 {
 
 impl Mapper088 {
     pub fn new() -> Self {
-        Self { selected_register_id: Chr(C) }
+        Self { selected_register_id: CHR(C) }
     }
 }
 
 #[derive(Clone, Copy, Debug)]
 enum RegId {
-    Chr(ChrBankRegisterId),
-    Prg(PrgBankRegisterId),
+    CHR(ChrBankRegisterId),
+    PRG(PrgBankRegisterId),
 }

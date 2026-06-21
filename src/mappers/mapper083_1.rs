@@ -5,29 +5,29 @@ use crate::mappers::common::cony::Cony;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(256 * KIBIBYTE)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(S).read_status(RS0)),
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(T)),
-        PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgBank::ROM.fixed_number(-2)),
-        PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Prg::ROM).switchable(S).read_status(RS0),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Prg::ROM).switchable(T),
+        PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, Prg::ROM).fixed_number(-2),
+        PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, Prg::ROM).fixed_number(-1),
     ])
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(S).read_status(RS0)),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(T)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Prg::ROM).switchable(S).read_status(RS0),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Prg::ROM).switchable(T),
     ])
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(S).read_status(RS0)),
-        PrgWindow::new(0x8000, 0x9FFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
-        PrgWindow::new(0xA000, 0xBFFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
-        PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(R)),
-        PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Prg::ROM).switchable(S).read_status(RS0),
+        PrgWindow::new(0x8000, 0x9FFF,  8 * KIBIBYTE, Prg::ROM).switchable(P),
+        PrgWindow::new(0xA000, 0xBFFF,  8 * KIBIBYTE, Prg::ROM).switchable(Q),
+        PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, Prg::ROM).switchable(R),
+        PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, Prg::ROM).fixed_number(-1),
     ])
     // Same as above.
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(S).read_status(RS0)),
-        PrgWindow::new(0x8000, 0x9FFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
-        PrgWindow::new(0xA000, 0xBFFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
-        PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(R)),
-        PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Prg::ROM).switchable(S).read_status(RS0),
+        PrgWindow::new(0x8000, 0x9FFF,  8 * KIBIBYTE, Prg::ROM).switchable(P),
+        PrgWindow::new(0xA000, 0xBFFF,  8 * KIBIBYTE, Prg::ROM).switchable(Q),
+        PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, Prg::ROM).switchable(R),
+        PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, Prg::ROM).fixed_number(-1),
     ])
     .chr_rom_max_size(512 * KIBIBYTE)
     .chr_layout(&[

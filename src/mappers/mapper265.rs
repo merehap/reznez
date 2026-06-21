@@ -4,23 +4,23 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(2048 * KIBIBYTE)
     .prg_rom_outer_bank_size(128 * KIBIBYTE)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT),
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₃o₀₂o₀₁o₀₀p₀₂p₀₁p₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₃o₀₂o₀₁o₀₀1₀₂1₀₁1₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Prg::RAM_OR_ABSENT),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Prg::ROM).rom_address_template("o₀₃o₀₂o₀₁o₀₀p₀₂p₀₁p₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Prg::ROM).rom_address_template("o₀₃o₀₂o₀₁o₀₀1₀₂1₀₁1₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
     ])
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT),
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₃o₀₂o₀₁o₀₀p₀₂p₀₁p₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₃o₀₂o₀₁o₀₀p₀₂p₀₁p₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Prg::RAM_OR_ABSENT),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Prg::ROM).rom_address_template("o₀₃o₀₂o₀₁o₀₀p₀₂p₀₁p₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Prg::ROM).rom_address_template("o₀₃o₀₂o₀₁o₀₀p₀₂p₀₁p₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
     ])
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT),
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₃o₀₂o₀₁o₀₀p₀₂p₀₁0₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₃o₀₂o₀₁o₀₀1₀₂1₀₁1₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Prg::RAM_OR_ABSENT),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Prg::ROM).rom_address_template("o₀₃o₀₂o₀₁o₀₀p₀₂p₀₁0₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Prg::ROM).rom_address_template("o₀₃o₀₂o₀₁o₀₀1₀₂1₀₁1₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
     ])
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.rom_address_template("o₀₃o₀₂o₀₁o₀₀p₀₂p₀₁a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Prg::RAM_OR_ABSENT),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Prg::ROM).rom_address_template("o₀₃o₀₂o₀₁o₀₀p₀₂p₀₁a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
     ])
     .chr_rom_max_size(0 * KIBIBYTE)
     .chr_layout(&[

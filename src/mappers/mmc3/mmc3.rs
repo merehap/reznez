@@ -1,4 +1,5 @@
 use crate::mapper::*;
+use crate::memory::window::PrgSourceProvider as PRG;
 use crate::mappers::mmc3::irq_state::Mmc3IrqState;
 
 pub const LAYOUT: Layout = Layout::builder()
@@ -12,19 +13,19 @@ pub const LAYOUT: Layout = Layout::builder()
     .build();
 
 pub const PRG_WINDOWS_8000_SWITCHABLE: &[PrgWindow] = &[
-    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.read_write_status(RS0, WS0)),
-    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
-    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
-    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-2)),
-    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
+    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PRG::RAM_OR_ABSENT).read_write_status(RS0, WS0),
+    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PRG::ROM).switchable(P),
+    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PRG::ROM).switchable(Q),
+    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PRG::ROM).fixed_number(-2),
+    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PRG::ROM).fixed_number(-1),
 ];
 
 pub const PRG_WINDOWS_C000_SWITCHABLE: &[PrgWindow] = &[
-    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.read_write_status(RS0, WS0)),
-    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-2)),
-    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
-    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
-    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
+    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PRG::RAM_OR_ABSENT).read_write_status(RS0, WS0),
+    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PRG::ROM).fixed_number(-2),
+    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PRG::ROM).switchable(Q),
+    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PRG::ROM).switchable(P),
+    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PRG::ROM).fixed_number(-1),
 ];
 
 pub const CHR_BIG_WINDOWS_FIRST: &[ChrWindow] = &[

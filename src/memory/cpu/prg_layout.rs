@@ -96,7 +96,7 @@ impl PrgLayout {
                 windows[i].start() == windows[i - 1].end().get() + 1,
                 "There must be no gaps nor overlap between PRG windows."
             );
-            if windows[i].bank().is_rom() {
+            if windows[i].is_rom() {
                 has_rom = true;
             }
 
@@ -113,7 +113,7 @@ impl PrgLayout {
         let mut smallest_size = 32 * KIBIBYTE_U16;
         while i < self.0.len() {
             let window = &self.0[i];
-            if window.bank().is_rom() {
+            if window.is_rom() {
                 smallest_size = std::cmp::min(smallest_size, window.size().to_raw());
             }
 
@@ -126,7 +126,7 @@ impl PrgLayout {
     pub const fn supports_ram(&self) -> bool {
         let mut i = 0;
         while i < self.0.len() {
-            if self.0[i].bank().supports_ram() {
+            if self.0[i].supports_ram() {
                 return true;
             }
 

@@ -1,8 +1,8 @@
 use crate::mapper::*;
 
 pub const PRG_LAYOUT: &[PrgWindow] = &[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P)),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Prg::ABSENT),
+    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Prg::ROM).switchable(P),
 ];
 
 pub const NORMAL_CHR_LAYOUT: &[ChrWindow] = &[

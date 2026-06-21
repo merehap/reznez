@@ -4,15 +4,15 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(1024 * KIBIBYTE)
     .override_prg_bank_register(W, -1)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0x8FFF, 4 * KIBIBYTE, PrgBank::ROM.switchable(P)),
-        PrgWindow::new(0x9000, 0x9FFF, 4 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
-        PrgWindow::new(0xA000, 0xAFFF, 4 * KIBIBYTE, PrgBank::ROM.switchable(R)),
-        PrgWindow::new(0xB000, 0xBFFF, 4 * KIBIBYTE, PrgBank::ROM.switchable(S)),
-        PrgWindow::new(0xC000, 0xCFFF, 4 * KIBIBYTE, PrgBank::ROM.switchable(T)),
-        PrgWindow::new(0xD000, 0xDFFF, 4 * KIBIBYTE, PrgBank::ROM.switchable(U)),
-        PrgWindow::new(0xE000, 0xEFFF, 4 * KIBIBYTE, PrgBank::ROM.switchable(V)),
-        PrgWindow::new(0xF000, 0xFFFF, 4 * KIBIBYTE, PrgBank::ROM.switchable(W)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Prg::ABSENT),
+        PrgWindow::new(0x8000, 0x8FFF, 4 * KIBIBYTE, Prg::ROM).switchable(P),
+        PrgWindow::new(0x9000, 0x9FFF, 4 * KIBIBYTE, Prg::ROM).switchable(Q),
+        PrgWindow::new(0xA000, 0xAFFF, 4 * KIBIBYTE, Prg::ROM).switchable(R),
+        PrgWindow::new(0xB000, 0xBFFF, 4 * KIBIBYTE, Prg::ROM).switchable(S),
+        PrgWindow::new(0xC000, 0xCFFF, 4 * KIBIBYTE, Prg::ROM).switchable(T),
+        PrgWindow::new(0xD000, 0xDFFF, 4 * KIBIBYTE, Prg::ROM).switchable(U),
+        PrgWindow::new(0xE000, 0xEFFF, 4 * KIBIBYTE, Prg::ROM).switchable(V),
+        PrgWindow::new(0xF000, 0xFFFF, 4 * KIBIBYTE, Prg::ROM).switchable(W),
     ])
     .chr_rom_max_size(8 * KIBIBYTE)
     .chr_layout(&[

@@ -4,16 +4,16 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
     .override_prg_rom_inner_bank_size(2 * KIBIBYTE)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WORK_RAM_OR_ROM.fixed_number(0)),
-        PrgWindow::new(0x8000, 0xB7FF, 14 * KIBIBYTE, PrgBank::ROM.fixed_number(48)),
-        PrgWindow::new(0xB800, 0xD7FF,  8 * KIBIBYTE, PrgBank::WORK_RAM_OR_ROM.fixed_number(1)),
-        PrgWindow::new(0xD800, 0xFFFF, 10 * KIBIBYTE, PrgBank::ROM.fixed_number(59)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Prg::WORK_RAM_OR_ROM).fixed_number(0),
+        PrgWindow::new(0x8000, 0xB7FF, 14 * KIBIBYTE, Prg::ROM).fixed_number(48),
+        PrgWindow::new(0xB800, 0xD7FF,  8 * KIBIBYTE, Prg::WORK_RAM_OR_ROM).fixed_number(1),
+        PrgWindow::new(0xD800, 0xFFFF, 10 * KIBIBYTE, Prg::ROM).fixed_number(59),
     ])
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
-        PrgWindow::new(0x8000, 0xB7FF, 14 * KIBIBYTE, PrgBank::ROM.fixed_number(48)),
-        PrgWindow::new(0xB800, 0xD7FF,  8 * KIBIBYTE, PrgBank::ROM.fixed_number(55)),
-        PrgWindow::new(0xD800, 0xFFFF, 10 * KIBIBYTE, PrgBank::ROM.fixed_number(59)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Prg::ROM).switchable(P),
+        PrgWindow::new(0x8000, 0xB7FF, 14 * KIBIBYTE, Prg::ROM).fixed_number(48),
+        PrgWindow::new(0xB800, 0xD7FF,  8 * KIBIBYTE, Prg::ROM).fixed_number(55),
+        PrgWindow::new(0xD800, 0xFFFF, 10 * KIBIBYTE, Prg::ROM).fixed_number(59),
     ])
     .chr_rom_max_size(8 * KIBIBYTE)
     .chr_layout(&[

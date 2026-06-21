@@ -5,18 +5,18 @@ const LAYOUT: Layout = Layout::builder()
     // The wiki says 256KiB, but then doesn't mask down to just 4 banks.
     .prg_rom_max_size(8192 * KIBIBYTE)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(R)),
-        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Prg::ABSENT),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Prg::ROM).switchable(P),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Prg::ROM).switchable(Q),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Prg::ROM).switchable(R),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Prg::ROM).fixed_number(-1),
     ])
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(R)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
-        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Prg::ABSENT),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Prg::ROM).switchable(R),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Prg::ROM).switchable(Q),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Prg::ROM).switchable(P),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Prg::ROM).fixed_number(-1),
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(&[
@@ -64,10 +64,10 @@ const LAYOUT: Layout = Layout::builder()
 const CPU_CYCLE_MODE_IRQ_PENDING_DELAY: u8 = 1;
 const SCANLINE_MODE_IRQ_PENDING_DELAY: u8 = 4;
 
-use RegId::{Chr, Prg};
+use RegId::{CHR, PRG};
 const BANK_NUMBER_REGISTER_IDS: [Option<RegId>; 16] =
-    [Some(Chr(C)), Some(Chr(D)), Some(Chr(E)), Some(Chr(F)), Some(Chr(G)), Some(Chr(H)), Some(Prg(P)), Some(Prg(Q)),
-     Some(Chr(I)), Some(Chr(J)),          None,          None,          None,          None,          None, Some(Prg(R)),
+    [Some(CHR(C)), Some(CHR(D)), Some(CHR(E)), Some(CHR(F)), Some(CHR(G)), Some(CHR(H)), Some(PRG(P)), Some(PRG(Q)),
+     Some(CHR(I)), Some(CHR(J)),          None,          None,          None,          None,          None, Some(PRG(R)),
     ];
 
 // RAMBO-1 (Similar to MMC3)
@@ -165,7 +165,7 @@ impl Mapper for Mapper064 {
 impl Mapper064 {
     pub fn new() -> Self {
         Self {
-            selected_register_id: Chr(C),
+            selected_register_id: CHR(C),
 
             irq_enabled: false,
             irq_pending_delay_cycles: 0,
@@ -192,8 +192,8 @@ impl Mapper064 {
 
     fn set_bank_number(&self, bus: &mut Bus, value: u8) {
         match self.selected_register_id {
-            Chr(cx) => bus.set_chr_register(cx, value),
-            Prg(px) => bus.set_prg_register(px, value),
+            CHR(cx) => bus.set_chr_register(cx, value),
+            PRG(px) => bus.set_prg_register(px, value),
         }
     }
 
@@ -251,6 +251,6 @@ enum IrqCounterReloadMode {
 
 #[derive(Clone, Copy)]
 enum RegId {
-    Chr(ChrBankRegisterId),
-    Prg(PrgBankRegisterId),
+    CHR(ChrBankRegisterId),
+    PRG(PrgBankRegisterId),
 }

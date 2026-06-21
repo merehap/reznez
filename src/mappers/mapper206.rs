@@ -3,11 +3,11 @@ use crate::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-2)),
-        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Prg::ABSENT),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Prg::ROM).switchable(P),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Prg::ROM).switchable(Q),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Prg::ROM).fixed_number(-2),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Prg::ROM).fixed_number(-1),
     ])
     .chr_rom_max_size(64 * KIBIBYTE)
     .chr_layout(&[
@@ -21,8 +21,8 @@ const LAYOUT: Layout = Layout::builder()
     .fixed_name_table_mirroring()
     .build();
 
-use RegId::{Chr, Prg};
-const BANK_NUMBER_REGISTER_IDS: [RegId; 8] = [Chr(C), Chr(D), Chr(E), Chr(F), Chr(G), Chr(H), Prg(P), Prg(Q)];
+use RegId::{CHR, PRG};
+const BANK_NUMBER_REGISTER_IDS: [RegId; 8] = [CHR(C), CHR(D), CHR(E), CHR(F), CHR(G), CHR(H), PRG(P), PRG(Q)];
 
 // DxROM, Tengen MIMIC-1, Namco 118
 // A much simpler predecessor to MMC3.
@@ -40,8 +40,8 @@ impl Mapper for Mapper206 {
             }
             0x8000..=0x9FFF => {
                 match self.selected_register_id {
-                    Chr(id) => bus.set_chr_register(id, value & 0b0011_1111),
-                    Prg(id) => bus.set_prg_register(id, value & 0b0000_1111),
+                    CHR(id) => bus.set_chr_register(id, value & 0b0011_1111),
+                    PRG(id) => bus.set_prg_register(id, value & 0b0000_1111),
                 }
             }
             0xA000..=0xFFFF => { /* Do nothing. */ }
@@ -55,12 +55,12 @@ impl Mapper for Mapper206 {
 
 impl Mapper206 {
     pub fn new() -> Self {
-        Self { selected_register_id: Chr(C) }
+        Self { selected_register_id: CHR(C) }
     }
 }
 
 #[derive(Clone, Copy, Debug)]
 enum RegId {
-    Chr(ChrBankRegisterId),
-    Prg(PrgBankRegisterId),
+    CHR(ChrBankRegisterId),
+    PRG(PrgBankRegisterId),
 }

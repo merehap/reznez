@@ -6,9 +6,9 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
     .override_prg_bank_register(R, -1)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Prg::ABSENT),
         // Use "R" instead of "P" in order to ignore MMC3's normal PRG banking.
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(R)),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Prg::ROM).switchable(R),
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(mmc3::CHR_BIG_WINDOWS_FIRST)

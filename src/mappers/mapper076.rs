@@ -3,11 +3,11 @@ use crate::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-2)),
-        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Prg::ABSENT),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Prg::ROM).switchable(P),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Prg::ROM).switchable(Q),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Prg::ROM).fixed_number(-2),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Prg::ROM).fixed_number(-1),
     ])
     .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(&[
@@ -19,9 +19,9 @@ const LAYOUT: Layout = Layout::builder()
     .fixed_name_table_mirroring()
     .build();
 
-use RegId::{Chr, Prg};
+use RegId::{CHR, PRG};
 const BANK_NUMBER_REGISTER_IDS: [Option<RegId>; 8] =
-    [None, None, Some(Chr(C)), Some(Chr(D)), Some(Chr(E)), Some(Chr(F)), Some(Prg(P)), Some(Prg(Q))];
+    [None, None, Some(CHR(C)), Some(CHR(D)), Some(CHR(E)), Some(CHR(F)), Some(PRG(P)), Some(PRG(Q))];
 
 // NAMCOT-3446
 // Similar to Namcot 108, but with only large CHR windows and more PRG and CHR.
@@ -53,7 +53,7 @@ impl Mapper for Mapper076 {
 impl Mapper076 {
     pub fn new() -> Self {
         Self {
-            selected_register_id: Chr(C),
+            selected_register_id: CHR(C),
         }
     }
 
@@ -66,14 +66,14 @@ impl Mapper076 {
     fn set_bank_number(&mut self, bus: &mut Bus, value: u8) {
         let bank_number = u16::from(value & 0b0011_1111);
         match self.selected_register_id {
-            Chr(cx) => bus.set_chr_register(cx, bank_number),
-            Prg(px) => bus.set_prg_register(px, bank_number),
+            CHR(cx) => bus.set_chr_register(cx, bank_number),
+            PRG(px) => bus.set_prg_register(px, bank_number),
         }
     }
 }
 
 #[derive(Clone, Copy)]
 enum RegId {
-    Chr(ChrBankRegisterId),
-    Prg(PrgBankRegisterId),
+    CHR(ChrBankRegisterId),
+    PRG(PrgBankRegisterId),
 }

@@ -2,7 +2,7 @@ ROADMAP
 1. Fully passing DMC tests
 2. Fully working MMC5
 3. Remaining test ROMs
-4. Windows/Mac/WASM support
+4. WASM support
 5. Audio filters: https://forums.nesdev.org/viewtopic.php?t=8602
 6. Make most panics into dialog warnings/errors instead.
 7. Comments

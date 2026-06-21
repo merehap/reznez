@@ -4,8 +4,8 @@ const LAYOUT: Layout = Layout::builder()
     // Oversize. Actual cartridge only has 128 max.
     .prg_rom_max_size(4096 * KIBIBYTE)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Prg::ABSENT),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Prg::ROM).switchable(P),
     ])
     // Oversize. Actual cartridge only has 64 max.
     .chr_rom_max_size(2048 * KIBIBYTE)

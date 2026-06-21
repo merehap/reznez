@@ -1,11 +1,11 @@
 use std::fmt;
 
 use crate::mapper::PrgBankRegisterId;
-use crate::memory::window::PrgWindow;
+use crate::memory::window::{PrgWindow, PrgSourceProvider};
 use crate::memory::bank::bank_number::ReadStatus;
 use crate::memory::address_template::address_resolver::AddressResolver;
 use crate::memory::address_template::bank_sizes::BankSizes;
-use crate::memory::bank::bank::{PrgBank, PrgSource, PrgSourceProvider};
+use crate::memory::window::PrgSource;
 use crate::memory::bank::bank_number::{PrgMemTypeStatus, MemSpace, PrgBankRegisters};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
@@ -99,8 +99,8 @@ impl PrgMemoryMap {
         work_ram_start_inner_bank_number: u16,
     ) -> Vec<PrgMapping> {
         let mapping = PrgMapping {
-            bank: window.bank(),
-            rom_address_resolver: window.rom_address_template(rom_bank_sizes),
+            window: *window,
+            rom_address_resolver: window.get_rom_address_template(rom_bank_sizes),
             ram_address_resolver: window.ram_address_template(ram_bank_sizes, work_ram_start_inner_bank_number),
             // This will be immediately updated to the correct value.
             selected_mem_type_status: PrgMemTypeStatus::Rom(ReadStatus::Enabled),
@@ -163,7 +163,7 @@ impl PrgMappingSlot {
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct PrgMapping {
-    bank: PrgBank,
+    window: PrgWindow,
     rom_address_resolver: AddressResolver<PrgBankRegisterId>,
     ram_address_resolver: AddressResolver<PrgBankRegisterId>,
     selected_mem_type_status: PrgMemTypeStatus,
@@ -171,7 +171,7 @@ pub struct PrgMapping {
 
 impl PrgMapping {
     pub fn index_for_address(&self, addr: CpuAddress) -> Option<(u32, PrgMemTypeStatus)> {
-        if self.bank.is_absent() {
+        if self.window.is_absent() {
             return None;
         }
 
@@ -179,7 +179,7 @@ impl PrgMapping {
     }
 
     pub fn inner_bank_number(&self) -> Option<(PrgMemTypeStatus, u16)> {
-        if self.bank.is_absent() {
+        if self.window.is_absent() {
             return None;
         }
 
@@ -187,7 +187,7 @@ impl PrgMapping {
     }
 
     pub fn maybe_address_resolver(&self) -> Option<&AddressResolver<PrgBankRegisterId>> {
-        if self.bank.is_absent() {
+        if self.window.is_absent() {
             return None;
         }
 
@@ -202,7 +202,7 @@ impl PrgMapping {
     }
 
     pub fn update(&mut self, regs: &PrgBankRegisters) {
-        let (Ok(_), Some(page_number_space)) = (self.bank.bank_number(regs), self.bank.page_number_space(regs)) else {
+        let (Ok(_), Some(page_number_space)) = (self.window.bank_number(regs), self.window.page_number_space(regs)) else {
             return;
         };
 
@@ -230,7 +230,7 @@ impl PrgMapping {
 
 impl fmt::Display for PrgMapping {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.bank.source_provider() {
+        match self.window.source_provider() {
             PrgSourceProvider::Fixed(None) =>
                 writeln!(f, "\tABSENT"),
             PrgSourceProvider::Fixed(Some(PrgSource::Rom)) =>

@@ -5,13 +5,13 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(80 * KIBIBYTE)
     .prg_layout(&[
         // Layout doesn't support PRG banks below 0x6000, so this mapper implements the equivalent of the following manually:
-        // PrgWindow::new(0x5000, 0x57FF, 2 * KIBIBYTE, PrgBank::ROM.fixed_index(8)),
-        // PrgWindow::new(0x5800, 0x5FFF, 2 * KIBIBYTE, PrgBank::ROM.fixed_index(8)),
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(2)),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(1)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(0)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
-        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(9)),
+        // PrgWindow::new(0x5000, 0x57FF, 2 * KIBIBYTE, Prg::ROM).fixed_index(8),
+        // PrgWindow::new(0x5800, 0x5FFF, 2 * KIBIBYTE, Prg::ROM).fixed_index(8),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Prg::ROM).fixed_number(2),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Prg::ROM).fixed_number(1),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Prg::ROM).fixed_number(0),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Prg::ROM).switchable(P),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Prg::ROM).fixed_number(9),
     ])
     .chr_rom_max_size(8 * KIBIBYTE)
     .chr_layout(&[

@@ -8,7 +8,7 @@ pub use crate::memory::bank::bank_number::{BankNumber, PrgBankRegisterId, ChrBan
 pub use crate::memory::bank::bank_number::PrgBankRegisterId::*;
 pub use crate::memory::bank::bank_number::ChrBankRegisterId::*;
 pub use crate::memory::bank::bank_number::MetaRegisterId::*;
-pub use crate::memory::bank::bank::{PrgBank, ChrBank, ChrSource};
+pub use crate::memory::bank::bank::{ChrBank, ChrSource};
 pub use crate::memory::bank::bank::PrgSourceRegisterId::*;
 pub use crate::memory::bank::bank::ChrSourceRegisterId::*;
 pub use crate::memory::bank::bank::ReadStatusRegisterId::*;
@@ -21,6 +21,7 @@ pub use crate::memory::ppu::ppu_address::PpuAddress;
 pub use crate::memory::read_result::ReadResult;
 pub use crate::memory::ppu::ciram::CiramSide;
 pub use crate::memory::window::{PrgWindow, ChrWindow};
+pub use crate::memory::window::PrgSourceProvider as Prg;
 pub use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 pub use crate::ppu::name_table::name_table_mirroring::{NameTableMirroring, NameTableSource};
 pub use crate::ppu::pattern_table_side::PatternTableSide;

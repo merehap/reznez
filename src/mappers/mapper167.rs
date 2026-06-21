@@ -6,28 +6,28 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(1024 * KIBIBYTE)
     // UNROM-like
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT),
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P)),
-        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.fixed_number(0x20)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Prg::RAM_OR_ABSENT),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Prg::ROM).switchable(P),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Prg::ROM).fixed_number(0x20),
     ])
     // NROM-like, but reversed ordering of the 16KiB banks.
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Prg::RAM_OR_ABSENT),
         // P, but with inverted low bits.
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.rom_address_template("p₀₅p₀₄p₀₃p₀₂p₀₁1₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.rom_address_template("p₀₅p₀₄p₀₃p₀₂p₀₁0₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Prg::ROM).rom_address_template("p₀₅p₀₄p₀₃p₀₂p₀₁1₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Prg::ROM).rom_address_template("p₀₅p₀₄p₀₃p₀₂p₀₁0₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
     ])
     // Reverse UNROM-like
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT),
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.fixed_number(0x1F)),
-        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Prg::RAM_OR_ABSENT),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Prg::ROM).fixed_number(0x1F),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Prg::ROM).switchable(P),
     ])
     // Duplicate of the above PRG layout.
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT),
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.fixed_number(0x1F)),
-        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Prg::RAM_OR_ABSENT),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Prg::ROM).fixed_number(0x1F),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Prg::ROM).switchable(P),
     ])
     .chr_rom_max_size(8 * KIBIBYTE)
     .chr_layout(&[

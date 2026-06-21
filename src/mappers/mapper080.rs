@@ -12,13 +12,13 @@ pub const LAYOUT: Layout = Layout::builder()
     .build();
 
 pub const PRG_LAYOUT: &[PrgWindow] = &[
-    PrgWindow::new(0x6000, 0x7EFF, 7 * KIBIBYTE + 3 * KIBIBYTE / 4, PrgBank::ABSENT),
-    PrgWindow::new(0x7F00, 0x7F7F, KIBIBYTE / 8, PrgBank::RAM_OR_ABSENT.fixed_number(0).read_write_status(RS0, WS0)),
-    PrgWindow::new(0x7F80, 0x7FFF, KIBIBYTE / 8, PrgBank::RAM_OR_ABSENT.fixed_number(0).read_write_status(RS0, WS0)),
-    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
-    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
-    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(R)),
-    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
+    PrgWindow::new(0x6000, 0x7EFF, 7 * KIBIBYTE + 3 * KIBIBYTE / 4, Prg::ABSENT),
+    PrgWindow::new(0x7F00, 0x7F7F, KIBIBYTE / 8, Prg::RAM_OR_ABSENT).fixed_number(0).read_write_status(RS0, WS0),
+    PrgWindow::new(0x7F80, 0x7FFF, KIBIBYTE / 8, Prg::RAM_OR_ABSENT).fixed_number(0).read_write_status(RS0, WS0),
+    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Prg::ROM).switchable(P),
+    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Prg::ROM).switchable(Q),
+    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Prg::ROM).switchable(R),
+    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Prg::ROM).fixed_number(-1),
 ];
 pub const CHR_LAYOUT: &[ChrWindow] = &[
     ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),

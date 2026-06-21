@@ -1,7 +1,8 @@
 use num_derive::FromPrimitive;
 
-use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId, MemoryPresence, PrgSource, ReadStatusRegisterId, PrgSourceRegisterId, WriteStatusRegisterId};
+use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId, MemoryPresence, ReadStatusRegisterId, PrgSourceRegisterId, WriteStatusRegisterId};
 use crate::memory::ppu::ciram::CiramSide;
+use crate::memory::window::PrgSource;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct BankNumber(u16);

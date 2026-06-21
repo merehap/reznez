@@ -3,10 +3,10 @@ use crate::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(256 * KIBIBYTE)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.read_write_status(RS0, WS0)),
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Prg::RAM_OR_ABSENT).read_write_status(RS0, WS0),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Prg::ROM).switchable(P),
         // TODO: The fixed number here may have to change once external ROM is supported.
-        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.fixed_number(-1)),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Prg::ROM).fixed_number(-1),
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .override_chr_rom_inner_bank_size(2 * KIBIBYTE)

@@ -1,10 +1,11 @@
 use crate::mapper::*;
 
 use crate::bus::Bus;
-use crate::memory::bank::bank::{PrgSource, PrgSourceRegisterId};
+use crate::memory::bank::bank::PrgSourceRegisterId;
 use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
 use crate::memory::ppu::ppu_address::PpuAddressSection;
 use crate::memory::small_page::SmallPage;
+use crate::memory::window::PrgSource;
 use crate::mappers::mmc5::frame_state::FrameState;
 use crate::ppu::constants::NAME_TABLE_SIZE;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
@@ -14,29 +15,29 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(1024 * KIBIBYTE)
     // Mode 0
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.switchable(P)),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(T)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Prg::RAM_OR_ABSENT).switchable(P),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Prg::ROM).switchable(T),
     ])
     // Mode 1
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.switchable(P)),
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM_RAM.switchable(R).write_status(WS1).rom_ram_register(PS1)),
-        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(T)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Prg::RAM_OR_ABSENT).switchable(P),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Prg::ROM_RAM).switchable(R).write_status(WS1).rom_ram_register(PS1),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Prg::ROM).switchable(T),
     ])
     // Mode 2
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.switchable(P)),
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM_RAM.switchable(R).write_status(WS1).rom_ram_register(PS1)),
-        PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgBank::ROM_RAM.switchable(S).write_status(WS1).rom_ram_register(PS2)),
-        PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(T)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Prg::RAM_OR_ABSENT).switchable(P),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Prg::ROM_RAM).switchable(R).write_status(WS1).rom_ram_register(PS1),
+        PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, Prg::ROM_RAM).switchable(S).write_status(WS1).rom_ram_register(PS2),
+        PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, Prg::ROM).switchable(T),
     ])
     // Mode 3
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.switchable(P)),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM_RAM.switchable(Q).write_status(WS1).rom_ram_register(PS0)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM_RAM.switchable(R).write_status(WS1).rom_ram_register(PS1)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM_RAM.switchable(S).write_status(WS1).rom_ram_register(PS2)),
-        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(T)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Prg::RAM_OR_ABSENT).switchable(P),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Prg::ROM_RAM).switchable(Q).write_status(WS1).rom_ram_register(PS0),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Prg::ROM_RAM).switchable(R).write_status(WS1).rom_ram_register(PS1),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Prg::ROM_RAM).switchable(S).write_status(WS1).rom_ram_register(PS2),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Prg::ROM).switchable(T),
     ])
     .prg_layout_index(3)
     .override_prg_bank_register(T, -1)

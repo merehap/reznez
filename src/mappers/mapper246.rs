@@ -3,14 +3,14 @@ use crate::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x67FF, 2 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x6800, 0x6FFF, 2 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.fixed_number(0)),
-        PrgWindow::new(0x7000, 0x77FF, 2 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x7800, 0x7FFF, 2 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(Q)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(R)),
-        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(S)),
+        PrgWindow::new(0x6000, 0x67FF, 2 * KIBIBYTE, Prg::ABSENT),
+        PrgWindow::new(0x6800, 0x6FFF, 2 * KIBIBYTE, Prg::RAM_OR_ABSENT).fixed_number(0),
+        PrgWindow::new(0x7000, 0x77FF, 2 * KIBIBYTE, Prg::ABSENT),
+        PrgWindow::new(0x7800, 0x7FFF, 2 * KIBIBYTE, Prg::ABSENT),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Prg::ROM).switchable(P),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Prg::ROM).switchable(Q),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Prg::ROM).switchable(R),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Prg::ROM).switchable(S),
     ])
     .override_prg_bank_register(S, -1)
     .chr_rom_max_size(512 * KIBIBYTE)

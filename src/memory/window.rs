@@ -1,31 +1,43 @@
 use std::num::NonZeroU16;
 
-use crate::mapper::KIBIBYTE_U16;
 use crate::memory::address_template::address_resolver::AddressResolver;
 use crate::memory::address_template::bank_sizes::BankSizes;
-use crate::memory::bank::bank::PrgBank;
-use crate::memory::bank::bank_number::{ChrBankRegisters, PrgBankRegisterId};
-use crate::util::unit::KIBIBYTE;
+use crate::memory::bank::bank::{PrgSourceRegisterId, ReadStatusRegisterId, WriteStatusRegisterId};
+use crate::memory::bank::bank_number::{BankNumber, ChrBankRegisters, PrgBankRegisters, PrgBankRegisterId, MemSpace, ReadStatus, WriteStatus};
+use crate::util::unit::{KIBIBYTE, KIBIBYTE_U16};
 
 use super::bank::bank::{ChrBank, ChrBankNumberProvider};
 use super::bank::bank_number::ChrBankRegisterId;
 
 // A PrgWindow is a range within the CPU address space.
 // If a single bank is not enough to fill the window, then subsequent banks will be included too.
-#[derive(Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct PrgWindow {
     start: PrgWindowStart,
     end: PrgWindowEnd,
     size: PrgWindowSize,
-    bank: PrgBank,
+    prg_source_provider: PrgSourceProvider,
+    bank_number_provider: PrgBankNumberProvider,
+    read_status_register_id: Option<ReadStatusRegisterId>,
+    write_status_register_id: Option<WriteStatusRegisterId>,
+    rom_address_template: Option<AddressResolver<PrgBankRegisterId>>,
 }
 
 impl PrgWindow {
-    pub const fn new(start: u16, end: u16, size: u32, bank: PrgBank) -> PrgWindow {
+    pub const fn new(start: u16, end: u16, size: u32, prg_source_provider: PrgSourceProvider) -> Self {
         let start = PrgWindowStart::new(start);
         let end = PrgWindowEnd::new(end);
         let size = PrgWindowSize::new(size, start, end);
-        PrgWindow { start, end, size, bank }
+        Self {
+            start,
+            end,
+            size,
+            prg_source_provider,
+            bank_number_provider: PrgBankNumberProvider::Fixed(BankNumber::ZERO),
+            read_status_register_id: None,
+            write_status_register_id: None,
+            rom_address_template: None,
+        }
     }
 
     pub const fn start(self) -> u16 {
@@ -40,12 +52,8 @@ impl PrgWindow {
         self.size
     }
 
-    pub const fn bank(self) -> PrgBank {
-        self.bank
-    }
-
     pub const fn register_id(self) -> Option<PrgBankRegisterId> {
-        self.bank.bank_register_id()
+        self.bank_register_id()
     }
 
     pub fn offset(self, address: u16) -> Option<u16> {
@@ -56,8 +64,8 @@ impl PrgWindow {
         }
     }
 
-    pub fn rom_address_template(&self, bank_sizes: &BankSizes) -> AddressResolver<PrgBankRegisterId> {
-        self.bank().rom_address_template_override()
+    pub fn get_rom_address_template(&self, bank_sizes: &BankSizes) -> AddressResolver<PrgBankRegisterId> {
+        self.rom_address_template_override()
             .map_or(AddressResolver::prg(self, bank_sizes, 0), |template| template.reduced(bank_sizes))
     }
 
@@ -66,13 +74,213 @@ impl PrgWindow {
     }
 
     pub const fn validate_rom_address_template_width(&self, max_rom_size: u32) {
-        if let Some(rom_address_template) = self.bank().rom_address_template_override() {
+        if let Some(rom_address_template) = self.rom_address_template_override() {
             let max_width = (max_rom_size - 1).count_ones() as u8;
             let template_width = rom_address_template.total_width();
             let segment_count = rom_address_template.segment_count();
             const_panic::concat_assert!(template_width == max_width,
                 "Override ROM Address Template was not the correct bit width. Expected ", max_width, ", Found ", template_width,
                 " Segment count: ", segment_count);
+        }
+    }
+
+    pub const fn fixed_number(mut self, index: i16) -> Self {
+        assert!(
+            self.prg_source_provider.is_mapped(),
+            "An ABSENT bank can't be fixed_index."
+        );
+        self.bank_number_provider =
+            PrgBankNumberProvider::Fixed(BankNumber::from_i16(index));
+        self
+    }
+
+    pub const fn switchable(mut self, register_id: PrgBankRegisterId) -> Self {
+        assert!(
+            self.prg_source_provider.is_mapped(),
+            "An ABSENT bank can't be switchable."
+        );
+        self.bank_number_provider = PrgBankNumberProvider::Switchable(register_id);
+        self
+    }
+
+    pub const fn read_status(mut self, read_id: ReadStatusRegisterId) -> Self {
+        assert!(
+            self.prg_source_provider.is_mapped(),
+            "An ABSENT bank can't have a read status register."
+        );
+        self.read_status_register_id = Some(read_id);
+        self
+    }
+
+    pub const fn write_status(mut self, write_id: WriteStatusRegisterId) -> Self {
+        assert!(
+            self.prg_source_provider.is_mapped(),
+            "An ABSENT bank can't have a write status register."
+        );
+        self.write_status_register_id = Some(write_id);
+        self
+    }
+
+    pub const fn read_write_status(
+        mut self,
+        read_id: ReadStatusRegisterId,
+        write_id: WriteStatusRegisterId,
+    ) -> Self {
+        assert!(
+            self.prg_source_provider.is_mapped(),
+            "An ABSENT bank can't have a read or write status register."
+        );
+        self.read_status_register_id = Some(read_id);
+        self.write_status_register_id = Some(write_id);
+        self
+    }
+
+    pub const fn rom_ram_register(mut self, id: PrgSourceRegisterId) -> Self {
+        assert!(
+            self.prg_source_provider.is_switchable(),
+            "Only ROM_RAM may have a rom ram register."
+        );
+        self.prg_source_provider = PrgSourceProvider::Switchable(id);
+        self
+    }
+
+    pub const fn rom_address_template(mut self, template: &'static str) -> Self {
+        assert!(
+            self.prg_source_provider.is_mapped(),
+            "An ABSENT bank can't have an override ROM address template."
+        );
+        match AddressResolver::from_formatted(template, 0) {
+            Ok(template) => self.rom_address_template = Some(template),
+            Err(err) => panic!("{}", err),
+        }
+
+        self
+    }
+
+    pub const fn source_provider(&self) -> PrgSourceProvider {
+        self.prg_source_provider
+    }
+
+    pub const fn is_rom(self) -> bool {
+        matches!(
+            self.prg_source_provider,
+            PrgSourceProvider::Fixed(Some(PrgSource::Rom))
+                | PrgSourceProvider::Switchable(_)
+        )
+    }
+
+    pub const fn supports_ram(self) -> bool {
+        matches!(
+            self.prg_source_provider,
+            PrgSourceProvider::Fixed(Some(PrgSource::RamOrAbsent | PrgSource::RamOrRom))
+                | PrgSourceProvider::Switchable(_)
+        )
+    }
+
+    pub fn is_absent(self) -> bool {
+        self.prg_source_provider == PrgSourceProvider::Fixed(None)
+    }
+
+    pub fn is_rom_ram(self) -> bool {
+        matches!(self.prg_source_provider, PrgSourceProvider::Switchable(_))
+    }
+
+    pub fn bank_number(self, regs: &PrgBankRegisters) -> Result<BankNumber, String> {
+        if self.prg_source_provider.is_mapped() {
+            Ok(self.bank_number_provider.bank_number(regs))
+        } else {
+            Err(format!("Empty banks {self:?} don't have a bank location."))
+        }
+    }
+
+    pub const fn prg_bank_number_provider(self) -> PrgBankNumberProvider {
+        self.bank_number_provider
+    }
+
+    pub const fn bank_register_id(self) -> Option<PrgBankRegisterId> {
+        match self.bank_number_provider {
+            PrgBankNumberProvider::Fixed(_) => None,
+            PrgBankNumberProvider::Switchable(reg_id) => Some(reg_id),
+        }
+    }
+
+    pub const fn rom_address_template_override(self) -> Option<AddressResolver<PrgBankRegisterId>> {
+        self.rom_address_template
+    }
+
+
+    // FIXME: Use explicit rom_read_status() and ram_read_status() providers, then simplify this accordingly.
+    pub fn page_number_space(self, regs: &PrgBankRegisters) -> Option<MemSpace> {
+        let prg_source = match self.prg_source_provider {
+            PrgSourceProvider::Fixed(prg_source) => prg_source,
+            PrgSourceProvider::Switchable(reg_id) => Some(regs.rom_ram_mode(reg_id)),
+        }?;
+
+        let read_status = self
+            .read_status_register_id
+            .map_or(ReadStatus::Enabled, |id| regs.read_status(id));
+        let write_status = self
+            .write_status_register_id
+            .map_or(WriteStatus::Enabled, |id| regs.write_status(id));
+
+        // There's currently no way to set make the ROM ReadStatus of a RomRam bank switchable.
+        if self.is_rom_ram() && (prg_source == PrgSource::Rom || !regs.cartridge_has_ram()) {
+            return Some(MemSpace::Rom(ReadStatus::Enabled));
+        }
+
+        match prg_source {
+            PrgSource::RamOrRom | PrgSource::RamOrAbsent if regs.cartridge_has_ram() => {
+                Some(MemSpace::Ram(read_status, write_status))
+            }
+            PrgSource::Rom | PrgSource::RamOrRom => {
+                Some(MemSpace::Rom(read_status))
+            }
+            PrgSource::RamOrAbsent => None,
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum PrgSourceProvider {
+    Fixed(Option<PrgSource>),
+    Switchable(PrgSourceRegisterId),
+}
+
+impl PrgSourceProvider {
+    pub const ABSENT:          Self = Self::Fixed(None);
+    pub const RAM_OR_ABSENT:   Self = Self::Fixed(Some(PrgSource::RamOrAbsent));
+    pub const ROM:             Self = Self::Fixed(Some(PrgSource::Rom));
+    pub const WORK_RAM_OR_ROM: Self = Self::Fixed(Some(PrgSource::RamOrRom));
+    pub const ROM_RAM:         Self = Self::Switchable(PrgSourceRegisterId::PS0);
+
+    const fn is_mapped(self) -> bool {
+        !matches!(self, Self::Fixed(None))
+    }
+
+    const fn is_switchable(self) -> bool {
+        matches!(self, Self::Switchable(_))
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum PrgSource {
+    Rom,
+    // Work RAM or Save RAM
+    RamOrAbsent,
+    RamOrRom,
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum PrgBankNumberProvider {
+    Fixed(BankNumber),
+    Switchable(PrgBankRegisterId),
+}
+
+impl PrgBankNumberProvider {
+    fn bank_number(self, regs: &PrgBankRegisters) -> BankNumber {
+        match self {
+            Self::Fixed(bank_number) => bank_number,
+            Self::Switchable(register_id) => regs.get(register_id),
         }
     }
 }
@@ -153,7 +361,7 @@ impl ChrWindow {
 const PRG_PAGE_SIZE: u16 = 8 * KIBIBYTE as u16;
 const PRG_SUB_PAGE_SIZE: u16 = KIBIBYTE as u16 / 8;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct PrgWindowStart(u16);
 
 impl PrgWindowStart {
@@ -170,7 +378,7 @@ impl PrgWindowStart {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct PrgWindowEnd(NonZeroU16);
 
 impl PrgWindowEnd {
