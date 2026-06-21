@@ -9,31 +9,19 @@ use crate::ppu::register::ppu_registers::Mask;
 
 // Good enough emphasis for now.
 // Taken from https://forums.nesdev.org/viewtopic.php?p=4634
-// RGB
 const ALL_EMPHASIS_FACTORS: [[f32; 3]; 8] =
 [
-	[1.00, 1.00, 1.00],
-	[1.00, 0.80, 0.81],
-	[0.78, 0.94, 0.66],
-	[0.79, 0.77, 0.63],
-	[0.82, 0.83, 1.12],
-	[0.81, 0.71, 0.87],
-	[0.68, 0.79, 0.79],
-	[0.70, 0.70, 0.70],
+    // R     G     B
+    [1.00, 1.00, 1.00], // No emphasis
+    [1.00, 0.80, 0.81], // Red emphasis
+    [0.78, 0.94, 0.66], // Green emphasis
+    [0.79, 0.77, 0.63], // Blue emphasis
+    [0.82, 0.83, 1.12], // Red and green emphasis
+    [0.81, 0.71, 0.87], // Red and blue emphasis
+    [0.68, 0.79, 0.79], // Blue and green emphasis
+    [0.70, 0.70, 0.70], // All emphasis
 ];
 
-/*
- * [
- *     No emphasis,
- *     Red emphasis,
- *     Green emphasis,
- *     Blue emphasis,
- *     Red and green emphasis,
- *     Red and blue emphasis,
- *     Blue and green emphasis,
- *     All emphasis,
- * ]
- */
 #[derive(Clone, Debug)]
 pub struct SystemPalette([SystemPaletteSection; 8]);
 
