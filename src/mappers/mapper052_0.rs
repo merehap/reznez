@@ -39,43 +39,43 @@ const LAYOUT: Layout = Layout::builder()
     .chr_rom_max_size(1024 * KIBIBYTE)
     .chr_layout(&[
         // Big windows.
-        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM.rom_address_template("o₀₂o₀₁c₀₇c₀₆c₀₅c₀₄c₀₃c₀₂c₀₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM.rom_address_template("o₀₂o₀₁d₀₇d₀₆d₀₅d₀₄d₀₃d₀₂d₀₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, Chr::ROM).rom_address_template("o₀₂o₀₁c₀₇c₀₆c₀₅c₀₄c₀₃c₀₂c₀₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Chr::ROM).rom_address_template("o₀₂o₀₁d₀₇d₀₆d₀₅d₀₄d₀₃d₀₂d₀₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
         // Small windows.
-        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM.rom_address_template("o₀₂o₀₁e₀₇e₀₆e₀₅e₀₄e₀₃e₀₂e₀₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM.rom_address_template("o₀₂o₀₁f₀₇f₀₆f₀₅f₀₄f₀₃f₀₂f₀₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM.rom_address_template("o₀₂o₀₁g₀₇g₀₆g₀₅g₀₄g₀₃g₀₂g₀₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM.rom_address_template("o₀₂o₀₁h₀₇h₀₆h₀₅h₀₄h₀₃h₀₂h₀₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, Chr::ROM).rom_address_template("o₀₂o₀₁e₀₇e₀₆e₀₅e₀₄e₀₃e₀₂e₀₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, Chr::ROM).rom_address_template("o₀₂o₀₁f₀₇f₀₆f₀₅f₀₄f₀₃f₀₂f₀₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Chr::ROM).rom_address_template("o₀₂o₀₁g₀₇g₀₆g₀₅g₀₄g₀₃g₀₂g₀₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Chr::ROM).rom_address_template("o₀₂o₀₁h₀₇h₀₆h₀₅h₀₄h₀₃h₀₂h₀₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
     ])
     .chr_layout(&[
         // Small windows.
-        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM.rom_address_template("o₀₂o₀₁e₀₇e₀₆e₀₅e₀₄e₀₃e₀₂e₀₁e₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM.rom_address_template("o₀₂o₀₁f₀₇f₀₆f₀₅f₀₄f₀₃f₀₂f₀₁f₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM.rom_address_template("o₀₂o₀₁g₀₇g₀₆g₀₅g₀₄g₀₃g₀₂g₀₁g₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM.rom_address_template("o₀₂o₀₁h₀₇h₀₆h₀₅h₀₄h₀₃h₀₂h₀₁h₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, Chr::ROM).rom_address_template("o₀₂o₀₁e₀₇e₀₆e₀₅e₀₄e₀₃e₀₂e₀₁e₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, Chr::ROM).rom_address_template("o₀₂o₀₁f₀₇f₀₆f₀₅f₀₄f₀₃f₀₂f₀₁f₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Chr::ROM).rom_address_template("o₀₂o₀₁g₀₇g₀₆g₀₅g₀₄g₀₃g₀₂g₀₁g₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Chr::ROM).rom_address_template("o₀₂o₀₁h₀₇h₀₆h₀₅h₀₄h₀₃h₀₂h₀₁h₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
         // Big windows.
-        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM.rom_address_template("o₀₂o₀₁c₀₇c₀₆c₀₅c₀₄c₀₃c₀₂c₀₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM.rom_address_template("o₀₂o₀₁d₀₇d₀₆d₀₅d₀₄d₀₃d₀₂d₀₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, Chr::ROM).rom_address_template("o₀₂o₀₁c₀₇c₀₆c₀₅c₀₄c₀₃c₀₂c₀₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Chr::ROM).rom_address_template("o₀₂o₀₁d₀₇d₀₆d₀₅d₀₄d₀₃d₀₂d₀₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
     ])
     .chr_layout(&[
         // Big windows.
-        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM.rom_address_template("o₀₂o₀₁o₀₀c₀₆c₀₅c₀₄c₀₃c₀₂c₀₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM.rom_address_template("o₀₂o₀₁o₀₀d₀₆d₀₅d₀₄d₀₃d₀₂d₀₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, Chr::ROM).rom_address_template("o₀₂o₀₁o₀₀c₀₆c₀₅c₀₄c₀₃c₀₂c₀₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Chr::ROM).rom_address_template("o₀₂o₀₁o₀₀d₀₆d₀₅d₀₄d₀₃d₀₂d₀₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
         // Small windows.
-        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM.rom_address_template("o₀₂o₀₁o₀₀e₀₆e₀₅e₀₄e₀₃e₀₂e₀₁e₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM.rom_address_template("o₀₂o₀₁o₀₀f₀₆f₀₅f₀₄f₀₃f₀₂f₀₁f₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM.rom_address_template("o₀₂o₀₁o₀₀g₀₆g₀₅g₀₄g₀₃g₀₂g₀₁g₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM.rom_address_template("o₀₂o₀₁o₀₀h₀₆h₀₅h₀₄h₀₃h₀₂h₀₁h₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, Chr::ROM).rom_address_template("o₀₂o₀₁o₀₀e₀₆e₀₅e₀₄e₀₃e₀₂e₀₁e₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, Chr::ROM).rom_address_template("o₀₂o₀₁o₀₀f₀₆f₀₅f₀₄f₀₃f₀₂f₀₁f₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Chr::ROM).rom_address_template("o₀₂o₀₁o₀₀g₀₆g₀₅g₀₄g₀₃g₀₂g₀₁g₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Chr::ROM).rom_address_template("o₀₂o₀₁o₀₀h₀₆h₀₅h₀₄h₀₃h₀₂h₀₁h₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
     ])
     .chr_layout(&[
         // Small windows.
-        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM.rom_address_template("o₀₂o₀₁o₀₀e₀₆e₀₅e₀₄e₀₃e₀₂e₀₁e₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM.rom_address_template("o₀₂o₀₁o₀₀f₀₆f₀₅f₀₄f₀₃f₀₂f₀₁f₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM.rom_address_template("o₀₂o₀₁o₀₀g₀₆g₀₅g₀₄g₀₃g₀₂g₀₁g₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM.rom_address_template("o₀₂o₀₁o₀₀h₀₆h₀₅h₀₄h₀₃h₀₂h₀₁h₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, Chr::ROM).rom_address_template("o₀₂o₀₁o₀₀e₀₆e₀₅e₀₄e₀₃e₀₂e₀₁e₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, Chr::ROM).rom_address_template("o₀₂o₀₁o₀₀f₀₆f₀₅f₀₄f₀₃f₀₂f₀₁f₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Chr::ROM).rom_address_template("o₀₂o₀₁o₀₀g₀₆g₀₅g₀₄g₀₃g₀₂g₀₁g₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Chr::ROM).rom_address_template("o₀₂o₀₁o₀₀h₀₆h₀₅h₀₄h₀₃h₀₂h₀₁h₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
         // Big windows.
-        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM.rom_address_template("o₀₂o₀₁o₀₀c₀₆c₀₅c₀₄c₀₃c₀₂c₀₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM.rom_address_template("o₀₂o₀₁o₀₀d₀₆d₀₅d₀₄d₀₃d₀₂d₀₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, Chr::ROM).rom_address_template("o₀₂o₀₁o₀₀c₀₆c₀₅c₀₄c₀₃c₀₂c₀₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Chr::ROM).rom_address_template("o₀₂o₀₁o₀₀d₀₆d₀₅d₀₄d₀₃d₀₂d₀₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
     ])
     .name_table_mirrorings(mmc3::NAME_TABLE_MIRRORINGS)
     .build();

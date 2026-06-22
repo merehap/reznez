@@ -9,7 +9,7 @@ const LAYOUT: Layout = Layout::builder()
     .chr_rom_max_size(128 * KIBIBYTE)
     .chr_rom_outer_bank_size(32 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM.switchable(C)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Chr::ROM).switchable(C),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,

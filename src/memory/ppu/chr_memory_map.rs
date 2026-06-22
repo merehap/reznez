@@ -1,13 +1,13 @@
 use log::warn;
 
-use crate::mapper::{BankNumber, ChrBank, ChrBankRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource};
+use crate::mapper::{BankNumber, ChrBankRegisterId, ChrWindow, NameTableMirroring, NameTableQuadrant, NameTableSource};
 use crate::memory::address_template::address_resolver::AddressResolver;
 use crate::memory::address_template::bank_sizes::BankSizes;
-use crate::memory::bank::bank::{ChrBankNumberProvider, ChrSource, ChrSourceRegisterId};
+use crate::memory::bank::bank::ChrSourceRegisterId;
 use crate::memory::bank::bank_number::{ChrBankRegisters, ReadStatus, WriteStatus};
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::ppu_address::PpuAddress;
-use crate::memory::window::ChrWindowSize;
+use crate::memory::window::{ChrSource, ChrSourceProvider, ChrBankNumberProvider, ChrWindowSize};
 use crate::util::unit::KIBIBYTE;
 
 use super::chr_memory::PeekSource;
@@ -37,8 +37,8 @@ impl ChrMemoryMap {
             let pages_per_window = window.size().page_multiple();
             for page_offset in 0..pages_per_window {
                 page_mappings.push(ChrMapping {
-                    bank: window.bank(),
-                    rom_address_resolver: window.rom_address_template(rom_bank_sizes),
+                    window: *window,
+                    rom_address_resolver: window.get_rom_address_template(rom_bank_sizes),
                     ram_address_resolver: window.ram_address_template(ram_bank_sizes, 0),
                     pages_per_bank: bank_size.page_multiple(),
                     page_offset,
@@ -70,12 +70,14 @@ impl ChrMemoryMap {
                     page_mappings.push(ChrMapping::from_name_table_source(quadrant, address_template, address_template));
                 }
             } else {
-                let quadrants_with_source_reg_ids = cartridge_name_table_mirroring.quadrants().into_iter()
+                let quadrants_with_source_reg_ids = [0x2000, 0x2400, 0x2800, 0x2C00].into_iter()
+                    .zip(cartridge_name_table_mirroring.quadrants())
                     .zip(ChrSourceRegisterId::ALL_NAME_TABLE_SOURCE_IDS);
-                for (quadrant, reg_id) in quadrants_with_source_reg_ids {
+                for ((addr, quadrant), reg_id) in quadrants_with_source_reg_ids {
                     assert!(matches!(quadrant, NameTableSource::Ciram(_)), "Configure non-CIRAM mirrorings using chr_layouts instead.");
+                    let window = ChrWindow::new(addr, addr + 0x3FF, 0x400, ChrSourceProvider::Switchable(reg_id));
                     page_mappings.push(ChrMapping::from_name_table_source_with_register(
-                        quadrant, address_template, address_template, reg_id, regs));
+                        window, quadrant, address_template, address_template, reg_id, regs));
                 }
             }
         }
@@ -219,7 +221,7 @@ impl ChrMemoryIndex {
 
 #[derive(Clone, Copy, Debug)]
 pub struct ChrMapping {
-    bank: ChrBank,
+    window: ChrWindow,
     rom_address_resolver: AddressResolver<ChrBankRegisterId>,
     ram_address_resolver: AddressResolver<ChrBankRegisterId>,
     // TODO: Figure out how to get rid of this field. It's only used for the PatternTable debug screen.
@@ -237,7 +239,7 @@ impl ChrMapping {
         ram_address_resolver: AddressResolver<ChrBankRegisterId>,
     ) -> Self {
         let mut mapping = Self {
-            bank: ChrBank::ROM,
+            window: ChrWindow::new(0, 0x1FFF, 8 * KIBIBYTE, ChrSourceProvider::Fixed(None)),
             rom_address_resolver,
             ram_address_resolver,
             pages_per_bank: 1,
@@ -245,17 +247,18 @@ impl ChrMapping {
             ciram_side: CiramSide::Left,
             mem_type_status: ChrMemTypeStatus::Rom(ReadStatus::Enabled),
         };
-        mapping.bank = match name_table_source {
-            NameTableSource::Rom { bank_number } => mapping.bank.fixed_index(bank_number.to_raw() as i16),
-            NameTableSource::Ram { bank_number } => mapping.bank.fixed_index(bank_number.to_raw() as i16),
-            NameTableSource::Ciram(ciram_side) => ChrBank::ciram(ciram_side),
-            NameTableSource::MapperCustom { page_id: page_number } => ChrBank::mapper_sourced(page_number),
+        mapping.window = match name_table_source {
+            NameTableSource::Rom { bank_number } => mapping.window.fixed_index(bank_number.to_raw() as i16),
+            NameTableSource::Ram { bank_number } => mapping.window.fixed_index(bank_number.to_raw() as i16),
+            NameTableSource::Ciram(ciram_side) => mapping.window.ciram(ciram_side),
+            NameTableSource::MapperCustom { page_id } => mapping.window.mapper_sourced(page_id),
         };
 
         mapping
     }
 
     pub fn from_name_table_source_with_register(
+        window: ChrWindow,
         name_table_source: NameTableSource,
         rom_address_resolver: AddressResolver<ChrBankRegisterId>,
         ram_address_resolver: AddressResolver<ChrBankRegisterId>,
@@ -263,7 +266,7 @@ impl ChrMapping {
         regs: &mut ChrBankRegisters,
     ) -> Self {
         let mapping = Self {
-            bank: ChrBank::with_switchable_source(source_id),
+            window,
             rom_address_resolver,
             ram_address_resolver,
             pages_per_bank: 1,
@@ -300,32 +303,32 @@ impl ChrMapping {
     }
 
     pub fn to_name_table_source(self, regs: &ChrBankRegisters) -> Result<NameTableSource, String> {
-        let chr_source = self.bank.current_chr_source(regs).expect("NameTableSource can't come from an empty bank.");
+        let chr_source = self.window.current_chr_source(regs).expect("NameTableSource can't come from an empty bank.");
         match chr_source {
             ChrSource::RomOrRam => {
                 assert!(!regs.has_rom() || !regs.has_ram(),
                     "Don't know what to do with a Chr RomOrRam bank when the cartridge has both ROM and RAM.");
                 if regs.has_rom() {
-                    Ok(NameTableSource::Rom { bank_number: self.bank.bank_number(regs).unwrap() })
+                    Ok(NameTableSource::Rom { bank_number: self.window.bank_number(regs).unwrap() })
                 } else if regs.has_ram() {
-                    Ok(NameTableSource::Ram { bank_number: self.bank.bank_number(regs).unwrap() })
+                    Ok(NameTableSource::Ram { bank_number: self.window.bank_number(regs).unwrap() })
                 } else {
                     Err("Absent CHR banks are not yet supported.".to_owned())
                 }
             }
-            ChrSource::Rom => Ok(NameTableSource::Rom { bank_number: self.bank.bank_number(regs).unwrap() }),
+            ChrSource::Rom => Ok(NameTableSource::Rom { bank_number: self.window.bank_number(regs).unwrap() }),
             ChrSource::Ciram(ciram_side) => Ok(NameTableSource::Ciram(ciram_side)),
-            ChrSource::WorkRam => Ok(NameTableSource::Ram { bank_number: self.bank.bank_number(regs).unwrap() }),
+            ChrSource::WorkRam => Ok(NameTableSource::Ram { bank_number: self.window.bank_number(regs).unwrap() }),
             ChrSource::MapperCustom { page_id } => Ok(NameTableSource::MapperCustom { page_id }),
         }
     }
 
     pub fn update_page_id(&mut self, regs: &ChrBankRegisters) {
-        let Self { bank, .. } = self;
+        let Self { window, .. } = self;
 
-        let read_status = bank.read_status_register_id().map_or(ReadStatus::Enabled, |id| regs.read_status(id));
-        let write_status = bank.write_status_register_id().map_or(WriteStatus::Enabled, |id| regs.write_status(id));
-        match bank.current_chr_source(regs) {
+        let read_status = window.read_status_register_id().map_or(ReadStatus::Enabled, |id| regs.read_status(id));
+        let write_status = window.write_status_register_id().map_or(WriteStatus::Enabled, |id| regs.write_status(id));
+        match window.current_chr_source(regs) {
             None => todo!("EMPTY bank"),
             Some(ChrSource::RomOrRam) => {
                 match (regs.has_rom(), regs.has_ram()) {

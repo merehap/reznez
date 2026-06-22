@@ -4,7 +4,7 @@ use log::{info, warn};
 
 use crate::mapper::{BankNumber, ChrBankRegisterId, ChrWindow, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource};
 use crate::memory::address_template::bank_sizes::BankSizes;
-use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId, MemoryPresence, ReadStatusRegisterId, WriteStatusRegisterId};
+use crate::memory::bank::bank::{ChrSourceRegisterId, MemoryPresence, ReadStatusRegisterId, WriteStatusRegisterId};
 use crate::memory::bank::bank_number::{ChrBankRegisters, ReadStatus, WriteStatus};
 use crate::memory::ppu::chr_layout::{ChrLayouts, ChrLayout};
 use crate::memory::ppu::ppu_address::PpuAddress;
@@ -12,7 +12,7 @@ use crate::memory::ppu::chr_memory_map::{ChrMemTypeStatus, ChrMemoryIndex, ChrMe
 use crate::memory::ppu::ciram::Ciram;
 use crate::memory::raw_memory::RawMemory;
 use crate::memory::small_page::SmallPage;
-use crate::memory::window::ChrWindowSize;
+use crate::memory::window::{ChrSource, ChrWindowSize};
 use crate::util::unit::KIBIBYTE;
 
 use super::ciram::CiramSide;
@@ -55,8 +55,8 @@ impl ChrMemory {
                     bank_size = Some(window.size());
                 }
 
-                regs.layout_rom_presence = std::cmp::max(regs.layout_rom_presence, window.bank().rom_presence());
-                regs.layout_ram_presence = std::cmp::max(regs.layout_ram_presence, window.bank().ram_presence());
+                regs.layout_rom_presence = std::cmp::max(regs.layout_rom_presence, window.rom_presence());
+                regs.layout_ram_presence = std::cmp::max(regs.layout_ram_presence, window.ram_presence());
             }
         }
 

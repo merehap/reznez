@@ -13,7 +13,7 @@ const LAYOUT_WITH_SWITCHABLE_CHR_ROM: Layout = Layout::builder()
     ])
     .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM.switchable(C)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Chr::ROM).switchable(C),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,
@@ -33,7 +33,7 @@ const LAYOUT_WITH_FIXED_CHR_RAM: Layout = Layout::builder()
     ])
     .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::RAM.fixed_index(0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Chr::RAM),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,

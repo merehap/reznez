@@ -103,7 +103,7 @@ impl ChrLayout {
         let mut smallest_size = 32 * KIBIBYTE_U16;
         while i < self.initial_windows.len() {
             let window = &self.initial_windows[i];
-            if !matches!(window.bank().rom_presence(), MemoryPresence::Absent) {
+            if !matches!(window.rom_presence(), MemoryPresence::Absent) {
                 smallest_size = std::cmp::min(smallest_size, window.size().to_raw());
             }
 
@@ -116,7 +116,7 @@ impl ChrLayout {
     pub const fn supports_ram(&self) -> bool {
         let mut i = 0;
         while i < self.initial_windows.len() {
-            if !matches!(self.initial_windows[i].bank().ram_presence(), MemoryPresence::Absent) {
+            if !matches!(self.initial_windows[i].ram_presence(), MemoryPresence::Absent) {
                 return true;
             }
 

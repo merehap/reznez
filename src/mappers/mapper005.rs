@@ -45,52 +45,52 @@ const LAYOUT: Layout = Layout::builder()
     .chr_rom_max_size(1024 * KIBIBYTE)
     // Normal sprite height layouts
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(J)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(J),
     ])
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(F)),
-        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(J)),
+        ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(F),
+        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(J),
     ])
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(D)),
-        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(F)),
-        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(H)),
-        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(J)),
+        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(D),
+        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(F),
+        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(H),
+        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(J),
     ])
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
-        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(D)),
-        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(E)),
-        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(F)),
-        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(G)),
-        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(H)),
-        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(I)),
-        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(J)),
+        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(C),
+        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(D),
+        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(E),
+        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(F),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(G),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(H),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(I),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(J),
     ])
 
     // Tall sprite height layouts
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(N)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(N),
     ])
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(N)),
-        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(N)),
+        ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(N),
+        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(N),
     ])
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(L)),
-        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(N)),
-        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(L)),
-        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(N)),
+        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(L),
+        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(N),
+        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(L),
+        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(N),
     ])
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(K)),
-        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(L)),
-        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(M)),
-        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(N)),
-        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(K)),
-        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(L)),
-        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(M)),
-        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(N)),
+        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(K),
+        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(L),
+        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(M),
+        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(N),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(K),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(L),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(M),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(N),
     ])
     // FIXME: This isn't respected anymore
     .do_not_align_large_chr_windows()

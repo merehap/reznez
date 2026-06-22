@@ -10,7 +10,7 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(8 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::RAM),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Chr::RAM),
     ])
     .fixed_name_table_mirroring()
     .build();

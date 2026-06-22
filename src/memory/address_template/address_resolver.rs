@@ -4,9 +4,8 @@ use crate::memory::address_template::bank_sizes::BankSizes;
 use crate::memory::address_template::bit_template::BitTemplate;
 use crate::memory::address_template::segment::{Label, Segment};
 use crate::memory::bank::bank_number::RegisterId;
-use crate::memory::bank::bank::ChrBankNumberProvider;
 use crate::memory::bank::bank_number::{PrgBankRegisters, PrgBankRegisterId, ChrBankRegisters, ChrBankRegisterId};
-use crate::memory::window::{ChrWindowSize, PrgWindow, PrgBankNumberProvider};
+use crate::memory::window::{ChrBankNumberProvider, ChrWindowSize, PrgWindow, PrgBankNumberProvider};
 use crate::util::const_vec::ConstVec;
 
 const MAX_WIDTH: u8 = 32;

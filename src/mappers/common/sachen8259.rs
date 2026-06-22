@@ -6,17 +6,17 @@ pub const PRG_LAYOUT: &[PrgWindow] = &[
 ];
 
 pub const NORMAL_CHR_LAYOUT: &[ChrWindow] = &[
-    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
-    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(D)),
-    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(E)),
-    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(F)),
+    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(C),
+    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(D),
+    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(E),
+    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(F),
 ];
 // G, H, and I are the same as C, except for their low bits.
 pub const SIMPLE_CHR_LAYOUT: &[ChrWindow] = &[
-    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
-    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(G)),
-    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(H)),
-    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(I)),
+    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(C),
+    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(G),
+    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(H),
+    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(I),
 ];
 
 pub const NAME_TABLE_MIRRORINGS: &[NameTableMirroring] = &[

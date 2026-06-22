@@ -1,4 +1,5 @@
 use crate::mapper::*;
+use crate::memory::window::ChrSource;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(256 * KIBIBYTE)
@@ -11,14 +12,14 @@ const LAYOUT: Layout = Layout::builder()
     .chr_rom_max_size(256 * KIBIBYTE)
     .override_chr_rom_inner_bank_size(2 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C)),
-        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(D)),
-        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(E)),
-        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(F)),
-        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS0).meta_switchable(MR0)),
-        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS1).meta_switchable(MR1)),
-        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS2).meta_switchable(MR2)),
-        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS3).meta_switchable(MR3)),
+        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, Chr::ROM).switchable(C),
+        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Chr::ROM).switchable(D),
+        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, Chr::ROM).switchable(E),
+        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Chr::ROM).switchable(F),
+        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, Chr::with_switchable_source(NTS0)).meta_switchable(MR0),
+        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, Chr::with_switchable_source(NTS1)).meta_switchable(MR1),
+        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, Chr::with_switchable_source(NTS2)).meta_switchable(MR2),
+        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, Chr::with_switchable_source(NTS3)).meta_switchable(MR3),
     ])
     // Vertical mirroring
     .override_chr_meta_register(MR0, NT0)

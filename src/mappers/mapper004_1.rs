@@ -77,8 +77,8 @@ impl Mapper for Mapper004_1 {
             }
             (0x8000..=0x9FFF, false) => {
                 match self.selected_register_id {
-                    RegId::Chr(cx) => bus.set_chr_register(cx, value),
-                    RegId::Prg(px) => bus.set_prg_register(px, value),
+                    RegId::CHR(cx) => bus.set_chr_register(cx, value),
+                    RegId::PRG(px) => bus.set_prg_register(px, value),
                 }
             },
             (0xA000..=0xBFFF, true ) => {
@@ -133,7 +133,7 @@ impl Mapper for Mapper004_1 {
 impl Mapper004_1 {
     pub fn new() -> Self {
         Self {
-            selected_register_id: RegId::Chr(C),
+            selected_register_id: RegId::CHR(C),
             irq_state: Mmc3IrqState::REV_A_IRQ_STATE,
             prg_ram_enabled: false,
         }

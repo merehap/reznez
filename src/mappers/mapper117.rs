@@ -12,14 +12,14 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C)),
-        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(D)),
-        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(E)),
-        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(F)),
-        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(G)),
-        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(H)),
-        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(I)),
-        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(J)),
+        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, Chr::ROM).switchable(C),
+        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, Chr::ROM).switchable(D),
+        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Chr::ROM).switchable(E),
+        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Chr::ROM).switchable(F),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, Chr::ROM).switchable(G),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, Chr::ROM).switchable(H),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Chr::ROM).switchable(I),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Chr::ROM).switchable(J),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,

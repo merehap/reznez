@@ -1,5 +1,5 @@
 use crate::mapper::*;
-use crate::memory::window::PrgSourceProvider as PRG;
+use crate::memory::window::PrgSourceProvider as Prg;
 use crate::mappers::mmc3::irq_state::Mmc3IrqState;
 
 pub const LAYOUT: Layout = Layout::builder()
@@ -13,41 +13,41 @@ pub const LAYOUT: Layout = Layout::builder()
     .build();
 
 pub const PRG_WINDOWS_8000_SWITCHABLE: &[PrgWindow] = &[
-    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PRG::RAM_OR_ABSENT).read_write_status(RS0, WS0),
-    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PRG::ROM).switchable(P),
-    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PRG::ROM).switchable(Q),
-    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PRG::ROM).fixed_number(-2),
-    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PRG::ROM).fixed_number(-1),
+    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Prg::RAM_OR_ABSENT).read_write_status(RS0, WS0),
+    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Prg::ROM).switchable(P),
+    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Prg::ROM).switchable(Q),
+    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Prg::ROM).fixed_number(-2),
+    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Prg::ROM).fixed_number(-1),
 ];
 
 pub const PRG_WINDOWS_C000_SWITCHABLE: &[PrgWindow] = &[
-    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PRG::RAM_OR_ABSENT).read_write_status(RS0, WS0),
-    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PRG::ROM).fixed_number(-2),
-    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PRG::ROM).switchable(Q),
-    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PRG::ROM).switchable(P),
-    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PRG::ROM).fixed_number(-1),
+    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Prg::RAM_OR_ABSENT).read_write_status(RS0, WS0),
+    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Prg::ROM).fixed_number(-2),
+    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Prg::ROM).switchable(Q),
+    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Prg::ROM).switchable(P),
+    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Prg::ROM).fixed_number(-1),
 ];
 
 pub const CHR_BIG_WINDOWS_FIRST: &[ChrWindow] = &[
     // Big windows.
-    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
-    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(D)),
+    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(C),
+    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(D),
     // Small windows.
-    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(E)),
-    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(F)),
-    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(G)),
-    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(H)),
+    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(E),
+    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(F),
+    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(G),
+    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(H),
 ];
 
 pub const CHR_SMALL_WINDOWS_FIRST: &[ChrWindow] = &[
     // Small windows.
-    ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(E)),
-    ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(F)),
-    ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(G)),
-    ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(H)),
+    ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(E),
+    ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(F),
+    ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(G),
+    ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(H),
     // Big windows.
-    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
-    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(D)),
+    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(C),
+    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(D),
 ];
 
 pub const NAME_TABLE_MIRRORINGS: &[NameTableMirroring] = &[
@@ -55,8 +55,8 @@ pub const NAME_TABLE_MIRRORINGS: &[NameTableMirroring] = &[
     NameTableMirroring::HORIZONTAL,
 ];
 
-use RegId::{Chr, Prg};
-pub const BANK_NUMBER_REGISTER_IDS: [RegId; 8] = [Chr(C), Chr(D), Chr(E), Chr(F), Chr(G), Chr(H), Prg(P), Prg(Q)];
+use RegId::{CHR, PRG};
+pub const BANK_NUMBER_REGISTER_IDS: [RegId; 8] = [CHR(C), CHR(D), CHR(E), CHR(F), CHR(G), CHR(H), PRG(P), PRG(Q)];
 
 // TODO: Support VS System (and its 4-screen mirroring).
 pub struct Mapper004Mmc3 {
@@ -78,8 +78,8 @@ impl Mapper for Mapper004Mmc3 {
             }
             (0x8000..=0x9FFF, false) => {
                 match self.selected_register_id {
-                    Chr(cx) => bus.set_chr_register(cx, value),
-                    Prg(px) => bus.set_prg_register(px, value),
+                    CHR(cx) => bus.set_chr_register(cx, value),
+                    PRG(px) => bus.set_prg_register(px, value),
                 }
             }
             (0xA000..=0xBFFF, true ) => {
@@ -120,7 +120,7 @@ impl Mapper for Mapper004Mmc3 {
 impl Mapper004Mmc3 {
     pub fn new(irq_state: Mmc3IrqState) -> Self {
         Self {
-            selected_register_id: Chr(C),
+            selected_register_id: CHR(C),
             irq_state,
         }
     }
@@ -132,6 +132,6 @@ impl Mapper004Mmc3 {
 
 #[derive(Clone, Copy)]
 pub enum RegId {
-    Chr(ChrBankRegisterId),
-    Prg(PrgBankRegisterId),
+    CHR(ChrBankRegisterId),
+    PRG(PrgBankRegisterId),
 }

@@ -2,7 +2,8 @@ use crate::mapper::*;
 
 use crate::mappers::mmc3::mmc3;
 use crate::mappers::mmc3::irq_state::Mmc3IrqState;
-use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId};
+use crate::memory::bank::bank::ChrSourceRegisterId;
+use crate::memory::window::ChrSource;
 
 pub const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
@@ -11,20 +12,20 @@ pub const LAYOUT: Layout = Layout::builder()
     .chr_rom_max_size(64 * KIBIBYTE)
     // Same CHR layouts as standard MMC3, except the banks can switch between ROM and RAM memory spaces.
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::SWITCHABLE_SOURCE.switchable(C).chr_source(CS0)),
-        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::SWITCHABLE_SOURCE.switchable(D).chr_source(CS1)),
-        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::SWITCHABLE_SOURCE.switchable(E).chr_source(CS2)),
-        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::SWITCHABLE_SOURCE.switchable(F).chr_source(CS3)),
-        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::SWITCHABLE_SOURCE.switchable(G).chr_source(CS4)),
-        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::SWITCHABLE_SOURCE.switchable(H).chr_source(CS5)),
+        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, Chr::SWITCHABLE_SOURCE).switchable(C).chr_source(CS0),
+        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Chr::SWITCHABLE_SOURCE).switchable(D).chr_source(CS1),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, Chr::SWITCHABLE_SOURCE).switchable(E).chr_source(CS2),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, Chr::SWITCHABLE_SOURCE).switchable(F).chr_source(CS3),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Chr::SWITCHABLE_SOURCE).switchable(G).chr_source(CS4),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Chr::SWITCHABLE_SOURCE).switchable(H).chr_source(CS5),
     ])
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::SWITCHABLE_SOURCE.switchable(E).chr_source(CS2)),
-        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::SWITCHABLE_SOURCE.switchable(F).chr_source(CS3)),
-        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::SWITCHABLE_SOURCE.switchable(G).chr_source(CS4)),
-        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::SWITCHABLE_SOURCE.switchable(H).chr_source(CS5)),
-        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::SWITCHABLE_SOURCE.switchable(C).chr_source(CS0)),
-        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::SWITCHABLE_SOURCE.switchable(D).chr_source(CS1)),
+        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, Chr::SWITCHABLE_SOURCE).switchable(E).chr_source(CS2),
+        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, Chr::SWITCHABLE_SOURCE).switchable(F).chr_source(CS3),
+        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Chr::SWITCHABLE_SOURCE).switchable(G).chr_source(CS4),
+        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Chr::SWITCHABLE_SOURCE).switchable(H).chr_source(CS5),
+        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, Chr::SWITCHABLE_SOURCE).switchable(C).chr_source(CS0),
+        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Chr::SWITCHABLE_SOURCE).switchable(D).chr_source(CS1),
     ])
     .name_table_mirrorings(mmc3::NAME_TABLE_MIRRORINGS)
     .build();
@@ -40,7 +41,7 @@ impl Mapper for Mapper119 {
     fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         if matches!(*addr, 0x8001..=0x9FFF)
                 && !addr.is_multiple_of(2)
-                && let mmc3::RegId::Chr(chr_id) = self.mmc3.selected_register_id() {
+                && let mmc3::RegId::CHR(chr_id) = self.mmc3.selected_register_id() {
 
             let fields = splitbits!(value, ".mcccccc");
             bus.set_chr_register(chr_id, fields.c);

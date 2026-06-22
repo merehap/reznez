@@ -1,6 +1,7 @@
 use std::num::NonZeroI8;
 
 use crate::mapper::*;
+use crate::memory::window::ChrSource;
 use crate::util::pattern_table_transition_detector::{PatternTableTransitionDetector, AllowedAddresses};
 
 // TODO Fix the 0x6000 ROM alignments now that they aren't auto-aligned.
@@ -114,45 +115,45 @@ const LAYOUT: Layout = Layout::builder()
     .chr_rom_max_size(2048 * KIBIBYTE)
     .chr_rom_outer_bank_size(256 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
-        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS0).switchable(NT0).write_status(WS0)),
-        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS1).switchable(NT1).write_status(WS0)),
-        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS2).switchable(NT2).write_status(WS0)),
-        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS3).switchable(NT3).write_status(WS0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(C),
+        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, Chr::with_switchable_source(NTS0)).switchable(NT0).write_status(WS0),
+        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, Chr::with_switchable_source(NTS1)).switchable(NT1).write_status(WS0),
+        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, Chr::with_switchable_source(NTS2)).switchable(NT2).write_status(WS0),
+        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, Chr::with_switchable_source(NTS3)).switchable(NT3).write_status(WS0),
     ])
     .chr_layout(&[
         // Meta register M0 used to support MMC4 bank-switching mode. Initial value: C0. Other value: C8.
-        ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::ROM_OR_RAM.meta_switchable(MR0)),
+        ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Chr::ROM_OR_RAM).meta_switchable(MR0),
         // Meta register M1 used to support MMC4 bank-switching mode. Initial value: C4. Other value: C9.
-        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::ROM_OR_RAM.meta_switchable(MR1)),
-        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS0).switchable(NT0).write_status(WS0)),
-        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS1).switchable(NT1).write_status(WS0)),
-        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS2).switchable(NT2).write_status(WS0)),
-        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS3).switchable(NT3).write_status(WS0)),
+        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Chr::ROM_OR_RAM).meta_switchable(MR1),
+        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, Chr::with_switchable_source(NTS0)).switchable(NT0).write_status(WS0),
+        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, Chr::with_switchable_source(NTS1)).switchable(NT1).write_status(WS0),
+        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, Chr::with_switchable_source(NTS2)).switchable(NT2).write_status(WS0),
+        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, Chr::with_switchable_source(NTS3)).switchable(NT3).write_status(WS0),
     ])
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C)),
-        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(E)),
-        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(G)),
-        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(I)),
-        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS0).switchable(NT0).write_status(WS0)),
-        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS1).switchable(NT1).write_status(WS0)),
-        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS2).switchable(NT2).write_status(WS0)),
-        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS3).switchable(NT3).write_status(WS0)),
+        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(C),
+        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(E),
+        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(G),
+        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(I),
+        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, Chr::with_switchable_source(NTS0)).switchable(NT0).write_status(WS0),
+        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, Chr::with_switchable_source(NTS1)).switchable(NT1).write_status(WS0),
+        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, Chr::with_switchable_source(NTS2)).switchable(NT2).write_status(WS0),
+        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, Chr::with_switchable_source(NTS3)).switchable(NT3).write_status(WS0),
     ])
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C).write_status(WS0)),
-        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(D).write_status(WS0)),
-        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(E).write_status(WS0)),
-        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(F).write_status(WS0)),
-        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(G).write_status(WS0)),
-        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(H).write_status(WS0)),
-        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(I).write_status(WS0)),
-        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(J).write_status(WS0)),
-        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS0).switchable(NT0).write_status(WS0)),
-        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS1).switchable(NT1).write_status(WS0)),
-        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS2).switchable(NT2).write_status(WS0)),
-        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS3).switchable(NT3).write_status(WS0)),
+        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(C).write_status(WS0),
+        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(D).write_status(WS0),
+        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(E).write_status(WS0),
+        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(F).write_status(WS0),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(G).write_status(WS0),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(H).write_status(WS0),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(I).write_status(WS0),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(J).write_status(WS0),
+        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, Chr::with_switchable_source(NTS0)).switchable(NT0).write_status(WS0),
+        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, Chr::with_switchable_source(NTS1)).switchable(NT1).write_status(WS0),
+        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, Chr::with_switchable_source(NTS2)).switchable(NT2).write_status(WS0),
+        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, Chr::with_switchable_source(NTS3)).switchable(NT3).write_status(WS0),
     ])
     .override_chr_meta_register(MR0, C)
     .override_chr_meta_register(MR1, G)

@@ -16,18 +16,18 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS0).switchable(C).write_status(WS0)),
-        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS1).switchable(D).write_status(WS1)),
-        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS2).switchable(E).write_status(WS2)),
-        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS3).switchable(F).write_status(WS3)),
-        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS4).switchable(G).write_status(WS4)),
-        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS5).switchable(H).write_status(WS5)),
-        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS6).switchable(I).write_status(WS6)),
-        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS7).switchable(J).write_status(WS7)),
-        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS0).switchable(NT0).write_status(WS8)),
-        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS1).switchable(NT1).write_status(WS9)),
-        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS2).switchable(NT2).write_status(WS10)),
-        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NTS3).switchable(NT3).write_status(WS11)),
+        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, Chr::with_switchable_source(CS0)).switchable(C).write_status(WS0),
+        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, Chr::with_switchable_source(CS1)).switchable(D).write_status(WS1),
+        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Chr::with_switchable_source(CS2)).switchable(E).write_status(WS2),
+        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Chr::with_switchable_source(CS3)).switchable(F).write_status(WS3),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, Chr::with_switchable_source(CS4)).switchable(G).write_status(WS4),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, Chr::with_switchable_source(CS5)).switchable(H).write_status(WS5),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Chr::with_switchable_source(CS6)).switchable(I).write_status(WS6),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Chr::with_switchable_source(CS7)).switchable(J).write_status(WS7),
+        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, Chr::with_switchable_source(NTS0)).switchable(NT0).write_status(WS8),
+        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, Chr::with_switchable_source(NTS1)).switchable(NT1).write_status(WS9),
+        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, Chr::with_switchable_source(NTS2)).switchable(NT2).write_status(WS10),
+        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, Chr::with_switchable_source(NTS3)).switchable(NT3).write_status(WS11),
     ])
     .fixed_name_table_mirroring()
     .build();

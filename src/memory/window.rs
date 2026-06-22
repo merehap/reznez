@@ -1,12 +1,14 @@
 use std::num::NonZeroU16;
 
+use crate::mapper::NameTableSource;
 use crate::memory::address_template::address_resolver::AddressResolver;
 use crate::memory::address_template::bank_sizes::BankSizes;
-use crate::memory::bank::bank::{PrgSourceRegisterId, ReadStatusRegisterId, WriteStatusRegisterId};
-use crate::memory::bank::bank_number::{BankNumber, ChrBankRegisters, PrgBankRegisters, PrgBankRegisterId, MemSpace, ReadStatus, WriteStatus};
+use crate::memory::bank::bank::{PrgSourceRegisterId, ChrSourceRegisterId, ReadStatusRegisterId, WriteStatusRegisterId, MemoryPresence};
+use crate::memory::bank::bank_number::{BankNumber, ChrBankRegisters, PrgBankRegisters, MetaRegisterId, PrgBankRegisterId, MemSpace, ReadStatus, WriteStatus};
+use crate::memory::ppu::ciram::CiramSide;
+use crate::memory::window::ChrSource::Ciram;
 use crate::util::unit::{KIBIBYTE, KIBIBYTE_U16};
 
-use super::bank::bank::{ChrBank, ChrBankNumberProvider};
 use super::bank::bank_number::ChrBankRegisterId;
 
 // A PrgWindow is a range within the CPU address space.
@@ -290,15 +292,95 @@ pub struct ChrWindow {
     start: ChrWindowStart,
     end: ChrWindowEnd,
     size: ChrWindowSize,
-    bank: ChrBank,
+    chr_source_provider: ChrSourceProvider,
+    bank_number_provider: ChrBankNumberProvider,
+    read_status_register_id: Option<ReadStatusRegisterId>,
+    write_status_register_id: Option<WriteStatusRegisterId>,
+    rom_address_template: Option<AddressResolver<ChrBankRegisterId>>,
 }
 
 impl ChrWindow {
-    pub const fn new(start: u16, end: u16, size: u32, bank: ChrBank) -> Self {
+    pub const fn new(start: u16, end: u16, size: u32, chr_source_provider: ChrSourceProvider) -> Self {
         let start = ChrWindowStart::new(start);
         let end = ChrWindowEnd::new(end);
         let size = ChrWindowSize::new(size, start, end);
-        Self { start, end, size, bank }
+        Self {
+            start,
+            end,
+            size,
+            chr_source_provider,
+            bank_number_provider: ChrBankNumberProvider::Fixed(BankNumber::ZERO),
+            read_status_register_id: None,
+            write_status_register_id: None,
+            rom_address_template: None,
+        }
+    }
+
+    pub const fn fixed_index(self, index: i16) -> Self {
+        self.set_location(ChrBankNumberProvider::Fixed(BankNumber::from_i16(index)))
+    }
+
+    pub const fn switchable(self, register_id: ChrBankRegisterId) -> Self {
+        self.set_location(ChrBankNumberProvider::Switchable(register_id))
+    }
+
+    pub const fn meta_switchable(self, meta_id: MetaRegisterId) -> Self {
+        self.set_location(ChrBankNumberProvider::MetaSwitchable(meta_id))
+    }
+
+    pub const fn rom_address_template(mut self, template: &'static str) -> Self {
+        assert!(
+            self.chr_source_provider.is_mapped(),
+            "An ABSENT bank can't have an override ROM address template."
+        );
+        match AddressResolver::from_formatted(template, 0) {
+            Ok(template) => self.rom_address_template = Some(template),
+            Err(err) => panic!("{}", err),
+        }
+
+        self
+    }
+
+    pub const fn read_status(mut self, read_id: ReadStatusRegisterId) -> Self {
+        assert!(self.chr_source_provider.is_mapped());
+        self.read_status_register_id = Some(read_id);
+        self
+    }
+
+    pub const fn write_status(mut self, write_id: WriteStatusRegisterId) -> Self {
+        assert!(self.chr_source_provider.is_mapped());
+        self.write_status_register_id = Some(write_id);
+        self
+    }
+
+    pub const fn chr_source(mut self, id: ChrSourceRegisterId) -> Self {
+        assert!(matches!(
+            self.chr_source_provider,
+            ChrSourceProvider::Switchable(_)
+        ));
+        self.chr_source_provider = ChrSourceProvider::Switchable(id);
+        self
+    }
+
+    pub const fn ciram(mut self, side: CiramSide) -> Self {
+        self.chr_source_provider = ChrSourceProvider::Fixed(Some(Ciram(side)));
+        self
+    }
+
+    pub const fn mapper_sourced(mut self, page_id: u8) -> Self {
+        self.chr_source_provider = ChrSourceProvider::Fixed(Some(ChrSource::MapperCustom { page_id }));
+        self
+    }
+
+    pub const fn read_write_status(
+        mut self,
+        read_id: ReadStatusRegisterId,
+        write_id: WriteStatusRegisterId,
+    ) -> Self {
+        assert!(self.chr_source_provider.is_mapped());
+        self.read_status_register_id = Some(read_id);
+        self.write_status_register_id = Some(write_id);
+        self
     }
 
     pub const fn start(self) -> u16 {
@@ -313,20 +395,34 @@ impl ChrWindow {
         self.size
     }
 
-    pub const fn bank(self) -> ChrBank {
-        self.bank
-    }
-
     pub fn is_in_bounds(self, address: u16) -> bool {
         self.start.0 <= address && address <= self.end.0.get()
     }
 
     pub fn location(self) -> Result<ChrBankNumberProvider, String> {
-        self.bank.location()
+        if self.chr_source_provider.is_mapped() {
+            Ok(self.bank_number_provider)
+        } else {
+            Err("EMPTY banks don't have a location".to_owned())
+        }
+    }
+
+    pub fn bank_number(self, regs: &ChrBankRegisters) -> Option<BankNumber> {
+        self.location()
+            .ok()
+            .map(|provider| provider.bank_number(regs))
+    }
+
+    pub const fn read_status_register_id(&self) -> Option<ReadStatusRegisterId> {
+        self.read_status_register_id
+    }
+
+    pub const fn write_status_register_id(&self) -> Option<WriteStatusRegisterId> {
+        self.write_status_register_id
     }
 
     pub const fn register_id(self, regs: &ChrBankRegisters) -> Option<ChrBankRegisterId> {
-        self.bank.register_id(regs)
+        self.bank_number_provider.register_id(regs)
     }
 
     pub fn offset(self, address: u16) -> Option<u16> {
@@ -337,23 +433,137 @@ impl ChrWindow {
         }
     }
 
-    pub fn rom_address_template(&self, bank_sizes: &BankSizes) -> AddressResolver<ChrBankRegisterId> {
-        self.bank().rom_address_template_override()
-            .map_or(AddressResolver::chr(self.bank.chr_bank_number_provider(), self.size, bank_sizes, 0), |template| template.reduced(bank_sizes))
+    pub fn get_rom_address_template(&self, bank_sizes: &BankSizes) -> AddressResolver<ChrBankRegisterId> {
+        self.rom_address_template
+            .map_or(AddressResolver::chr(self.bank_number_provider, self.size, bank_sizes, 0), |template| template.reduced(bank_sizes))
     }
 
     pub fn ram_address_template(&self, bank_sizes: &BankSizes, work_ram_start_inner_bank_number: u16) -> AddressResolver<ChrBankRegisterId> {
-        AddressResolver::chr(self.bank.chr_bank_number_provider(), self.size, bank_sizes, work_ram_start_inner_bank_number)
+        AddressResolver::chr(self.bank_number_provider, self.size, bank_sizes, work_ram_start_inner_bank_number)
+    }
+
+    pub fn current_chr_source(self, regs: &ChrBankRegisters) -> Option<ChrSource> {
+        match self.chr_source_provider {
+            ChrSourceProvider::Fixed(chr_source) => chr_source,
+            ChrSourceProvider::Switchable(reg_id) => Some(regs.chr_source(reg_id)),
+        }
+    }
+
+    pub const fn rom_presence(self) -> MemoryPresence {
+        match self.chr_source_provider {
+            ChrSourceProvider::Fixed(Some(ChrSource::Rom)) => MemoryPresence::Required,
+            ChrSourceProvider::Switchable(_) | ChrSourceProvider::Fixed(Some(ChrSource::RomOrRam)) => MemoryPresence::Supported,
+            ChrSourceProvider::Fixed(_) => MemoryPresence::Absent,
+        }
+    }
+
+    pub const fn ram_presence(self) -> MemoryPresence {
+        match self.chr_source_provider {
+            ChrSourceProvider::Fixed(Some(ChrSource::WorkRam)) => MemoryPresence::Required,
+            ChrSourceProvider::Switchable(_) | ChrSourceProvider::Fixed(Some(ChrSource::RomOrRam)) => MemoryPresence::Supported,
+            ChrSourceProvider::Fixed(_) => MemoryPresence::Absent,
+        }
     }
 
     pub const fn validate_rom_address_template_width(&self, max_rom_size: u32) {
-        if let Some(rom_address_template) = self.bank().rom_address_template_override() {
+        if let Some(rom_address_template) = self.rom_address_template {
             let max_width = (max_rom_size - 1).count_ones() as u8;
             let template_width = rom_address_template.total_width();
             let segment_count = rom_address_template.segment_count();
             const_panic::concat_assert!(template_width == max_width,
                 "Override ROM Address Template was not the correct bit width. Expected ", max_width, ", Found ", template_width,
                 " Segment count: ", segment_count);
+        }
+    }
+
+    const fn set_location(mut self, location: ChrBankNumberProvider) -> Self {
+        assert!(self.chr_source_provider.is_mapped());
+        assert!(
+            self.read_status_register_id.is_none(),
+            "Location must be set before read status register."
+        );
+        assert!(
+            self.write_status_register_id.is_none(),
+            "Location must be set before write status register."
+        );
+        self.bank_number_provider = location;
+        self
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum ChrSourceProvider {
+    Fixed(Option<ChrSource>),
+    Switchable(ChrSourceRegisterId),
+}
+
+impl ChrSourceProvider {
+    pub const EMPTY: Self = Self::Fixed(None);
+    pub const ROM_OR_RAM: Self = Self::Fixed(Some(ChrSource::RomOrRam));
+    pub const ROM: Self = Self::Fixed(Some(ChrSource::Rom));
+    pub const RAM: Self = Self::Fixed(Some(ChrSource::WorkRam));
+    pub const SWITCHABLE_SOURCE: Self = Self::Switchable(ChrSourceRegisterId::CS0);
+
+    pub const fn ciram(ciram_side: CiramSide) -> Self {
+        Self::Fixed(Some(ChrSource::Ciram(ciram_side)))
+    }
+
+    pub const fn with_switchable_source(source_reg_id: ChrSourceRegisterId) -> Self {
+        Self::Switchable(source_reg_id)
+    }
+
+    pub const fn mapper_sourced(page_id: u8) -> Self {
+        Self::Fixed(Some(ChrSource::MapperCustom { page_id }))
+    }
+
+    const fn is_mapped(self) -> bool {
+        !matches!(self, Self::Fixed(None))
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum ChrSource {
+    RomOrRam,
+    Rom,
+    WorkRam,
+    Ciram(CiramSide),
+    MapperCustom { page_id: u8 },
+}
+
+impl ChrSource {
+    pub fn from_name_table_source(name_table_source: NameTableSource) -> (Self, Option<BankNumber>) {
+        match name_table_source {
+            NameTableSource::Ciram(ciram_side) => (ChrSource::Ciram(ciram_side), None),
+            NameTableSource::Rom { bank_number } => (ChrSource::Rom, Some(bank_number)),
+            NameTableSource::Ram { bank_number } => (ChrSource::WorkRam, Some(bank_number)),
+            NameTableSource::MapperCustom { page_id } => (ChrSource::MapperCustom { page_id }, None),
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum ChrBankNumberProvider {
+    Fixed(BankNumber),
+    Switchable(ChrBankRegisterId),
+    MetaSwitchable(MetaRegisterId),
+}
+
+impl ChrBankNumberProvider {
+    pub fn bank_number(self, registers: &ChrBankRegisters) -> BankNumber {
+        match self {
+            Self::Fixed(bank_number) => bank_number,
+            Self::Switchable(register_id) => registers.get(register_id),
+            Self::MetaSwitchable(meta_id) => registers.get_from_meta(meta_id),
+        }
+    }
+
+    pub const fn register_id(self, registers: &ChrBankRegisters) -> Option<ChrBankRegisterId> {
+        match self {
+            Self::Fixed(_) => None,
+            Self::Switchable(register_id) => Some(register_id),
+            Self::MetaSwitchable(meta_id) => {
+                Some(registers.get_register_id_from_meta(meta_id))
+            }
         }
     }
 }

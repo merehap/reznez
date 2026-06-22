@@ -28,7 +28,7 @@ impl Mapper for Mapper189 {
                 let bank_number = (value >> 4) | (value & 0b1111);
                 bus.set_prg_register(P, bank_number);
             }
-            (0x8000..=0xBFFF, mmc3::RegId::Prg(_)) if *addr % 2 == 1 => {
+            (0x8000..=0xBFFF, mmc3::RegId::PRG(_)) if *addr % 2 == 1 => {
                 // Do nothing here: PRG registers are not set by the standard MMC3 process.
             }
             _ => {

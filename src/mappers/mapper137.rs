@@ -8,11 +8,11 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(32 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM.rom_address_template("0₀₀0₀₀c₀₂c₀₁c₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM.rom_address_template("i₀₀0₀₀d₀₂d₀₁d₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM.rom_address_template("j₀₀0₀₀e₀₂e₀₁e₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM.rom_address_template("k₀₀m₀₀f₀₂f₀₁f₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
-        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::ROM.rom_address_template("1₀₀1₀₀1₀₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀")),
+        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, Chr::ROM).rom_address_template("0₀₀0₀₀c₀₂c₀₁c₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, Chr::ROM).rom_address_template("i₀₀0₀₀d₀₂d₀₁d₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Chr::ROM).rom_address_template("j₀₀0₀₀e₀₂e₀₁e₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Chr::ROM).rom_address_template("k₀₀m₀₀f₀₂f₀₁f₀₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Chr::ROM).rom_address_template("1₀₀1₀₀1₀₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::HORIZONTAL,

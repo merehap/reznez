@@ -8,9 +8,9 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(0 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::RAM.switchable(C)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Chr::RAM).switchable(C),
         // 0x3F00 through 0x3FFF is still mapped to Palette RAM, despite this.
-        ChrWindow::new(0x2000, 0x3FFF, 8 * KIBIBYTE, ChrBank::RAM.switchable(D)),
+        ChrWindow::new(0x2000, 0x3FFF, 8 * KIBIBYTE, Chr::RAM).switchable(D),
     ])
     .fixed_name_table_mirroring()
     .build();

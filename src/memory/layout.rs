@@ -2,14 +2,13 @@ use std::num::NonZeroU16;
 
 use crate::cartridge::cartridge::Cartridge;
 use crate::cartridge::resolved_metadata::ResolvedMetadata;
-use crate::mapper::ChrSource;
 use crate::memory::bank::bank_number::{BankNumber, ChrBankRegisters, MetaRegisterId, PrgBankRegisterId, PrgBankRegisters};
 use crate::memory::cpu::prg_layout::{PrgLayout, PrgLayouts};
 use crate::memory::cpu::prg_memory::PrgMemory;
 use crate::memory::ppu::chr_layout::{ChrLayout, ChrLayouts};
 use crate::memory::ppu::chr_memory::ChrMemory;
 use crate::memory::raw_memory::{RawMemory, SaveRam};
-use crate::memory::window::PrgWindow;
+use crate::memory::window::{ChrSource, PrgWindow};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::util::const_vec::ConstVec;
 use crate::util::unit::KIBIBYTE;

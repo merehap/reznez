@@ -60,7 +60,7 @@ impl Mapper for Mapper049 {
             }
             0x8000..=0x9FFF if !addr.is_multiple_of(2)
                     && self.mode == Mode::BigPrgWindow
-                    && matches!(self.mmc3.selected_register_id(), mmc3::RegId::Prg(_)) => {
+                    && matches!(self.mmc3.selected_register_id(), mmc3::RegId::PRG(_)) => {
                 // Do nothing, PRG bank switching for NROM mode is not delegated to MMC3.
             }
             _ => {
