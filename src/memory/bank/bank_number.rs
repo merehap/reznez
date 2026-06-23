@@ -1,7 +1,7 @@
 use num_derive::FromPrimitive;
 
 use crate::memory::bank::bank::{ChrSourceRegisterId, MemoryPresence, ReadStatusRegisterId, PrgSourceRegisterId, WriteStatusRegisterId};
-use crate::memory::ppu::ciram::CiramSide;
+use crate::memory::regions::ciram::CiramSide;
 use crate::memory::window::{ChrSource, PrgSource};
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]

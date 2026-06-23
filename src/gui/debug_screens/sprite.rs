@@ -1,7 +1,7 @@
 use enum_iterator::all;
 use num_traits::FromPrimitive;
 
-use crate::memory::ppu::palette_ram::PaletteRam;
+use crate::memory::regions::palette_ram::PaletteRam;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::gui::debug_screens::pattern_table::{PatternTable, Tile};
 use crate::ppu::palette::system_palette::SystemPaletteSection;

@@ -4,7 +4,7 @@ use crate::bus::Bus;
 use crate::memory::bank::bank::PrgSourceRegisterId;
 use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
 use crate::memory::ppu::ppu_address::PpuAddressSection;
-use crate::memory::small_page::SmallPage;
+use crate::memory::regions::small_page::SmallPage;
 use crate::memory::window::PrgSource;
 use crate::mapper::mappers::mmc5::frame_state::FrameState;
 use crate::ppu::constants::NAME_TABLE_SIZE;

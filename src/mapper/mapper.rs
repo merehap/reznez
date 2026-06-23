@@ -15,7 +15,7 @@ pub(in crate::mapper) use crate::memory::cpu::cpu_address::CpuAddress;
 pub(in crate::mapper) use crate::memory::layout::Layout;
 pub(in crate::mapper) use crate::memory::ppu::ppu_address::PpuAddress;
 pub(in crate::mapper) use crate::memory::read_result::ReadResult;
-pub(in crate::mapper) use crate::memory::ppu::ciram::CiramSide;
+pub(in crate::mapper) use crate::memory::regions::ciram::CiramSide;
 pub(in crate::mapper) use crate::memory::window::{PrgWindow, ChrWindow};
 pub(in crate::mapper) use crate::memory::window::ChrSourceProvider as Chr;
 pub(in crate::mapper) use crate::memory::window::PrgSourceProvider as Prg;

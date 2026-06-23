@@ -12,7 +12,7 @@ use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::util::unit::KIBIBYTE;
 
 use super::chr_memory::PeekSource;
-use super::ciram::CiramSide;
+use crate::memory::regions::ciram::CiramSide;
 
 const CHR_SLOT_COUNT: usize = 16;
 

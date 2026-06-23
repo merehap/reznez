@@ -6,6 +6,6 @@ pub mod ppu;
 pub mod primitives;
 pub mod raw_memory;
 pub mod read_result;
+pub mod regions;
 pub mod signal_level;
-pub mod small_page;
 pub mod window;

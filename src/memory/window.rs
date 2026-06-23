@@ -4,7 +4,7 @@ use crate::memory::address_template::address_resolver::AddressResolver;
 use crate::memory::address_template::bank_sizes::BankSizes;
 use crate::memory::bank::bank::{PrgSourceRegisterId, ChrSourceRegisterId, ReadStatusRegisterId, WriteStatusRegisterId, MemoryPresence};
 use crate::memory::bank::bank_number::{BankNumber, ChrBankRegisters, PrgBankRegisters, MetaRegisterId, PrgBankRegisterId, MemSpace, ReadStatus, WriteStatus};
-use crate::memory::ppu::ciram::CiramSide;
+use crate::memory::regions::ciram::CiramSide;
 use crate::memory::window::ChrSource::Ciram;
 use crate::ppu::name_table::name_table_mirroring::NameTableSource;
 use crate::util::unit::{KIBIBYTE, KIBIBYTE_U16};

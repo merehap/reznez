@@ -1,6 +1,6 @@
 use crate::mapper::mapper::*;
 use crate::memory::bank::bank::{ChrSourceRegisterId, WriteStatusRegisterId};
-use crate::memory::ppu::ciram::CiramSide;
+use crate::memory::regions::ciram::CiramSide;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)

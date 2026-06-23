@@ -1,7 +1,7 @@
 use std::fmt;
 
 use crate::memory::ppu::ppu_address::{XScroll, YScroll};
-use crate::memory::ppu::palette_ram::PaletteRam;
+use crate::memory::regions::palette_ram::PaletteRam;
 use crate::gui::debug_screens::attribute_table::AttributeTable;
 use crate::ppu::constants::{NAME_TABLE_SIZE, NAME_TABLE_WITH_ATTRIBUTES_SIZE};
 use crate::ppu::name_table::background_tile_index::BackgroundTileIndex;

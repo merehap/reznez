@@ -2,7 +2,6 @@ use ux::u11;
 
 use crate::memory::read_result::ReadResult;
 
-
 const RAM_SIZE: usize = 0x2000;
 
 pub struct CpuInternalRam(Box<[u8; RAM_SIZE]>);

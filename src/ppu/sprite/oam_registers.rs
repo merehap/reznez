@@ -1,7 +1,7 @@
 use std::ops::{Index, IndexMut};
 
 use crate::memory::ppu::chr_memory::PpuPeek;
-use crate::memory::ppu::palette_ram::PaletteRam;
+use crate::memory::regions::palette_ram::PaletteRam;
 use crate::ppu::palette::color_t::ColorT;
 use crate::ppu::sprite::sprite_attributes::{SpriteAttributes, Priority};
 
