@@ -1,7 +1,6 @@
-use crate::mapper::{BankNumber, KIBIBYTE, PrgBankRegisterId};
 use crate::memory::address_template::bank_sizes::BankSizes;
 use crate::memory::bank::bank::{PrgSourceRegisterId, ReadStatusRegisterId, WriteStatusRegisterId};
-use crate::memory::bank::bank_number::{PrgMemTypeStatus, PrgBankRegisters, ReadStatus, WriteStatus};
+use crate::memory::bank::bank_number::{BankNumber, PrgBankRegisterId, PrgBankRegisters, PrgMemTypeStatus, ReadStatus, WriteStatus};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::{PrgLayout, PrgLayouts};
 use crate::memory::cpu::prg_memory_map::{PrgMappingSlot, PrgMemoryMap};
@@ -9,6 +8,7 @@ use crate::memory::layout::OuterBankLayout;
 use crate::memory::raw_memory::{RawMemory, SaveRam};
 use crate::memory::read_result::ReadResult;
 use crate::memory::window::{PrgWindow, PrgSource};
+use crate::util::unit::KIBIBYTE;
 use log::{info, warn};
 
 pub struct PrgMemory {

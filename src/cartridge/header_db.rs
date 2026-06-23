@@ -6,7 +6,8 @@ use std::collections::BTreeMap;
 use log::info;
 use num_traits::FromPrimitive;
 
-use crate::{cartridge::cartridge_metadata::{CartridgeMetadata, CartridgeMetadataBuilder}, mapper::NameTableMirroring};
+use crate::cartridge::cartridge_metadata::{CartridgeMetadata, CartridgeMetadataBuilder};
+use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 
 const OVERRIDE_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
     // Crystalis (no submapper number has been officially assigned for MMC3 with Sharp Rev A IRQ)

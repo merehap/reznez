@@ -1,0 +1,49 @@
+
+use crate::mapper::mapper::*;
+
+const LAYOUT: Layout = Layout::builder()
+    .prg_rom_max_size(2048 * KIBIBYTE)
+    .prg_layout(&[
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Prg::ABSENT),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Prg::ROM).switchable(P),
+    ])
+    .prg_layout(&[
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Prg::ABSENT),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Prg::ROM).switchable(P),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Prg::ROM).switchable(P),
+    ])
+    .chr_rom_max_size(8 * KIBIBYTE)
+    .chr_layout(&[
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Chr::ROM_OR_RAM).fixed_index(0).write_status(WS0),
+    ])
+    .name_table_mirrorings(&[
+        NameTableMirroring::VERTICAL,
+        NameTableMirroring::HORIZONTAL,
+    ])
+    .build();
+
+// 82AB
+// Same as submapper 1, except there's one less PRG bank bit, and the RAM status bit is moved over
+// to take its place.
+// TODO: Untested. Test ROM needed.
+pub struct Mapper063_1;
+
+impl Mapper for Mapper063_1 {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, _value: u8) {
+        match *addr {
+            0x0000..=0x401F => unreachable!(),
+            0x4020..=0x7FFF => { /* Do nothing. */ }
+            0x8000..=0xFFFF => {
+                let (disable_chr_writes, prg_bank, layout, mirroring) = splitbits_named!(*addr, ".... ..dp pppp pplm");
+                bus.set_writes_enabled(WS0, !disable_chr_writes);
+                bus.set_prg_register(P, prg_bank);
+                bus.set_prg_layout(layout as u8);
+                bus.set_name_table_mirroring(mirroring as u8);
+            }
+        }
+    }
+
+    fn layout(&self) -> Layout {
+        LAYOUT
+    }
+}

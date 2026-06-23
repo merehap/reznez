@@ -6,8 +6,7 @@ use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use ux::u2;
 
-use crate::mapper::ChrBankRegisterId;
-use crate::memory::bank::bank::ChrSourceRegisterId;
+use crate::memory::bank::{bank::ChrSourceRegisterId, bank_number::ChrBankRegisterId};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, FromPrimitive, Specifier)]
 pub enum NameTableQuadrant {

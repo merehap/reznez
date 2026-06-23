@@ -4,9 +4,9 @@ use pixels::Pixels;
 use crate::gui::debug_screens::pattern_table::{PatternTable, Tile};
 use crate::gui::window_renderer::{FlowControl, WindowRenderer};
 use crate::gui::world::World;
-use crate::mapper::PatternTableSide;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgb::Rgb;
+use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::ppu::render::frame::DebugBuffer;
 use crate::ppu::tile_number::TileNumber;
 

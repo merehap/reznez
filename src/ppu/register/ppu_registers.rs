@@ -1,8 +1,9 @@
 use log::{Level, info, log_enabled};
 use splitbits::{splitbits, combinebits};
 
-use crate::mapper::{PatternTableSide, ReadResult};
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll};
+use crate::memory::read_result::ReadResult;
+use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::ppu::ppu_clock::PpuClock;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::pixel_index::ColumnInTile;

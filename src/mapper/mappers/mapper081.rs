@@ -1,0 +1,37 @@
+use crate::mapper::mapper::*;
+
+const LAYOUT: Layout = Layout::builder()
+    .prg_rom_max_size(64 * KIBIBYTE)
+    .prg_layout(&[
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Prg::ABSENT),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Prg::ROM).switchable(P),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Prg::ROM).fixed_number(-1),
+    ])
+    .chr_rom_max_size(32 * KIBIBYTE)
+    .chr_layout(&[
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(C),
+    ])
+    .fixed_name_table_mirroring()
+    .build();
+
+// NTDEC N715021 (Super Gun)
+// TODO: Untested. Need test ROM.
+pub struct Mapper081;
+
+impl Mapper for Mapper081 {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, _value: u8) {
+        match *addr {
+            0x0000..=0x401F => unreachable!(),
+            0x4020..=0x7FFF => { /* Do nothing. */ }
+            0x8000..=0xFFFF => {
+                let fields = splitbits!(*addr, ".... .... .... ppcc");
+                bus.set_prg_register(P, fields.p);
+                bus.set_chr_register(C, fields.c);
+            }
+        }
+    }
+
+    fn layout(&self) -> Layout {
+        LAYOUT
+    }
+}

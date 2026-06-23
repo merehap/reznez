@@ -2,7 +2,8 @@ use std::marker::ConstParamTy;
 
 use modular_bitfield::Specifier;
 
-use crate::mapper::KIBIBYTE;
+use crate::util::unit::KIBIBYTE;
+
 
 const PATTERN_TABLE_SIZE: u32 = 4 * KIBIBYTE;
 

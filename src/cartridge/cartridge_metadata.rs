@@ -3,7 +3,7 @@ use std::fmt;
 use num_derive::FromPrimitive;
 use ux::u2;
 
-use crate::mapper_list::MAPPERS_WITHOUT_SUBMAPPER_0;
+use crate::mapper::mapper_list::MAPPERS_WITHOUT_SUBMAPPER_0;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 
 #[allow(dead_code)]

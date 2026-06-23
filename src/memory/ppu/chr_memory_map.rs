@@ -1,13 +1,14 @@
 use log::warn;
 
-use crate::mapper::{BankNumber, ChrBankRegisterId, ChrWindow, NameTableMirroring, NameTableQuadrant, NameTableSource};
 use crate::memory::address_template::address_resolver::AddressResolver;
 use crate::memory::address_template::bank_sizes::BankSizes;
 use crate::memory::bank::bank::ChrSourceRegisterId;
-use crate::memory::bank::bank_number::{ChrBankRegisters, ReadStatus, WriteStatus};
+use crate::memory::bank::bank_number::{BankNumber, ChrBankRegisterId, ChrBankRegisters, ReadStatus, WriteStatus};
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::ppu_address::PpuAddress;
-use crate::memory::window::{ChrSource, ChrSourceProvider, ChrBankNumberProvider, ChrWindowSize};
+use crate::memory::window::{ChrBankNumberProvider, ChrSource, ChrSourceProvider, ChrWindow, ChrWindowSize};
+use crate::ppu::name_table::name_table_mirroring::{NameTableMirroring, NameTableSource};
+use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::util::unit::KIBIBYTE;
 
 use super::chr_memory::PeekSource;

@@ -23,8 +23,6 @@ pub mod cpu;
 pub mod gui;
 pub mod logging;
 pub mod mapper;
-pub mod mapper_list;
-pub mod mappers;
 pub mod master_clock;
 pub mod memory;
 pub mod nes;

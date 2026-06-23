@@ -1,8 +1,7 @@
 use std::fmt;
 
-use crate::mapper::PrgBankRegisterId;
 use crate::memory::window::{PrgWindow, PrgSourceProvider};
-use crate::memory::bank::bank_number::ReadStatus;
+use crate::memory::bank::bank_number::{PrgBankRegisterId, ReadStatus};
 use crate::memory::address_template::address_resolver::AddressResolver;
 use crate::memory::address_template::bank_sizes::BankSizes;
 use crate::memory::window::PrgSource;

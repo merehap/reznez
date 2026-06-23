@@ -1,0 +1,146 @@
+use crate::mapper::mapper::*;
+
+pub const PRG_LAYOUT: &[PrgWindow] = &[
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Prg::ABSENT),
+    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Prg::ROM).switchable(P),
+];
+
+pub const NORMAL_CHR_LAYOUT: &[ChrWindow] = &[
+    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(C),
+    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(D),
+    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(E),
+    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(F),
+];
+// G, H, and I are the same as C, except for their low bits.
+pub const SIMPLE_CHR_LAYOUT: &[ChrWindow] = &[
+    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(C),
+    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(G),
+    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(H),
+    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(I),
+];
+
+pub const NAME_TABLE_MIRRORINGS: &[NameTableMirroring] = &[
+    NameTableMirroring::VERTICAL,
+    NameTableMirroring::HORIZONTAL,
+    NameTableMirroring::new(
+        CiramSide::Left.to_source(),  CiramSide::Right.to_source(),
+        CiramSide::Right.to_source(), CiramSide::Right.to_source(),
+    ),
+    NameTableMirroring::ONE_SCREEN_LEFT_BANK,
+];
+
+const VERTICAL: u8 = 0;
+
+// UNL-Sachen-8259A, UNL-Sachen-8259B, UNL-Sachen-8259C
+pub struct Sachen8259 {
+    layout: Layout,
+
+    chr_bank_shift: u8,
+    chr_inner_banks: [u8; 4],
+    chr_bank_low_bits: [u8; 4],
+    register_value: RegisterValue,
+}
+
+impl Mapper for Sachen8259 {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
+        match *addr & 0xC101 {
+            0x4100 => {
+                let value = value & 0b111;
+                self.register_value = match value {
+                    0 => RegisterValue::ChrSelect(C),
+                    1 => RegisterValue::ChrSelect(D),
+                    2 => RegisterValue::ChrSelect(E),
+                    3 => RegisterValue::ChrSelect(F),
+                    4 => RegisterValue::ChrOuterBank,
+                    5 => RegisterValue::PrgBank,
+                    6 => RegisterValue::Nop,
+                    7 => RegisterValue::ModeSelect,
+                    _ => unreachable!(),
+                };
+            }
+            0x4101 => {
+                match self.register_value {
+                    RegisterValue::Nop => {}
+                    RegisterValue::PrgBank => bus.set_prg_register(P, value & 0b111),
+                    RegisterValue::ChrOuterBank => bus.set_chr_rom_outer_bank_number(value & 0b111),
+                    RegisterValue::ChrSelect(reg_id) => {
+                        self.chr_inner_banks[reg_id.to_raw_chr_id() as usize] = value & 0b111;
+                        self.update_chr_banks(bus);
+                    }
+                    RegisterValue::ModeSelect => {
+                        let (mirroring, simple_layout) = splitbits_named!(value, ".... .mms");
+                        bus.set_chr_layout(simple_layout as u8);
+                        if simple_layout {
+                            bus.set_name_table_mirroring(VERTICAL);
+                        } else {
+                            bus.set_name_table_mirroring(mirroring);
+                        }
+                    }
+                }
+            }
+            _ => { /* Do nothing. */ }
+        }
+    }
+
+    fn layout(&self) -> Layout {
+        self.layout.clone()
+    }
+}
+
+impl Sachen8259 {
+    pub const fn new(layout: Layout, board: Sachen8259Board) -> Self {
+        // The CHR bank low bits are actually the respective PPU address line bits.
+        let (chr_bank_shift, chr_bank_low_bits) = match board {
+            Sachen8259Board::A => (1, [0b00, 0b01, 0b00, 0b01]),
+            Sachen8259Board::B => (0, [0b00, 0b00, 0b00, 0b00]),
+            Sachen8259Board::C => (2, [0b00, 0b01, 0b10, 0b11]),
+        };
+        Self {
+            layout,
+
+            chr_bank_shift,
+            chr_inner_banks: [0; 4],
+            chr_bank_low_bits,
+            register_value: RegisterValue::ChrSelect(C),
+        }
+    }
+
+    // TODO: Put this code directly into the caller.
+    fn update_chr_banks(&self, bus: &mut Bus) {
+        let meta_data = [
+            (C, 0, 0),
+            (D, 1, 1),
+            (E, 2, 2),
+            (F, 3, 3),
+
+            (G, 0, 1),
+            (H, 0, 2),
+            (I, 0, 3),
+        ];
+
+        for (reg_id, inner_bank_number, low_bits_index) in meta_data {
+            self.update_chr_bank(bus, reg_id, inner_bank_number, low_bits_index);
+        }
+    }
+
+    fn update_chr_bank(&self, bus: &mut Bus, cx: ChrBankRegisterId, inner_bank_number: u8, low_bits_index: u8) {
+        let bank = (self.chr_inner_banks[inner_bank_number as usize] << self.chr_bank_shift)
+            | self.chr_bank_low_bits[low_bits_index as usize];
+        bus.set_chr_register(cx, bank);
+    }
+}
+
+enum RegisterValue {
+    ChrSelect(ChrBankRegisterId),
+    ChrOuterBank,
+    PrgBank,
+    Nop,
+    ModeSelect,
+}
+
+#[derive(Clone, Copy)]
+pub enum Sachen8259Board {
+    A,
+    B,
+    C,
+}

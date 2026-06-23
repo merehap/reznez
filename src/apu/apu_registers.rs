@@ -10,7 +10,7 @@ use crate::apu::triangle_channel::TriangleChannel;
 use crate::apu::noise_channel::NoiseChannel;
 use crate::apu::dmc::Dmc;
 use crate::cpu::dmc_dma::DmcDma;
-use crate::mapper::ReadResult;
+use crate::memory::read_result::ReadResult;
 use crate::memory::cpu::cpu_pinout::CpuPinout;
 use crate::util::circular_buffer::CircularBuffer;
 

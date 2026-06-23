@@ -24,8 +24,6 @@ mod cpu;
 mod gui;
 mod logging;
 mod mapper;
-mod mapper_list;
-mod mappers;
 mod master_clock;
 mod memory;
 pub mod nes;

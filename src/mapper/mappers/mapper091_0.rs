@@ -1,0 +1,93 @@
+use crate::mapper::mapper::*;
+use crate::counter::counter::WhenDisabledPrevent;
+use crate::util::pattern_table_transition_detector::{PatternTableTransitionDetector, AllowedAddresses};
+
+const LAYOUT: Layout = Layout::builder()
+    .prg_rom_max_size(512 * KIBIBYTE)
+    .prg_rom_outer_bank_size(128 * KIBIBYTE)
+    .prg_layout(&[
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Prg::ABSENT),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Prg::ROM).switchable(P),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Prg::ROM).switchable(Q),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Prg::ROM).fixed_number(-2),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Prg::ROM).fixed_number(-1),
+    ])
+    .chr_rom_max_size(1024 * KIBIBYTE)
+    .chr_rom_outer_bank_size(512 * KIBIBYTE)
+    .chr_layout(&[
+        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(C),
+        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(D),
+        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(E),
+        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(F),
+    ])
+    .fixed_name_table_mirroring()
+    .build();
+
+const IRQ_COUNTER: ReloadDrivenCounter = CounterBuilder::new()
+    .step(-1)
+    .wraps(false)
+    .full_range(0, 64)
+    .initial_range(0, 64)
+    .initial_count(64)
+    .auto_trigger_when(AutoTriggerWhen::EndingOn(0))
+    .forced_reload_timing(ForcedReloadTiming::Immediate)
+    .when_disabled_prevent(WhenDisabledPrevent::Triggering)
+    .build_reload_driven_counter();
+
+// J.Y. Company JY830623C and YY840238C
+pub struct Mapper091_0 {
+    irq_counter: ReloadDrivenCounter,
+    transition_detector: PatternTableTransitionDetector,
+}
+
+impl Mapper for Mapper091_0 {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
+        match *addr & 0xF003 {
+            0x6000 => bus.set_chr_register(C, value),
+            0x6001 => bus.set_chr_register(D, value),
+            0x6002 => bus.set_chr_register(E, value),
+            0x6003 => bus.set_chr_register(F, value),
+            0x7000 => bus.set_prg_register(P, value & 0b0000_1111),
+            0x7001 => bus.set_prg_register(Q, value & 0b0000_1111),
+            0x7002 => {
+                self.irq_counter.disable();
+                bus.cpu_pinout.acknowledge_mapper_irq();
+            }
+            0x7003 => {
+                self.irq_counter.enable();
+                self.irq_counter.force_reload();
+            }
+            0x8000..=0x9FFF => {
+                let outer_banks = splitbits!(min=u8, *addr, ".... .... .... .pcc");
+                bus.set_prg_rom_outer_bank_number(outer_banks.p);
+                bus.set_prg_rom_outer_bank_number(outer_banks.c);
+            }
+            _ => { /* Do nothing. */ }
+        }
+    }
+
+    fn on_ppu_address_change(&mut self, bus: &mut Bus, address: PpuAddress) {
+        let transition_detected = self.transition_detector.detect(address) == Some(PatternTableSide::Right);
+        if transition_detected && self.irq_counter.tick().triggered {
+            bus.cpu_pinout.assert_mapper_irq();
+        }
+    }
+
+    fn irq_counter_info(&self) -> Option<IrqCounterInfo> {
+        Some(self.irq_counter.to_irq_counter_info())
+    }
+
+    fn layout(&self) -> Layout {
+        LAYOUT
+    }
+}
+
+impl Mapper091_0 {
+    pub fn new() -> Self {
+        Self {
+            irq_counter: IRQ_COUNTER,
+            // TODO: Verify if AllowedAddresses::All is correct here.
+            transition_detector: PatternTableTransitionDetector::new(AllowedAddresses::All),
+        }
+    }
+}

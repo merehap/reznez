@@ -1,4 +1,5 @@
-use crate::mapper::KIBIBYTE;
+use crate::util::unit::KIBIBYTE;
+
 
 // The size of the name table proper plus attribute table.
 pub const NAME_TABLE_WITH_ATTRIBUTES_SIZE: u32 = KIBIBYTE;

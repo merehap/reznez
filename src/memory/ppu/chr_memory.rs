@@ -2,17 +2,18 @@ use std::num::NonZeroU16;
 
 use log::{info, warn};
 
-use crate::mapper::{BankNumber, ChrBankRegisterId, ChrWindow, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource};
 use crate::memory::address_template::bank_sizes::BankSizes;
 use crate::memory::bank::bank::{ChrSourceRegisterId, MemoryPresence, ReadStatusRegisterId, WriteStatusRegisterId};
-use crate::memory::bank::bank_number::{ChrBankRegisters, ReadStatus, WriteStatus};
+use crate::memory::bank::bank_number::{BankNumber, ChrBankRegisterId, ChrBankRegisters, MetaRegisterId, ReadStatus, WriteStatus};
 use crate::memory::ppu::chr_layout::{ChrLayouts, ChrLayout};
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::chr_memory_map::{ChrMemTypeStatus, ChrMemoryIndex, ChrMemoryMap};
 use crate::memory::ppu::ciram::Ciram;
 use crate::memory::raw_memory::RawMemory;
 use crate::memory::small_page::SmallPage;
-use crate::memory::window::{ChrSource, ChrWindowSize};
+use crate::memory::window::{ChrSource, ChrWindow, ChrWindowSize};
+use crate::ppu::name_table::name_table_mirroring::{NameTableMirroring, NameTableSource};
+use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::util::unit::KIBIBYTE;
 
 use super::ciram::CiramSide;

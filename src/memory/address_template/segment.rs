@@ -1,4 +1,4 @@
-use crate::{mapper::MetaRegisterId, memory::bank::bank_number::RegisterId};
+use crate::memory::bank::bank_number::{RegisterId, MetaRegisterId};
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct Segment<ID: const RegisterId> {

@@ -1,7 +1,7 @@
 use log::{info, log_enabled};
 use log::Level::Info;
 
-use crate::mapper::Mapper;
+use crate::mapper::mapper::Mapper;
 use crate::bus::Bus;
 use crate::memory::ppu::chr_memory::PpuPeek;
 use crate::memory::ppu::ppu_address::PpuAddress;

@@ -5,7 +5,6 @@ use num_traits::FromPrimitive;
 use splitbits::{splitbits_named, splitbits_named_into_ux, splitbits_named_ux, combinebits, replacebits};
 use ux::u5;
 
-use crate::mapper::KIBIBYTE_U16;
 use crate::ppu::name_table::background_tile_index::{TileColumn, TileRow};
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::palette::palette_index::PaletteIndex;
@@ -14,6 +13,7 @@ use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
 use crate::ppu::register::ppu_registers::AddressIncrement;
 use crate::ppu::tile_number::TileNumber;
+use crate::util::unit::KIBIBYTE_U16;
 
 const PALETTE_TABLE_START: u16 = 0x3F00;
 

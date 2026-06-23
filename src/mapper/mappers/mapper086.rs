@@ -1,0 +1,36 @@
+use crate::mapper::mapper::*;
+
+const LAYOUT: Layout = Layout::builder()
+    .prg_rom_max_size(256 * KIBIBYTE)
+    .prg_layout(&[
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Prg::ABSENT),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Prg::ROM).switchable(P),
+    ])
+    .chr_rom_max_size(128 * KIBIBYTE)
+    .chr_layout(&[
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Chr::ROM_OR_RAM).switchable(C),
+    ])
+    .fixed_name_table_mirroring()
+    .build();
+
+// Jaleco's JF-13
+pub struct Mapper086;
+
+impl Mapper for Mapper086 {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
+        match *addr {
+            0x0000..=0x401F => unreachable!(),
+            0x6000..=0x6FFF => {
+                let banks = splitbits!(value, ".cpp..cc");
+                bus.set_chr_register(C, banks.c);
+                bus.set_prg_register(P, banks.p);
+            }
+            0x7000..=0x7FFF => { /* TODO: Audio control. */ }
+            _ => { /* Do nothing. */ }
+        }
+    }
+
+    fn layout(&self) -> Layout {
+        LAYOUT
+    }
+}

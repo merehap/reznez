@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::mapper::BankNumber;
+use crate::memory::bank::bank_number::BankNumber;
 use crate::memory::ppu::ciram::CiramSide;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 

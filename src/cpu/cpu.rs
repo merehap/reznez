@@ -12,7 +12,7 @@ use crate::cpu::oam_dma::OamDmaAction;
 use crate::cpu::status;
 use crate::cpu::status::Status;
 use crate::cpu::step::*;
-use crate::mapper::Mapper;
+use crate::mapper::mapper::Mapper;
 use crate::memory::cpu::cpu_address::{CpuAddress, FriendlyCpuAddress};
 use crate::bus::{Bus, IRQ_VECTOR_HIGH, IRQ_VECTOR_LOW, NMI_VECTOR_HIGH, NMI_VECTOR_LOW, RESET_VECTOR_HIGH, RESET_VECTOR_LOW};
 use crate::memory::cpu::cpu_pinout::CpuPinout;

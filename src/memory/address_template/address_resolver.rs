@@ -277,9 +277,10 @@ impl <ID: const RegisterId> fmt::Display for AddressResolver<ID> {
 
 #[cfg(test)]
 mod test {
-    use crate::mapper::KIBIBYTE;
 
-    use super::*;
+    use crate::util::unit::KIBIBYTE;
+
+use super::*;
 
     #[test]
     fn no_inner_bank() {

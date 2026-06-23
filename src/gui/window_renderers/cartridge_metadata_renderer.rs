@@ -4,7 +4,7 @@ use pixels::Pixels;
 use crate::cartridge::resolved_metadata::{ResolvedMetadata, Vs};
 use crate::gui::window_renderer::{FlowControl, WindowRenderer};
 use crate::gui::world::World;
-use crate::mapper::KIBIBYTE;
+use crate::util::unit::KIBIBYTE;
 
 pub struct CartridgeMetadataRenderer;
 

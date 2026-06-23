@@ -1,6 +1,7 @@
 use ux::u11;
 
-use crate::mapper::ReadResult;
+use crate::memory::read_result::ReadResult;
+
 
 const RAM_SIZE: usize = 0x2000;
 

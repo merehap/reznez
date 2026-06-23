@@ -3,8 +3,8 @@ use std::fmt;
 use log::warn;
 
 use crate::cartridge::cartridge_metadata::{CartridgeMetadata, CartridgeMetadataBuilder, ConsoleType, ExpansionDevice, TimingMode, VsHardwareType, VsPpuType};
-use crate::mapper::NameTableMirroring;
 
+use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::util::unit::KIBIBYTE;
 
 #[derive(Clone, Debug, Default)]

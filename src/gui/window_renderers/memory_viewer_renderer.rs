@@ -3,8 +3,8 @@ use pixels::Pixels;
 
 use crate::gui::window_renderer::{FlowControl, WindowRenderer};
 use crate::gui::world::World;
-use crate::mapper::CpuAddress;
 use crate::bus::AddressBusType;
+use crate::memory::cpu::cpu_address::CpuAddress;
 
 pub struct MemoryViewerRenderer;
 

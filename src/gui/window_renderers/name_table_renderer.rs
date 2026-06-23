@@ -5,7 +5,7 @@ use crate::gui::debug_screens::name_table::NameTable;
 use crate::gui::debug_screens::pattern_table::PatternTable;
 use crate::gui::window_renderer::{FlowControl, WindowRenderer};
 use crate::gui::world::World;
-use crate::mapper::NameTableQuadrant;
+use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::palette::rgb::Rgb;
 use crate::ppu::render::frame::{DebugBuffer, Frame};
 

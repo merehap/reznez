@@ -195,7 +195,7 @@ pub struct PlayChoice {
 #[cfg(test)]
 pub mod test_data {
     use crate::cartridge::resolved_metadata::{MetadataResolver, ResolvedMetadata};
-    use crate::mapper::NameTableMirroring;
+    use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 
     use super::*;
 

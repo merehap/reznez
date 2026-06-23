@@ -1,0 +1,23 @@
+use crate::mapper::mapper::*;
+use crate::mapper::mappers::mapper241::Mapper241;
+
+// Identical to mapper 241?
+pub struct Mapper039 {
+    mapper241: Mapper241,
+}
+
+impl Mapper for Mapper039 {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
+        self.mapper241.write_register(bus, addr, value);
+    }
+
+    fn layout(&self) -> Layout {
+        self.mapper241.layout()
+    }
+}
+
+impl Mapper039 {
+    pub fn new() -> Self {
+        Self { mapper241: Mapper241 }
+    }
+}

@@ -1,5 +1,5 @@
-use crate::mapper::{ChrMemory, CiramSide};
-use crate::memory::ppu::chr_memory::PeekSource;
+use crate::memory::ppu::chr_memory::{ChrMemory, PeekSource};
+use crate::memory::ppu::ciram::CiramSide;
 use crate::ppu::palette::util;
 
 use super::rgb::Rgb;

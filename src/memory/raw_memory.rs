@@ -5,7 +5,8 @@ use std::path::Path;
 use log::warn;
 use memmap2::MmapMut;
 
-use crate::mapper::KIBIBYTE;
+use crate::util::unit::KIBIBYTE;
+
 
 // A chunk of primitive memory. Allows indexing on u32s instead of usizes.
 #[derive(Clone, Debug)]
