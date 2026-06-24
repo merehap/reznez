@@ -18,7 +18,7 @@ jobs:
     - uses: actions/checkout@v6
     - name: Install dependencies
       run: sudo apt update && sudo apt install -y libasound2-dev libudev-dev
-    - name: Build
-      run: cargo build --verbose
+    - name: Check
+      run: cargo --version && cargo check --verbose
     - name: Run tests
-      run: find src -name "*.rs" | xargs sha1sum && cargo --version && cargo test --release --verbose
+      run: cargo test --release --verbose
