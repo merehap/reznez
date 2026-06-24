@@ -1,7 +1,7 @@
 use crate::mapper::mapper::*;
 use crate::mapper::mappers::mmc3::mmc3;
 use crate::mapper::mappers::mmc3::irq_state::Mmc3IrqState;
-use crate::memory::bank::bank::ChrSourceRegisterId;
+use crate::memory::register_ids::source::ChrSourceRegisterId;
 use crate::memory::window::ChrSource;
 
 pub const LAYOUT: Layout = Layout::builder()

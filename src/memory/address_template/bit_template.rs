@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
 use crate::memory::address_template::segment::{Label, LabelOrConstant, Segment};
-use crate::memory::bank::bank_number::RegisterId;
+use crate::memory::register_ids::bank::RegisterId;
 use crate::util::const_vec::ConstVec;
 
 const MAX_SEGMENT_COUNT: usize = 4;
@@ -193,7 +193,7 @@ fn subscript_byte_to_string(value: u8) -> String {
 mod test {
     use super::*;
     use crate::memory::address_template::segment::{Segment, Label};
-    use crate::memory::bank::bank_number::PrgBankRegisterId;
+    use crate::memory::register_ids::bank::PrgBankRegisterId;
 
     #[test]
     fn template_from_formatted() {

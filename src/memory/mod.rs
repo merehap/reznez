@@ -7,5 +7,6 @@ pub mod primitives;
 pub mod raw_memory;
 pub mod read_result;
 pub mod regions;
+pub mod register_ids;
 pub mod signal_level;
 pub mod window;

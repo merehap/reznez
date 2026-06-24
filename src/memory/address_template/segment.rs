@@ -1,4 +1,4 @@
-use crate::memory::bank::bank_number::{RegisterId, MetaRegisterId};
+use crate::memory::register_ids::bank::{RegisterId, MetaRegisterId};
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct Segment<ID: const RegisterId> {
@@ -313,7 +313,7 @@ const fn subscript_utf8_bytes_to_digit(top: u8, mid: u8, bot: u8) -> Result<u8, 
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::memory::bank::bank_number::PrgBankRegisterId;
+    use crate::memory::register_ids::bank::PrgBankRegisterId;
 
     #[test]
     fn subscript_digit() {

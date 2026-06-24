@@ -2,14 +2,15 @@ use std::num::NonZeroU16;
 
 use crate::memory::address_template::address_resolver::AddressResolver;
 use crate::memory::address_template::bank_sizes::BankSizes;
-use crate::memory::bank::bank::{PrgSourceRegisterId, ChrSourceRegisterId, ReadStatusRegisterId, WriteStatusRegisterId, MemoryPresence};
-use crate::memory::bank::bank_number::{BankNumber, ChrBankRegisters, PrgBankRegisters, MetaRegisterId, PrgBankRegisterId, MemSpace, ReadStatus, WriteStatus};
+use crate::memory::bank::bank::MemoryPresence;
+use crate::memory::bank::bank_number::{BankNumber, ChrBankRegisters, PrgBankRegisters, MemSpace, ReadStatus, WriteStatus};
 use crate::memory::regions::ciram::CiramSide;
+use crate::memory::register_ids::bank::{ChrBankRegisterId, MetaRegisterId, PrgBankRegisterId};
+use crate::memory::register_ids::read_write_status::{ReadStatusRegisterId, WriteStatusRegisterId};
+use crate::memory::register_ids::source::{ChrSourceRegisterId, PrgSourceRegisterId};
 use crate::memory::window::ChrSource::Ciram;
 use crate::ppu::name_table::name_table_mirroring::NameTableSource;
 use crate::util::unit::{KIBIBYTE, KIBIBYTE_U16};
-
-use super::bank::bank_number::ChrBankRegisterId;
 
 // A PrgWindow is a range within the CPU address space.
 // If a single bank is not enough to fill the window, then subsequent banks will be included too.

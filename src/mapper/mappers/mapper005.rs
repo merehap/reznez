@@ -1,7 +1,7 @@
 use crate::mapper::mapper::*;
 
 use crate::bus::Bus;
-use crate::memory::bank::bank::PrgSourceRegisterId;
+use crate::memory::register_ids::source::PrgSourceRegisterId;
 use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
 use crate::memory::ppu::ppu_address::PpuAddressSection;
 use crate::memory::regions::small_page::SmallPage;

@@ -2,18 +2,18 @@ use std::num::NonZeroU16;
 
 use crate::cartridge::cartridge::Cartridge;
 use crate::cartridge::resolved_metadata::ResolvedMetadata;
-use crate::memory::bank::bank_number::{BankNumber, ChrBankRegisters, MetaRegisterId, PrgBankRegisterId, PrgBankRegisters};
+use crate::memory::bank::bank_number::{BankNumber, ChrBankRegisters, PrgBankRegisters};
 use crate::memory::cpu::prg_layout::{PrgLayout, PrgLayouts};
 use crate::memory::cpu::prg_memory::PrgMemory;
 use crate::memory::ppu::chr_layout::{ChrLayout, ChrLayouts};
 use crate::memory::ppu::chr_memory::ChrMemory;
 use crate::memory::raw_memory::{RawMemory, SaveRam};
+use crate::memory::register_ids::bank::{ChrBankRegisterId, MetaRegisterId, PrgBankRegisterId};
 use crate::memory::window::{ChrSource, PrgWindow};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::util::const_vec::ConstVec;
 use crate::util::unit::KIBIBYTE;
 
-use super::bank::bank_number::ChrBankRegisterId;
 use super::window::ChrWindow;
 
 #[derive(Clone)]
@@ -358,6 +358,10 @@ impl LayoutBuilder {
 
             default_chr_source: self.default_chr_source,
         }
+    }
+
+    pub fn bank_register_overrides(&self) -> ConstVec<(PrgBankRegisterId, BankNumber), 5> {
+        self.bank_register_overrides
     }
 }
 

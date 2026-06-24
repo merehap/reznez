@@ -1,12 +1,14 @@
 use crate::memory::address_template::bank_sizes::BankSizes;
-use crate::memory::bank::bank::{PrgSourceRegisterId, ReadStatusRegisterId, WriteStatusRegisterId};
-use crate::memory::bank::bank_number::{BankNumber, PrgBankRegisterId, PrgBankRegisters, PrgMemTypeStatus, ReadStatus, WriteStatus};
+use crate::memory::bank::bank_number::{BankNumber, PrgBankRegisters, PrgMemTypeStatus, ReadStatus, WriteStatus};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::{PrgLayout, PrgLayouts};
 use crate::memory::cpu::prg_memory_map::{PrgMappingSlot, PrgMemoryMap};
 use crate::memory::layout::OuterBankLayout;
 use crate::memory::raw_memory::{RawMemory, SaveRam};
 use crate::memory::read_result::ReadResult;
+use crate::memory::register_ids::bank::PrgBankRegisterId;
+use crate::memory::register_ids::read_write_status::{ReadStatusRegisterId, WriteStatusRegisterId};
+use crate::memory::register_ids::source::PrgSourceRegisterId;
 use crate::memory::window::{PrgWindow, PrgSource};
 use crate::util::unit::KIBIBYTE;
 use log::{info, warn};
@@ -138,11 +140,7 @@ impl PrgMemory {
         self.update_page_ids();
     }
 
-    pub fn set_write_status(
-        &mut self,
-        id: WriteStatusRegisterId,
-        write_status: WriteStatus,
-    ) {
+    pub fn set_write_status(&mut self, id: WriteStatusRegisterId, write_status: WriteStatus) {
         self.regs.set_write_status(id, write_status);
         self.update_page_ids();
     }
