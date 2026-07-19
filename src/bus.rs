@@ -32,7 +32,7 @@ use crate::ppu::ppu_clock::PpuClock;
 use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::ppu::Ppu;
 use crate::ppu::register::ppu_registers::{PpuRegisters, WriteToggle};
-use crate::ppu::sprite::oam::Oam;
+use crate::memory::regions::oam::Oam;
 use crate::util::unit::KIBIBYTE;
 
 pub const NMI_VECTOR_LOW: CpuAddress     = CpuAddress::new(0xFFFA);

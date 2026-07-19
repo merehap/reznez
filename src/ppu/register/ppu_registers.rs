@@ -8,7 +8,7 @@ use crate::ppu::ppu_clock::PpuClock;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::pixel_index::ColumnInTile;
 use crate::ppu::register::ppu_io_bus::PpuIoBus;
-use crate::ppu::sprite::oam::Oam;
+use crate::memory::regions::oam::Oam;
 use crate::ppu::sprite::oam_address::OamAddress;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
 

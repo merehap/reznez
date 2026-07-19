@@ -4,7 +4,7 @@ use crate::bus::Bus;
 use crate::memory::primitives::dram_byte::DramByte;
 use crate::ppu::palette::color_t::ColorT;
 use crate::ppu::pixel_index::PixelRow;
-use crate::ppu::sprite::oam::Oam;
+use crate::memory::regions::oam::Oam;
 use crate::ppu::sprite::oam_address::OamAddress;
 use crate::ppu::sprite::sprite_attributes::Priority;
 use crate::ppu::render::frame::FrameBuffer;

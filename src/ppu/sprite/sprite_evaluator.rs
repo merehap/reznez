@@ -1,10 +1,8 @@
 use crate::ppu::pixel_index::PixelRow;
 use crate::ppu::ppu_clock::PpuClock;
 use crate::ppu::register::ppu_registers::PpuRegisters;
-use crate::ppu::sprite::oam::Oam;
-use crate::ppu::sprite::secondary_oam::SpriteField;
-
-use super::secondary_oam::SecondaryOam;
+use crate::memory::regions::oam::Oam;
+use crate::memory::regions::secondary_oam::{SecondaryOam, SpriteField};
 
 pub struct SpriteEvaluator {
     oam_data_read: u8,
