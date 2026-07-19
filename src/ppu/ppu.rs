@@ -345,11 +345,11 @@ impl Ppu {
             }
             ReadOamByte => {
                 if !bus.ppu_regs.rendering_enabled() { return; }
-                bus.ppu.sprite_evaluator.read_oam(&mut bus.oam, &bus.master_clock.ppu_clock(), &bus.ppu_regs);
+                bus.ppu.sprite_evaluator.read_oam(&mut bus.oam, &mut bus.oam_latch, &bus.master_clock.ppu_clock(), &bus.ppu_regs);
             }
             WriteSecondaryOamByte => {
                 if !bus.ppu_regs.rendering_enabled() { return; }
-                bus.ppu.sprite_evaluator.write_secondary_oam(bus.master_clock.ppu_clock(), &mut bus.ppu_regs);
+                bus.ppu.sprite_evaluator.write_secondary_oam(&mut bus.oam_latch, bus.master_clock.ppu_clock(), &mut bus.ppu_regs);
             }
             ReadSpriteY => {
                 if !bus.ppu_regs.rendering_enabled() { return; }

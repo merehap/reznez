@@ -193,10 +193,10 @@ impl PpuRegisters {
     }
 
     // Read 0x2004
-    pub fn read_oam_data(&mut self, oam: &mut Oam, clock: &PpuClock) -> ReadResult {
-        let value = oam.read(clock, self.oam_addr, self.rendering_enabled);
-        self.ppu_io_bus.update(value);
-        ReadResult::full(value)
+    pub fn read_oam_data(&mut self, oam: &mut Oam, oam_latch: &mut u8, clock: &PpuClock) -> ReadResult {
+        oam.read(oam_latch, clock, self.oam_addr, self.rendering_enabled);
+        self.ppu_io_bus.update(*oam_latch);
+        ReadResult::full(*oam_latch)
     }
 
     // Write 0x2004

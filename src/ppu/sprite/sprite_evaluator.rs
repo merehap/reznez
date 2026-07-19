@@ -5,7 +5,6 @@ use crate::memory::regions::oam::Oam;
 use crate::memory::regions::secondary_oam::{SecondaryOam, SpriteField};
 
 pub struct SpriteEvaluator {
-    oam_data_read: u8,
     secondary_oam: SecondaryOam,
     all_sprites_evaluated: bool,
     sprite_0_present: bool,
@@ -14,7 +13,6 @@ pub struct SpriteEvaluator {
 impl SpriteEvaluator {
     pub fn new() -> Self {
         Self {
-            oam_data_read: 0,
             secondary_oam: SecondaryOam::new(),
             all_sprites_evaluated: false,
             sprite_0_present: false,
@@ -40,17 +38,17 @@ impl SpriteEvaluator {
         self.secondary_oam.reset_index();
     }
 
-    pub fn read_oam(&mut self, oam: &mut Oam, clock: &PpuClock, ppu_regs: &PpuRegisters) {
-        self.oam_data_read = oam.read(clock, ppu_regs.oam_addr, ppu_regs.rendering_enabled());
+    pub fn read_oam(&mut self, oam: &mut Oam, oam_latch: &mut u8, clock: &PpuClock, ppu_regs: &PpuRegisters) {
+        oam.read(oam_latch, clock, ppu_regs.oam_addr, ppu_regs.rendering_enabled());
     }
 
     pub fn read_secondary_oam_and_advance(&mut self) -> u8 {
         self.secondary_oam.read_and_advance()
     }
 
-    pub fn write_secondary_oam(&mut self, clock: &PpuClock, ppu_regs: &mut PpuRegisters) {
+    pub fn write_secondary_oam(&mut self, oam_latch: &mut u8, clock: &PpuClock, ppu_regs: &mut PpuRegisters) {
         if clock.is_oam_clearing_window() {
-            self.secondary_oam.write(self.oam_data_read);
+            self.secondary_oam.write(*oam_latch);
             self.secondary_oam.advance();
             return;
         }
@@ -58,14 +56,14 @@ impl SpriteEvaluator {
         if self.all_sprites_evaluated {
             // TODO: Reading and incrementing still happen after sprite evaluation is
             // complete, but writes fail (i.e. they don't happen).
-            self.oam_data_read = self.secondary_oam.peek();
+            *oam_latch = self.secondary_oam.peek();
             return;
         }
 
         if !self.secondary_oam.is_full() {
             // Copy the sprite byte into secondary OAM, but it may be overwritten
             // if it is a Y coordinate that is not in range.
-            self.secondary_oam.write(self.oam_data_read);
+            self.secondary_oam.write(*oam_latch);
         }
 
         // If the Y-index is not currently being evaluated, then the current sprite was already verified to be on screen,
@@ -78,7 +76,7 @@ impl SpriteEvaluator {
 
         // Check if the sprite's Y-index is on screen and if the current row is inside of the sprite.
         if let Some(pixel_row) = clock.scanline_pixel_row()
-            && let Some(top_sprite_row) = PixelRow::try_from_u8(self.oam_data_read)
+            && let Some(top_sprite_row) = PixelRow::try_from_u8(*oam_latch)
             && let Some(offset) = pixel_row.difference(top_sprite_row)
             && offset < ppu_regs.sprite_height().to_dimension()
         {

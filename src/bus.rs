@@ -58,6 +58,7 @@ pub struct Bus {
     // Registers
     pub ppu_regs: PpuRegisters,
     pub apu_regs: ApuRegisters,
+    pub oam_latch: u8,
 
     // Memory
     pub cpu_internal_ram: CpuInternalRam,
@@ -107,6 +108,7 @@ impl Bus {
 
             ppu_regs: PpuRegisters::new(),
             apu_regs: ApuRegisters::new(),
+            oam_latch: 0,
 
             cpu_internal_ram: CpuInternalRam::new(),
             ciram: Ciram::new(),
@@ -332,7 +334,7 @@ impl Bus {
         let normal_read_value = match addr.to_friendly() {
             Addr::CpuInternalRam(index) => self.cpu_internal_ram().peek(index),
             Addr::PpuStatus             => self.ppu_regs.read_status(),
-            Addr::OamData               => self.ppu_regs.read_oam_data(&mut self.oam, self.master_clock.ppu_clock()),
+            Addr::OamData               => self.ppu_regs.read_oam_data(&mut self.oam, &mut self.oam_latch, self.master_clock.ppu_clock()),
             Addr::PpuData => {
                 self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
                 // TODO: Instead of peeking the old data, it must be available as part of some register.
