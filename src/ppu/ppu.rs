@@ -353,21 +353,24 @@ impl Ppu {
             }
             ReadSpriteY => {
                 if !bus.ppu_regs.rendering_enabled() { return; }
-                bus.ppu.current_sprite_y = SpriteY::new(bus.ppu.sprite_evaluator.read_secondary_oam_and_advance());
+                bus.ppu.sprite_evaluator.read_secondary_oam(&mut bus.oam_latch);
+                bus.ppu.current_sprite_y = SpriteY::new(bus.oam_latch);
             }
             ReadSpritePatternIndex => {
                 if !bus.ppu_regs.rendering_enabled() { return; }
-                bus.ppu.next_sprite_tile_number = TileNumber::new(bus.ppu.sprite_evaluator.read_secondary_oam_and_advance());
+                bus.ppu.sprite_evaluator.read_secondary_oam(&mut bus.oam_latch);
+                bus.ppu.next_sprite_tile_number = TileNumber::new(bus.oam_latch);
             }
             ReadSpriteAttributes => {
                 if !bus.ppu_regs.rendering_enabled() { return; }
-                let attributes = SpriteAttributes::from_u8(bus.ppu.sprite_evaluator.read_secondary_oam_and_advance());
+                bus.ppu.sprite_evaluator.read_secondary_oam(&mut bus.oam_latch);
+                let attributes = SpriteAttributes::from_u8(bus.oam_latch);
                 bus.ppu.oam_registers[bus.ppu.oam_register_index].set_attributes(attributes);
             }
             ReadSpriteX => {
                 if !bus.ppu_regs.rendering_enabled() { return; }
-                let x_counter = bus.ppu.sprite_evaluator.read_secondary_oam_and_advance();
-                bus.ppu.oam_registers[bus.ppu.oam_register_index].set_x_counter(x_counter);
+                bus.ppu.sprite_evaluator.read_secondary_oam(&mut bus.oam_latch);
+                bus.ppu.oam_registers[bus.ppu.oam_register_index].set_x_counter(bus.oam_latch);
             }
             DummyReadSpriteX => {
                 // TODO

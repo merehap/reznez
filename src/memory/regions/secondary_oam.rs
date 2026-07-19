@@ -33,10 +33,9 @@ impl SecondaryOam {
         self.data[to_usize(self.index)]
     }
 
-    pub fn read_and_advance(&mut self) -> u8 {
-        let result = self.data[to_usize(self.index)];
+    pub fn read(&mut self, oam_latch: &mut u8) {
+        *oam_latch = self.data[to_usize(self.index)];
         self.advance();
-        result
     }
 
     pub fn write(&mut self, value: u8) {
@@ -48,6 +47,7 @@ impl SecondaryOam {
         self.is_full = false;
     }
 
+    // TODO: Should this be made private and read() be called instead?
     pub fn advance(&mut self) {
         if self.index == u5::MAX {
             self.index = u5::MIN;
