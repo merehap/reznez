@@ -3,7 +3,7 @@ use crate::ppu::ppu_clock::PpuClock;
 use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::memory::regions::oam::Oam;
 use crate::memory::regions::secondary_oam::{SecondaryOam, SpriteField};
-use crate::signals::Signals;
+use crate::signals::{Signals, SpriteRenderingDotType};
 
 pub struct SpriteEvaluator {
     secondary_oam: SecondaryOam,
@@ -39,16 +39,16 @@ impl SpriteEvaluator {
         self.secondary_oam.reset_index();
     }
 
-    pub fn read_oam(&mut self, oam: &mut Oam, oam_latch: &mut u8, signals: &Signals, clock: &PpuClock, ppu_regs: &PpuRegisters) {
-        oam.read(oam_latch, signals, clock, ppu_regs.oam_addr);
+    pub fn read_oam(&mut self, oam: &mut Oam, oam_latch: &mut u8, signals: &Signals, ppu_regs: &PpuRegisters) {
+        oam.read(oam_latch, signals, ppu_regs.oam_addr);
     }
 
     pub fn read_secondary_oam(&mut self, oam_latch: &mut u8) {
         self.secondary_oam.read(oam_latch);
     }
 
-    pub fn write_secondary_oam(&mut self, oam_latch: &mut u8, clock: &PpuClock, ppu_regs: &mut PpuRegisters) {
-        if clock.is_oam_clearing_window() {
+    pub fn write_secondary_oam(&mut self, oam_latch: &mut u8, signals: &Signals, clock: &PpuClock, ppu_regs: &mut PpuRegisters) {
+        if signals.sprite_rendering_dot_type() == Some(SpriteRenderingDotType::OamClearing) {
             self.secondary_oam.write(*oam_latch);
             self.secondary_oam.advance();
             return;

@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::ppu::pixel_index::PixelRow;
+use crate::{ppu::pixel_index::PixelRow, signals::Signals};
 
 pub const MAX_SCANLINE: u16 = 261;
 
@@ -42,39 +42,20 @@ impl PpuClock {
         PixelRow::from_scanline(self.scanline)
     }
 
-    pub fn is_on_visible_scanline(&self) -> bool {
-        self.scanline < 240
-    }
-
-    pub fn is_on_vblank_scanline(&self) -> bool {
-        self.scanline >= 240 && self.scanline < 261
-    }
-
-    pub fn is_on_prerender_scanline(&self) -> bool {
-        self.scanline == 261
-    }
-
-    pub fn is_oam_clearing_window(&self) -> bool {
-        // TODO: Should the prerender scanline be included here, too?
-        self.is_on_visible_scanline() && self.cycle >= 1 && self.cycle <= 64
-    }
-
-    pub fn is_secondary_oam_transfer_window(&self) -> bool {
-        // TODO: Should the prerender scanline be included here, too?
-        self.is_on_visible_scanline() && self.cycle >= 256 && self.cycle <= 320
-    }
-
-    pub fn tick(&mut self, skip_odd_frame_cycle: bool) -> Option<LastCycle> {
+    pub fn tick(&mut self, signals: &mut Signals) -> Option<LastCycle> {
         self.total_cycles += 1;
 
+        let skip_odd_frame_cycle = signals.rendering_enabled;
         let last_cycle = if skip_odd_frame_cycle && self.frame % 2 == 1 {
             LastCycle::Skipped
         } else {
             LastCycle::Normal
         };
 
+        let old_scanline = self.scanline;
+
         let is_last_cycle_of_frame = self.scanline == MAX_SCANLINE && self.cycle >= last_cycle as u16;
-        if is_last_cycle_of_frame {
+        let last_cycle = if is_last_cycle_of_frame {
             self.frame += 1;
             self.scanline = 0;
             self.cycle = 0;
@@ -86,7 +67,27 @@ impl PpuClock {
         } else {
             self.cycle += 1;
             None
+        };
+
+        if self.scanline != old_scanline {
+            match self.scanline {
+                0 => signals.visible_scanlines_starting(),
+                240 => signals.vblank_scanlines_starting(),
+                261 => signals.prerender_scanline_starting(),
+                _ => { /* Continue with the current scanline type. */ }
+            }
         }
+
+        match self.cycle {
+            1 => signals.oam_clearing_starting(),
+            65 => signals.other_sprite_rendering_dot_type_starting(),
+            // TODO: Shouldn't this be 257?
+            256 => signals.secondary_oam_transfer_starting(),
+            321 => signals.other_sprite_rendering_dot_type_starting(),
+            _ => { /* Continue with the current dot type. */ }
+        }
+
+        last_cycle
     }
 }
 

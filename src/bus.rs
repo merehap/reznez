@@ -282,7 +282,7 @@ impl Bus {
         let normal_peek_value = match addr.to_friendly() {
             Addr::CpuInternalRam(index) => self.cpu_internal_ram().peek(index),
             Addr::PpuStatus             => self.ppu_regs.peek_status(),
-            Addr::OamData               => self.ppu_regs.peek_oam_data(&self.oam, &self.signals, &self.ppu_clock()),
+            Addr::OamData               => self.ppu_regs.peek_oam_data(&self.oam, &self.signals),
             Addr::PpuData => {
                 let old_value = mapper.ppu_peek(self, self.ppu_regs.current_address).value();
                 self.ppu_regs.peek_ppu_data(old_value)
@@ -339,7 +339,7 @@ impl Bus {
         let normal_read_value = match addr.to_friendly() {
             Addr::CpuInternalRam(index) => self.cpu_internal_ram().peek(index),
             Addr::PpuStatus             => self.ppu_regs.read_status(),
-            Addr::OamData               => self.ppu_regs.read_oam_data(&mut self.oam, &mut self.oam_latch, &self.signals, self.master_clock.ppu_clock()),
+            Addr::OamData               => self.ppu_regs.read_oam_data(&mut self.oam, &mut self.oam_latch, &self.signals),
             Addr::PpuData => {
                 self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
                 // TODO: Instead of peeking the old data, it must be available as part of some register.
@@ -349,7 +349,7 @@ impl Bus {
                 let pending_data_source = self.ppu_regs.current_address.to_pending_data_source();
                 let buffered_data = mapper.ppu_peek(self, pending_data_source).value();
                 mapper.on_ppu_read(self, pending_data_source, buffered_data);
-                self.ppu_regs.set_ppu_read_buffer_and_advance(&self.signals, self.master_clock.ppu_clock(), buffered_data);
+                self.ppu_regs.set_ppu_read_buffer_and_advance(&self.signals, buffered_data);
                 self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
 
                 new_data
@@ -426,7 +426,7 @@ impl Bus {
             Addr::PpuMask    => self.ppu_regs.write_mask(&self.signals, self.cpu_pinout.data_bus),
             Addr::PpuStatus  => self.ppu_regs.write_status(self.cpu_pinout.data_bus), // Read-only
             Addr::OamAddress => self.ppu_regs.write_oam_addr(self.cpu_pinout.data_bus),
-            Addr::OamData    => self.ppu_regs.write_oam_data(&mut self.oam, &self.signals, self.master_clock.ppu_clock(), self.cpu_pinout.data_bus),
+            Addr::OamData    => self.ppu_regs.write_oam_data(&mut self.oam, &self.signals, self.cpu_pinout.data_bus),
             Addr::PpuScroll  => self.ppu_regs.write_scroll(self.cpu_pinout.data_bus),
             Addr::PpuAddress => {
                 self.ppu_regs.write_ppu_addr(self.cpu_pinout.data_bus);
