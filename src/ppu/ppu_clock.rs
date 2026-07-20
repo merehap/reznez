@@ -81,8 +81,7 @@ impl PpuClock {
         match self.cycle {
             1 => signals.oam_clearing_starting(),
             65 => signals.other_sprite_rendering_dot_type_starting(),
-            // TODO: Shouldn't this be 257?
-            256 => signals.secondary_oam_transfer_starting(),
+            257 => signals.secondary_oam_transfer_starting(),
             321 => signals.other_sprite_rendering_dot_type_starting(),
             _ => { /* Continue with the current dot type. */ }
         }
