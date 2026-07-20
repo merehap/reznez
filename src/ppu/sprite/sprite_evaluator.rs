@@ -1,7 +1,6 @@
 use crate::ppu::pixel_index::PixelRow;
 use crate::ppu::ppu_clock::PpuClock;
 use crate::ppu::register::ppu_registers::PpuRegisters;
-use crate::memory::regions::oam::Oam;
 use crate::memory::regions::secondary_oam::{SecondaryOam, SpriteField};
 use crate::signals::{Signals, SpriteRenderingDotType};
 
@@ -37,10 +36,6 @@ impl SpriteEvaluator {
     pub fn start_loading_oam_registers(&mut self) {
         // TODO: Determine if this needs to occur on cycle 256 instead.
         self.secondary_oam.reset_index();
-    }
-
-    pub fn read_oam(&mut self, oam: &mut Oam, oam_latch: &mut u8, signals: &Signals, ppu_regs: &PpuRegisters) {
-        oam.read(oam_latch, signals, ppu_regs.oam_addr);
     }
 
     pub fn read_secondary_oam(&mut self, oam_latch: &mut u8) {

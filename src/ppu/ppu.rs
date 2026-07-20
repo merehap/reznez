@@ -346,7 +346,7 @@ impl Ppu {
             }
             ReadOamByte => {
                 if !rendering_enabled { return; }
-                bus.ppu.sprite_evaluator.read_oam(&mut bus.oam, &mut bus.oam_latch, &bus.signals, &bus.ppu_regs);
+                bus.oam.read(&mut bus.oam_latch, &mut bus.signals, bus.ppu_regs.oam_addr);
             }
             WriteSecondaryOamByte => {
                 if !rendering_enabled { return; }
