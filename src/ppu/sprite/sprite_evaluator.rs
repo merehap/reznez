@@ -50,9 +50,7 @@ impl SpriteEvaluator {
         }
 
         if self.all_sprites_evaluated {
-            // TODO: Reading and incrementing still happen after sprite evaluation is
-            // complete, but writes fail (i.e. they don't happen).
-            *oam_latch = self.secondary_oam.peek();
+            self.secondary_oam.read(oam_latch);
             return;
         }
 
