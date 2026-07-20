@@ -11,6 +11,7 @@ use crate::ppu::register::ppu_io_bus::PpuIoBus;
 use crate::memory::regions::oam::Oam;
 use crate::ppu::sprite::oam_address::OamAddress;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
+use crate::signals::Signals;
 
 pub struct PpuRegisters {
     // PPUCTRL (0x2000) sub-registers
@@ -26,7 +27,6 @@ pub struct PpuRegisters {
     mask: Mask,
 
     // PPUMASK (0x2001) and PPUCLOCK
-    rendering_enabled: bool,
     rendering_toggle_state: RenderingToggleState,
 
     // PPUSTATUS (0x2002) sub-registers
@@ -74,7 +74,6 @@ impl PpuRegisters {
             mask: Mask::all_disabled(),
 
             // PPUMASK (0x2001) and PPUCLOCK
-            rendering_enabled: false,
             rendering_toggle_state: RenderingToggleState::Inactive,
 
             // PPUSTATUS (0x2002)
@@ -136,10 +135,9 @@ impl PpuRegisters {
     pub fn mask(&self) -> Mask { self.mask }
     pub fn background_enabled(&self) -> bool { self.mask.background_enabled() }
     pub fn sprites_enabled(&self) -> bool { self.mask.sprites_enabled() }
-    pub fn rendering_enabled(&self) -> bool { self.rendering_enabled }
 
     // Write 0x2001
-    pub fn write_mask(&mut self, value: u8) {
+    pub fn write_mask(&mut self, signals: &Signals, value: u8) {
         self.ppu_io_bus.update(value);
 
         let fields = splitbits!(value, "efgs blmz");
@@ -152,7 +150,7 @@ impl PpuRegisters {
         self.mask.left_background_columns_enabled = fields.m;
         self.mask.greyscale_enabled = fields.z;
 
-        if self.rendering_enabled != (self.mask.sprites_enabled() || self.mask.background_enabled()) {
+        if signals.rendering_enabled != (self.mask.sprites_enabled() || self.mask.background_enabled()) {
             self.rendering_toggle_state = RenderingToggleState::Pending;
         }
     }
@@ -188,24 +186,24 @@ impl PpuRegisters {
     }
 
     // Peek 0x2004
-    pub fn peek_oam_data(&self, oam: &Oam, clock: &PpuClock) -> ReadResult {
-        ReadResult::full(oam.peek(clock, self.oam_addr, self.rendering_enabled))
+    pub fn peek_oam_data(&self, oam: &Oam, signals: &Signals, clock: &PpuClock) -> ReadResult {
+        ReadResult::full(oam.peek(signals, clock, self.oam_addr))
     }
 
     // Read 0x2004
-    pub fn read_oam_data(&mut self, oam: &mut Oam, oam_latch: &mut u8, clock: &PpuClock) -> ReadResult {
-        oam.read(oam_latch, clock, self.oam_addr, self.rendering_enabled);
+    pub fn read_oam_data(&mut self, oam: &mut Oam, oam_latch: &mut u8, signals: &Signals, clock: &PpuClock) -> ReadResult {
+        oam.read(oam_latch, signals, clock, self.oam_addr);
         self.ppu_io_bus.update(*oam_latch);
         ReadResult::full(*oam_latch)
     }
 
     // Write 0x2004
-    pub fn write_oam_data(&mut self, oam: &mut Oam, clock: &PpuClock, value: u8) {
+    pub fn write_oam_data(&mut self, oam: &mut Oam, signals: &Signals, clock: &PpuClock, value: u8) {
         self.ppu_io_bus.update(value);
 
         // TODO: What happens if this causes OAMADDR to wrap during sprite evaluation? Is all_sprites_evaluated set prematurely?
         // Forcing all_sprites_evaluated to true here didn't seem to break any tests, so maybe this is untested.
-        if self.rendering_enabled && (clock.is_on_visible_scanline() || clock.is_on_prerender_scanline()) {
+        if signals.rendering_enabled && (clock.is_on_visible_scanline() || clock.is_on_prerender_scanline()) {
             self.oam_addr.corrupt_by_write();
         } else {
             oam.write(self.oam_addr, value);
@@ -269,12 +267,12 @@ impl PpuRegisters {
     }
 
     // Read 0x2007
-    pub fn set_ppu_read_buffer_and_advance(&mut self, clock: &PpuClock, new_buffer_data: u8) {
+    pub fn set_ppu_read_buffer_and_advance(&mut self, signals: &Signals, clock: &PpuClock, new_buffer_data: u8) {
         self.ppu_read_buffer = new_buffer_data;
         self.current_address.advance(self.current_address_increment);
 
         // The current address is corrupted when reading PPUDATA during rendering. Some games depend on this.
-        let is_rendering = self.rendering_enabled && !clock.is_on_vblank_scanline();
+        let is_rendering = signals.rendering_enabled && !clock.is_on_vblank_scanline();
         if is_rendering {
             self.current_address.increment_fine_y_scroll();
         }
@@ -291,7 +289,7 @@ impl PpuRegisters {
         ReadResult::full(self.ppu_io_bus.value())
     }
 
-    pub fn tick(&mut self, clock: &PpuClock) -> PpuRegistersTickResult {
+    pub fn tick(&mut self, signals: &mut Signals, clock: &PpuClock) -> PpuRegistersTickResult {
         if clock.cycle() == 1 {
             self.ppu_io_bus.maybe_decay();
         }
@@ -314,14 +312,14 @@ impl PpuRegisters {
                 None
             }
             Ready => {
-                self.rendering_enabled = !self.rendering_enabled;
+                signals.rendering_enabled = !signals.rendering_enabled;
                 if log_enabled!(target: "ppuflags", Level::Info) {
-                    let state = if self.rendering_enabled { "enabled" } else { "disabled" };
+                    let state = if signals.rendering_enabled { "enabled" } else { "disabled" };
                     info!("Rendering {state} on {clock}");
                 }
 
                 self.rendering_toggle_state = Inactive;
-                Some(if self.rendering_enabled { Toggle::Enable } else { Toggle::Disable })
+                Some(if signals.rendering_enabled { Toggle::Enable } else { Toggle::Disable })
             }
         };
 

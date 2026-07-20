@@ -5,6 +5,7 @@ use itertools::Itertools;
 use crate::memory::primitives::dram_byte::DramByte;
 use crate::ppu::ppu_clock::PpuClock;
 use crate::ppu::sprite::oam_address::OamAddress;
+use crate::signals::Signals;
 
 #[derive(Clone)]
 pub struct Oam([DramByte; 256]);
@@ -28,19 +29,19 @@ impl Oam {
         &self.0
     }
 
-    pub fn peek(&self, clock: &PpuClock, oam_addr: OamAddress, rendering_enabled: bool) -> u8 {
+    pub fn peek(&self, signals: &Signals, clock: &PpuClock, oam_addr: OamAddress) -> u8 {
         let mut value = self.0[oam_addr.to_u8() as usize].peek();
-        if (clock.is_oam_clearing_window() || clock.is_secondary_oam_transfer_window()) && rendering_enabled {
+        if (clock.is_oam_clearing_window() || clock.is_secondary_oam_transfer_window()) && signals.rendering_enabled {
             value = 0xFF;
         }
 
         value
     }
 
-    pub fn read(&mut self, oam_latch: &mut u8, clock: &PpuClock, oam_addr: OamAddress, rendering_enabled: bool) {
+    pub fn read(&mut self, oam_latch: &mut u8, signals: &Signals, clock: &PpuClock, oam_addr: OamAddress) {
         // TODO: Verify that the read still actually happens if oam is being cleared, since the value is discarded.
         *oam_latch = self.0[oam_addr.to_u8() as usize].read();
-        if (clock.is_oam_clearing_window() || clock.is_secondary_oam_transfer_window()) && rendering_enabled {
+        if (clock.is_oam_clearing_window() || clock.is_secondary_oam_transfer_window()) && signals.rendering_enabled {
             *oam_latch = 0xFF;
         }
     }
@@ -49,13 +50,13 @@ impl Oam {
         self.0[address.to_u8() as usize].write(value);
     }
 
-    pub fn maybe_corrupt_starting_byte(&mut self, clock: &PpuClock, oam_addr: OamAddress, rendering_enabled: bool) {
+    pub fn maybe_corrupt_starting_byte(&mut self, signals: &Signals, clock: &PpuClock, oam_addr: OamAddress) {
         let index = u8::try_from(clock.cycle()).unwrap() - 1;
         let raw_address = oam_addr.to_u8();
         if raw_address >= 0x08 {
             let corrupted_addr = OamAddress::from_u8((raw_address & 0xF8) + index);
             // TODO: Should this be read() instead of peek()? Probably.
-            let value = self.peek(clock, corrupted_addr, rendering_enabled);
+            let value = self.peek(signals, clock, corrupted_addr);
             self.write(OamAddress::from_u8(index), value);
         }
     }

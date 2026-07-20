@@ -29,6 +29,7 @@ mod master_clock;
 mod memory;
 pub mod nes;
 mod ppu;
+mod signals;
 mod util;
 
 use std::panic;

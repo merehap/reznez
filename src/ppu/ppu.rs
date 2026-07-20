@@ -81,7 +81,7 @@ impl Ppu {
     }
 
     pub fn step_first_half(bus: &mut Bus, mapper: &mut dyn Mapper, frame: &mut Frame) {
-        let tick_result = bus.ppu_regs.tick(bus.master_clock.ppu_clock());
+        let tick_result = bus.ppu_regs.tick(&mut bus.signals, bus.master_clock.ppu_clock());
         if tick_result.rendering_toggled == Some(Toggle::Disable) {
             // "... when rendering is disabled, the value on the PPU address bus is the current value of the v register."
             bus.set_ppu_address_bus(mapper, bus.ppu_regs.current_address);
@@ -163,6 +163,7 @@ impl Ppu {
     }
 
     fn execute_cycle_action(bus: &mut Bus, mapper: &mut dyn Mapper, frame: &mut Frame, cycle_action: CycleAction) {
+        let rendering_enabled = bus.signals.rendering_enabled;
         use CycleAction::*;
         match cycle_action {
             SetPatternIndexAddress => {
@@ -171,7 +172,7 @@ impl Ppu {
             }
             SetPaletteIndexAddress => {
                 bus.set_ppu_address_bus(mapper, bus.ppu_regs.current_address.to_attribute_table_address());
-                if bus.ppu_regs.rendering_enabled() {
+                if rendering_enabled {
                     bus.ppu.next_rendering_field_to_set = Some((RenderingRegisterField::PaletteIndex, 2));
                 }
             }
@@ -183,7 +184,7 @@ impl Ppu {
                     false,
                 );
                 bus.set_ppu_address_bus(mapper, addr);
-                if bus.ppu_regs.rendering_enabled() {
+                if rendering_enabled {
                     bus.ppu.next_rendering_field_to_set = Some((RenderingRegisterField::BackgroundPatternLow, 2));
                 }
             }
@@ -195,7 +196,7 @@ impl Ppu {
                     true,
                 );
                 bus.set_ppu_address_bus(mapper, addr);
-                if bus.ppu_regs.rendering_enabled() {
+                if rendering_enabled {
                     bus.ppu.next_rendering_field_to_set = Some((RenderingRegisterField::BackgroundPatternHighAndNextTile, 2));
                 }
             }
@@ -208,11 +209,11 @@ impl Ppu {
             }
 
             GotoNextPixelRow => {
-                if !bus.ppu_regs.rendering_enabled() { return; }
+                if !rendering_enabled { return; }
                 bus.ppu_regs.current_address.increment_fine_y_scroll();
             }
             ResetTileColumn => {
-                if !bus.ppu_regs.rendering_enabled() { return; }
+                if !rendering_enabled { return; }
                 bus.ppu_regs.current_address.set_tile_column_from(bus.ppu_regs.next_address);
             }
             SetPixel => {
@@ -313,10 +314,10 @@ impl Ppu {
             }
 
             MaybeCorruptOamStart => {
-                if !bus.ppu_regs.rendering_enabled() { return; }
+                if !rendering_enabled { return; }
                 // Unclear if these are the correct cycles to trigger on.
                 let oam_addr = bus.ppu_regs.oam_addr;
-                bus.oam.maybe_corrupt_starting_byte(bus.master_clock.ppu_clock(), oam_addr, bus.ppu_regs.rendering_enabled());
+                bus.oam.maybe_corrupt_starting_byte(&bus.signals, bus.master_clock.ppu_clock(), oam_addr);
             }
 
             ResetOamAddress => {
@@ -344,31 +345,31 @@ impl Ppu {
                 info!(target: "ppustage", "\t\tLoading OAM registers ended.");
             }
             ReadOamByte => {
-                if !bus.ppu_regs.rendering_enabled() { return; }
-                bus.ppu.sprite_evaluator.read_oam(&mut bus.oam, &mut bus.oam_latch, &bus.master_clock.ppu_clock(), &bus.ppu_regs);
+                if !rendering_enabled { return; }
+                bus.ppu.sprite_evaluator.read_oam(&mut bus.oam, &mut bus.oam_latch, &bus.signals, &bus.master_clock.ppu_clock(), &bus.ppu_regs);
             }
             WriteSecondaryOamByte => {
-                if !bus.ppu_regs.rendering_enabled() { return; }
+                if !rendering_enabled { return; }
                 bus.ppu.sprite_evaluator.write_secondary_oam(&mut bus.oam_latch, bus.master_clock.ppu_clock(), &mut bus.ppu_regs);
             }
             ReadSpriteY => {
-                if !bus.ppu_regs.rendering_enabled() { return; }
+                if !rendering_enabled { return; }
                 bus.ppu.sprite_evaluator.read_secondary_oam(&mut bus.oam_latch);
                 bus.ppu.current_sprite_y = SpriteY::new(bus.oam_latch);
             }
             ReadSpritePatternIndex => {
-                if !bus.ppu_regs.rendering_enabled() { return; }
+                if !rendering_enabled { return; }
                 bus.ppu.sprite_evaluator.read_secondary_oam(&mut bus.oam_latch);
                 bus.ppu.next_sprite_tile_number = TileNumber::new(bus.oam_latch);
             }
             ReadSpriteAttributes => {
-                if !bus.ppu_regs.rendering_enabled() { return; }
+                if !rendering_enabled { return; }
                 bus.ppu.sprite_evaluator.read_secondary_oam(&mut bus.oam_latch);
                 let attributes = SpriteAttributes::from_u8(bus.oam_latch);
                 bus.ppu.oam_registers[bus.ppu.oam_register_index].set_attributes(attributes);
             }
             ReadSpriteX => {
-                if !bus.ppu_regs.rendering_enabled() { return; }
+                if !rendering_enabled { return; }
                 bus.ppu.sprite_evaluator.read_secondary_oam(&mut bus.oam_latch);
                 bus.ppu.oam_registers[bus.ppu.oam_register_index].set_x_counter(bus.oam_latch);
             }
@@ -376,7 +377,7 @@ impl Ppu {
                 // TODO
             }
             MaybeClearSpriteX => {
-                if !bus.ppu_regs.rendering_enabled() {
+                if !rendering_enabled {
                     // This is a quirk of the rendering pipeline. There may be a better way to represent this.
                     for i in 0..8 {
                         bus.ppu.oam_registers[i].set_x_counter(0);
@@ -390,7 +391,7 @@ impl Ppu {
                 (addr, bus.ppu.sprite_visible) = bus.ppu.current_sprite_pattern_address(bus, select_high);
                 bus.set_ppu_address_bus(mapper, addr);
 
-                if bus.ppu_regs.rendering_enabled() {
+                if rendering_enabled {
                     bus.ppu.next_rendering_field_to_set = Some((RenderingRegisterField::SpritePatternLow, 2));
                 }
             }
@@ -400,7 +401,7 @@ impl Ppu {
                 (addr, bus.ppu.sprite_visible) = bus.ppu.current_sprite_pattern_address(bus, select_high);
                 bus.set_ppu_address_bus(mapper, addr);
 
-                if bus.ppu_regs.rendering_enabled() {
+                if rendering_enabled {
                     bus.ppu.next_rendering_field_to_set = Some((RenderingRegisterField::SpritePatternHighAndNextSprite, 2));
                 }
             }

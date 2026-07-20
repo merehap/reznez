@@ -28,4 +28,5 @@ pub mod master_clock;
 pub mod memory;
 pub mod nes;
 pub mod ppu;
+pub mod signals;
 pub mod util;

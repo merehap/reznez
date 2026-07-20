@@ -3,6 +3,7 @@ use crate::ppu::ppu_clock::PpuClock;
 use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::memory::regions::oam::Oam;
 use crate::memory::regions::secondary_oam::{SecondaryOam, SpriteField};
+use crate::signals::Signals;
 
 pub struct SpriteEvaluator {
     secondary_oam: SecondaryOam,
@@ -38,8 +39,8 @@ impl SpriteEvaluator {
         self.secondary_oam.reset_index();
     }
 
-    pub fn read_oam(&mut self, oam: &mut Oam, oam_latch: &mut u8, clock: &PpuClock, ppu_regs: &PpuRegisters) {
-        oam.read(oam_latch, clock, ppu_regs.oam_addr, ppu_regs.rendering_enabled());
+    pub fn read_oam(&mut self, oam: &mut Oam, oam_latch: &mut u8, signals: &Signals, clock: &PpuClock, ppu_regs: &PpuRegisters) {
+        oam.read(oam_latch, signals, clock, ppu_regs.oam_addr);
     }
 
     pub fn read_secondary_oam(&mut self, oam_latch: &mut u8) {
