@@ -38,6 +38,10 @@ impl SpriteEvaluator {
         self.secondary_oam.reset_index();
     }
 
+    pub fn peek_secondary_oam(&self) -> u8 {
+        self.secondary_oam.peek()
+    }
+
     pub fn read_secondary_oam(&mut self, oam_latch: &mut u8) {
         self.secondary_oam.read(oam_latch);
     }

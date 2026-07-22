@@ -24,6 +24,7 @@ use crate::ppu::sprite::oam_registers::OamRegisters;
 use crate::ppu::sprite::sprite_y::SpriteY;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
 use crate::ppu::tile_number::TileNumber;
+use crate::signals::ScanlineType;
 
 use super::palette::bank_color_assigner::BankColorAssigner;
 use super::sprite::sprite_evaluator::SpriteEvaluator;
@@ -112,11 +113,21 @@ impl Ppu {
         mapper.on_end_of_ppu_cycle();
     }
 
-    pub fn step_second_half(Bus { ppu, ppu_regs, .. }: &mut Bus) {
-        if ppu.pending_register_shift && (ppu_regs.background_enabled() || ppu_regs.sprites_enabled()) {
-            ppu.pending_register_shift = false;
-            ppu.pattern_register.shift_left();
-            ppu.attribute_register.push_next_palette_table_index();
+    pub fn step_second_half(Bus { ppu, ppu_regs, master_clock, signals, oam_buffer, old_latch, .. }: &mut Bus) {
+        if ppu_regs.background_enabled() || ppu_regs.sprites_enabled() {
+            if signals.scanline_type() == ScanlineType::Visible {
+                *oam_buffer = match master_clock.ppu_clock().cycle() {
+                    0 | 320.. => ppu.sprite_evaluator.peek_secondary_oam(),
+                    1..=65 => 0xFF,
+                    66..=319 => *old_latch,
+                };
+            }
+
+            if ppu.pending_register_shift {
+                ppu.pending_register_shift = false;
+                ppu.pattern_register.shift_left();
+                ppu.attribute_register.push_next_palette_table_index();
+            }
         }
 
         let Some((next_rendering_field_to_set, cycles_remaining)) = ppu.next_rendering_field_to_set.take() else {
@@ -346,32 +357,32 @@ impl Ppu {
             }
             ReadOamByte => {
                 if !rendering_enabled { return; }
-                bus.oam.read(&mut bus.oam_latch, &mut bus.signals, bus.ppu_regs.oam_addr);
+                bus.oam.read(&mut bus.old_latch, &mut bus.signals, bus.ppu_regs.oam_addr, &bus.ppu_regs, bus.oam_buffer);
             }
             WriteSecondaryOamByte => {
                 if !rendering_enabled { return; }
-                bus.ppu.sprite_evaluator.write_secondary_oam(&mut bus.oam_latch, &bus.signals, bus.master_clock.ppu_clock(), &mut bus.ppu_regs);
+                bus.ppu.sprite_evaluator.write_secondary_oam(&mut bus.old_latch, &bus.signals, bus.master_clock.ppu_clock(), &mut bus.ppu_regs);
             }
             ReadSpriteY => {
                 if !rendering_enabled { return; }
-                bus.ppu.sprite_evaluator.read_secondary_oam(&mut bus.oam_latch);
-                bus.ppu.current_sprite_y = SpriteY::new(bus.oam_latch);
+                bus.ppu.sprite_evaluator.read_secondary_oam(&mut bus.old_latch);
+                bus.ppu.current_sprite_y = SpriteY::new(bus.old_latch);
             }
             ReadSpritePatternIndex => {
                 if !rendering_enabled { return; }
-                bus.ppu.sprite_evaluator.read_secondary_oam(&mut bus.oam_latch);
-                bus.ppu.next_sprite_tile_number = TileNumber::new(bus.oam_latch);
+                bus.ppu.sprite_evaluator.read_secondary_oam(&mut bus.old_latch);
+                bus.ppu.next_sprite_tile_number = TileNumber::new(bus.old_latch);
             }
             ReadSpriteAttributes => {
                 if !rendering_enabled { return; }
-                bus.ppu.sprite_evaluator.read_secondary_oam(&mut bus.oam_latch);
-                let attributes = SpriteAttributes::from_u8(bus.oam_latch);
+                bus.ppu.sprite_evaluator.read_secondary_oam(&mut bus.old_latch);
+                let attributes = SpriteAttributes::from_u8(bus.old_latch);
                 bus.ppu.oam_registers[bus.ppu.oam_register_index].set_attributes(attributes);
             }
             ReadSpriteX => {
                 if !rendering_enabled { return; }
-                bus.ppu.sprite_evaluator.read_secondary_oam(&mut bus.oam_latch);
-                bus.ppu.oam_registers[bus.ppu.oam_register_index].set_x_counter(bus.oam_latch);
+                bus.ppu.sprite_evaluator.read_secondary_oam(&mut bus.old_latch);
+                bus.ppu.oam_registers[bus.ppu.oam_register_index].set_x_counter(bus.old_latch);
             }
             DummyReadSpriteX => {
                 // TODO

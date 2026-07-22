@@ -191,8 +191,8 @@ impl PpuRegisters {
     }
 
     // Read 0x2004
-    pub fn read_oam_data(&mut self, oam: &mut Oam, oam_latch: &mut u8, signals: &Signals) -> ReadResult {
-        oam.read(oam_latch, signals, self.oam_addr);
+    pub fn read_oam_data(&mut self, oam: &mut Oam, oam_latch: &mut u8, signals: &Signals, oam_buffer: u8) -> ReadResult {
+        oam.read(oam_latch, signals, self.oam_addr, self, oam_buffer);
         self.ppu_io_bus.update(*oam_latch);
         ReadResult::full(*oam_latch)
     }

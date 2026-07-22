@@ -29,7 +29,6 @@ impl SecondaryOam {
         }
     }
 
-    #[allow(dead_code)]
     pub fn peek(&self) -> u8 {
         self.data[to_usize(self.index)]
     }

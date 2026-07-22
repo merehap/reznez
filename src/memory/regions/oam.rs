@@ -4,6 +4,7 @@ use itertools::Itertools;
 
 use crate::memory::primitives::dram_byte::DramByte;
 use crate::ppu::ppu_clock::PpuClock;
+use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::ppu::sprite::oam_address::OamAddress;
 use crate::signals::{Signals, SpriteRenderingDotType};
 
@@ -39,13 +40,14 @@ impl Oam {
         value
     }
 
-    pub fn read(&mut self, oam_latch: &mut u8, signals: &Signals, oam_addr: OamAddress) {
-        // TODO: Verify that the read still actually happens if oam is being cleared, since the value is discarded.
-        *oam_latch = self.0[oam_addr.to_u8() as usize].read();
+    pub fn read(&mut self, old_latch: &mut u8, signals: &Signals, oam_addr: OamAddress, ppuregs: &PpuRegisters, oam_buffer: u8) {
+        let rendering_enabled = ppuregs.background_enabled() || ppuregs.sprites_enabled();
         use SpriteRenderingDotType::*;
-        if matches!(signals.sprite_rendering_dot_type(), Some(OamClearing | SecondaryOamTransfer)) && signals.rendering_enabled {
-            *oam_latch = 0xFF;
-        }
+        *old_latch = if matches!(signals.sprite_rendering_dot_type(), Some(OamClearing | SecondaryOamTransfer)) && rendering_enabled {
+            oam_buffer
+        } else {
+            self.0[oam_addr.to_u8() as usize].read()
+        };
     }
 
     pub fn write(&mut self, address: OamAddress, value: u8) {
