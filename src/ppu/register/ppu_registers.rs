@@ -11,7 +11,7 @@ use crate::ppu::register::ppu_io_bus::PpuIoBus;
 use crate::memory::regions::oam::Oam;
 use crate::ppu::sprite::oam_address::OamAddress;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
-use crate::signals::{ScanlineType, Signals};
+use crate::signals::{ScanlineType, Signals, SpriteRenderingDotType};
 
 pub struct PpuRegisters {
     // PPUCTRL (0x2000) sub-registers
@@ -186,15 +186,22 @@ impl PpuRegisters {
     }
 
     // Peek 0x2004
+    // TODO: Sync this up with read_oam_data
     pub fn peek_oam_data(&self, oam: &Oam, signals: &Signals) -> ReadResult {
         ReadResult::full(oam.peek(signals, self.oam_addr))
     }
 
     // Read 0x2004
-    pub fn read_oam_data(&mut self, oam: &mut Oam, oam_latch: &mut u8, signals: &Signals, oam_buffer: u8) -> ReadResult {
-        oam.read(oam_latch, signals, self.oam_addr, self, oam_buffer);
-        self.ppu_io_bus.update(*oam_latch);
-        ReadResult::full(*oam_latch)
+    pub fn read_oam_data(&mut self, oam: &mut Oam, signals: &Signals, oam_buffer: u8) -> ReadResult {
+        let rendering_enabled = self.background_enabled() || self.sprites_enabled();
+        use SpriteRenderingDotType::*;
+        let value = if matches!(signals.sprite_rendering_dot_type(), Some(OamClearing | SecondaryOamTransfer)) && rendering_enabled {
+            oam_buffer
+        } else {
+            oam.read(self.oam_addr)
+        };
+        self.ppu_io_bus.update(value);
+        ReadResult::full(value)
     }
 
     // Write 0x2004

@@ -24,7 +24,7 @@ use crate::ppu::sprite::oam_registers::OamRegisters;
 use crate::ppu::sprite::sprite_y::SpriteY;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
 use crate::ppu::tile_number::TileNumber;
-use crate::signals::ScanlineType;
+use crate::signals::{ScanlineType, SpriteRenderingDotType};
 
 use super::palette::bank_color_assigner::BankColorAssigner;
 use super::sprite::sprite_evaluator::SpriteEvaluator;
@@ -357,7 +357,12 @@ impl Ppu {
             }
             ReadOamByte => {
                 if !rendering_enabled { return; }
-                bus.oam.read(&mut bus.old_latch, &mut bus.signals, bus.ppu_regs.oam_addr, &bus.ppu_regs, bus.oam_buffer);
+                // TODO: Shouldn't this just be calling the same code that PpuRegs::read_oam uses?
+                bus.old_latch = if bus.signals.sprite_rendering_dot_type() == Some(SpriteRenderingDotType::OamClearing) {
+                    0xFF
+                } else {
+                    bus.oam.read(bus.ppu_regs.oam_addr)
+                };
             }
             WriteSecondaryOamByte => {
                 if !rendering_enabled { return; }

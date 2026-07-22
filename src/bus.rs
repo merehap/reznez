@@ -341,7 +341,7 @@ impl Bus {
         let normal_read_value = match addr.to_friendly() {
             Addr::CpuInternalRam(index) => self.cpu_internal_ram().peek(index),
             Addr::PpuStatus             => self.ppu_regs.read_status(),
-            Addr::OamData               => self.ppu_regs.read_oam_data(&mut self.oam, &mut self.old_latch, &self.signals, self.oam_buffer),
+            Addr::OamData               => self.ppu_regs.read_oam_data(&mut self.oam, &self.signals, self.oam_buffer),
             Addr::PpuData => {
                 self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
                 // TODO: Instead of peeking the old data, it must be available as part of some register.
