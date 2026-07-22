@@ -61,7 +61,7 @@ pub struct Bus {
     // Registers
     pub ppu_regs: PpuRegisters,
     pub apu_regs: ApuRegisters,
-    pub old_latch: u8,
+    pub secondary_oam_buffer: u8,
     pub oam_buffer: u8,
 
     // Memory
@@ -114,7 +114,7 @@ impl Bus {
 
             ppu_regs: PpuRegisters::new(),
             apu_regs: ApuRegisters::new(),
-            old_latch: 0,
+            secondary_oam_buffer: 0,
             oam_buffer: 0,
 
             cpu_internal_ram: CpuInternalRam::new(),
