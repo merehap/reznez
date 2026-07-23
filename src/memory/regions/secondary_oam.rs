@@ -33,8 +33,8 @@ impl SecondaryOam {
         self.data[to_usize(self.index)]
     }
 
-    pub fn read(&mut self, oam_latch: &mut u8) {
-        *oam_latch = self.data[to_usize(self.index)];
+    pub fn read(&mut self, secondary_oam_buffer: &mut u8) {
+        *secondary_oam_buffer = self.data[to_usize(self.index)];
         self.advance();
     }
 

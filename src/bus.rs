@@ -7,6 +7,7 @@ use crate::cpu::dmc_dma::DmcDma;
 use crate::cpu::oam_dma::OamDma;
 use crate::mapper::mapper::Mapper;
 use crate::master_clock::MasterClock;
+use crate::memory::regions::secondary_oam::SecondaryOam;
 use crate::memory::register_ids::read_write_status::{ReadStatusRegisterId, WriteStatusRegisterId};
 use crate::memory::register_ids::source::{ChrSourceRegisterId, PrgSourceRegisterId};
 use crate::memory::register_ids::bank::{ChrBankRegisterId, PrgBankRegisterId, MetaRegisterId};
@@ -69,6 +70,7 @@ pub struct Bus {
     pub ciram: Ciram,
     pub palette_ram: PaletteRam,
     pub oam: Oam,
+    pub secondary_oam: SecondaryOam,
     pub prg_memory: PrgMemory,
     pub chr_memory: ChrMemory,
     pub mapper_custom_pages: Vec<SmallPage>,
@@ -121,6 +123,7 @@ impl Bus {
             ciram: Ciram::new(),
             palette_ram: PaletteRam::new(),
             oam: Oam::new(),
+            secondary_oam: SecondaryOam::new(),
             prg_memory,
             chr_memory,
             mapper_custom_pages: Vec::new(),

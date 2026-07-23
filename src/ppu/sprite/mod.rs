@@ -1,7 +1,6 @@
 pub mod oam_address;
 pub mod oam_registers;
 pub mod sprite_attributes;
-pub mod sprite_evaluator;
 pub mod sprite_half;
 pub mod sprite_height;
 pub mod sprite_y;

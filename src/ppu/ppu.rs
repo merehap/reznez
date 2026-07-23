@@ -6,6 +6,7 @@ use crate::mapper::mapper::Mapper;
 use crate::bus::Bus;
 use crate::memory::ppu::chr_memory::PpuPeek;
 use crate::memory::ppu::ppu_address::{PaletteRamIndex, PpuAddress};
+use crate::memory::regions::secondary_oam::SpriteField;
 use crate::memory::signal_level::SignalLevel;
 use crate::ppu::cycle_action::cycle_action::CycleAction;
 use crate::ppu::cycle_action::frame_actions::{FrameActions, NTSC_FRAME_ACTIONS};
@@ -27,12 +28,10 @@ use crate::ppu::tile_number::TileNumber;
 use crate::signals::{ScanlineType, SpriteRenderingDotType};
 
 use super::palette::bank_color_assigner::BankColorAssigner;
-use super::sprite::sprite_evaluator::SpriteEvaluator;
 
 pub struct Ppu {
     oam_registers: OamRegisters,
     oam_register_index: usize,
-    sprite_evaluator: SpriteEvaluator,
 
     next_tile_number: TileNumber,
     pattern_register: PatternRegister,
@@ -44,6 +43,10 @@ pub struct Ppu {
     next_sprite_tile_number: TileNumber,
     current_sprite_y: SpriteY,
     sprite_visible: bool,
+
+    // Sprite evaluation
+    all_sprites_evaluated: bool,
+    sprite_0_present: bool,
 
     frame_actions: FrameActions,
 
@@ -59,7 +62,6 @@ impl Ppu {
         Ppu {
             oam_registers: OamRegisters::new(),
             oam_register_index: 0,
-            sprite_evaluator: SpriteEvaluator::new(),
 
             next_tile_number: TileNumber::new(0),
             pattern_register: PatternRegister::new(),
@@ -71,6 +73,9 @@ impl Ppu {
             next_sprite_tile_number: TileNumber::new(0),
             current_sprite_y: SpriteY::new(0),
             sprite_visible: false,
+
+            all_sprites_evaluated: false,
+            sprite_0_present: false,
 
             frame_actions: NTSC_FRAME_ACTIONS.clone(),
 
@@ -113,11 +118,11 @@ impl Ppu {
         mapper.on_end_of_ppu_cycle();
     }
 
-    pub fn step_second_half(Bus { ppu, ppu_regs, master_clock, signals, oam_buffer, secondary_oam_buffer, .. }: &mut Bus) {
+    pub fn step_second_half(Bus { ppu, ppu_regs, master_clock, signals, secondary_oam, oam_buffer, secondary_oam_buffer, .. }: &mut Bus) {
         if ppu_regs.background_enabled() || ppu_regs.sprites_enabled() {
             if signals.scanline_type() == ScanlineType::Visible {
                 *oam_buffer = match master_clock.ppu_clock().cycle() {
-                    0 | 320.. => ppu.sprite_evaluator.peek_secondary_oam(),
+                    0 | 320.. => secondary_oam.peek(),
                     1..=65 => 0xFF,
                     66..=319 => *secondary_oam_buffer,
                 };
@@ -338,19 +343,22 @@ impl Ppu {
 
             StartClearingSecondaryOam => {
                 info!(target: "ppustage", "{}\t\tCLEARING SECONDARY OAM", bus.ppu_clock());
-                bus.ppu.sprite_evaluator.start_clearing_secondary_oam();
+                bus.secondary_oam.reset_index();
             }
             ClearOamRegisterIndex => {
                 bus.ppu.oam_register_index = 0;
             }
             StartSpriteEvaluation => {
                 info!(target: "ppustage", "\t\tSPRITE EVALUATION");
-                bus.ppu.sprite_evaluator.start_sprite_evaluation();
+                bus.ppu.sprite_0_present = false;
+                bus.ppu.all_sprites_evaluated = false;
+                bus.secondary_oam.reset_index();
             }
             StartLoadingOamRegisters => {
                 info!(target: "ppustage", "\t\tLoading OAM registers.");
-                bus.ppu.sprite_evaluator.start_loading_oam_registers();
-                bus.ppu.oam_registers.set_sprite_0_presence(bus.ppu.sprite_evaluator.sprite_0_present());
+                bus.ppu.oam_registers.set_sprite_0_presence(bus.ppu.sprite_0_present);
+                // TODO: Determine if this needs to occur on cycle 256 instead.
+                bus.secondary_oam.reset_index();
             }
             StopLoadingOamRegisters => {
                 info!(target: "ppustage", "\t\tLoading OAM registers ended.");
@@ -366,27 +374,81 @@ impl Ppu {
             }
             WriteSecondaryOamByte => {
                 if !rendering_enabled { return; }
-                bus.ppu.sprite_evaluator.write_secondary_oam(&mut bus.secondary_oam_buffer, &bus.signals, bus.master_clock.ppu_clock(), &mut bus.ppu_regs);
+                let Bus { secondary_oam, secondary_oam_buffer, signals, master_clock, ppu, ppu_regs, .. } = bus;
+
+                let ppu_clock = master_clock.ppu_clock();
+                if signals.sprite_rendering_dot_type() == Some(SpriteRenderingDotType::OamClearing) {
+                    secondary_oam.write(*secondary_oam_buffer);
+                    secondary_oam.advance();
+                    return;
+                }
+
+                if ppu.all_sprites_evaluated {
+                    secondary_oam.read(secondary_oam_buffer);
+                    return;
+                }
+
+                if !secondary_oam.is_full() {
+                    // Copy the sprite byte into secondary OAM, but it may be overwritten
+                    // if it is a Y coordinate that is not in range.
+                    secondary_oam.write(*secondary_oam_buffer);
+                }
+
+                // If the Y-index is not currently being evaluated, then the current sprite was already verified to be on screen,
+                // so copy another byte of its data over.
+                if secondary_oam.current_field() != SpriteField::Y {
+                    secondary_oam.advance();
+                    ppu.all_sprites_evaluated = ppu_regs.oam_addr.next_field();
+                    return;
+                }
+
+                // Check if the sprite's Y-index is on screen and if the current row is inside of the sprite.
+                if let Some(pixel_row) = ppu_clock.scanline_pixel_row()
+                    && let Some(top_sprite_row) = PixelRow::try_from_u8(*secondary_oam_buffer)
+                    && let Some(offset) = pixel_row.difference(top_sprite_row)
+                    && offset < ppu_regs.sprite_height().to_dimension()
+                {
+                    if ppu_clock.cycle() == 66 {
+                        ppu.sprite_0_present = true;
+                    }
+
+                    if secondary_oam.is_full() {
+                        ppu_regs.sprite_overflow_pending = true;
+                    }
+
+                    secondary_oam.advance();
+                    ppu.all_sprites_evaluated = ppu_regs.oam_addr.next_field();
+                    return;
+                }
+
+                // If the sprite isn't in range and OAM is full, then corrupt the OAMADDR.
+                // Sprite overflow hardware bug: https://www.nesdev.org/wiki/PPU_sprite_evaluation#Details
+                if secondary_oam.is_full() {
+                    ppu_regs.oam_addr.corrupt_sprite_y_index();
+                }
+
+                // If the sprite isn't in range, move to the next sprite.
+                ppu.all_sprites_evaluated = ppu_regs.oam_addr.next_sprite();
             }
             ReadSpriteY => {
                 if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
-                bus.ppu.sprite_evaluator.read_secondary_oam(&mut bus.secondary_oam_buffer);
+                bus.secondary_oam.read(&mut bus.secondary_oam_buffer);
                 bus.ppu.current_sprite_y = SpriteY::new(bus.secondary_oam_buffer);
             }
             ReadSpritePatternIndex => {
                 if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
-                bus.ppu.sprite_evaluator.read_secondary_oam(&mut bus.secondary_oam_buffer);
+                bus.secondary_oam.read(&mut bus.secondary_oam_buffer);
                 bus.ppu.next_sprite_tile_number = TileNumber::new(bus.secondary_oam_buffer);
             }
             ReadSpriteAttributes => {
                 if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
-                bus.ppu.sprite_evaluator.read_secondary_oam(&mut bus.secondary_oam_buffer);
+                bus.secondary_oam.read(&mut bus.secondary_oam_buffer);
                 let attributes = SpriteAttributes::from_u8(bus.secondary_oam_buffer);
                 bus.ppu.oam_registers[bus.ppu.oam_register_index].set_attributes(attributes);
             }
             ReadSpriteX => {
                 if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
-                bus.ppu.sprite_evaluator.read_secondary_oam(&mut bus.secondary_oam_buffer);
+                bus.secondary_oam.read(&mut bus.secondary_oam_buffer);
                 bus.ppu.oam_registers[bus.ppu.oam_register_index].set_x_counter(bus.secondary_oam_buffer);
             }
             DummyReadSpriteX => {
