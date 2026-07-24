@@ -443,29 +443,37 @@ impl Ppu {
                 ppu.all_sprites_evaluated = ppu_regs.oam_addr.next_sprite();
             }
             ReadSpriteY => {
-                if !signals.rendering_enabled { return Followup::None; }
-                secondary_oam.read(secondary_oam_buffer);
+                if signals.rendering_enabled {
+                    secondary_oam.read(secondary_oam_buffer);
+                    ppu.current_sprite_y = SpriteY::new(*secondary_oam_buffer);
+                }
+
                 secondary_oam.advance();
-                ppu.current_sprite_y = SpriteY::new(*secondary_oam_buffer);
             }
             ReadSpritePatternIndex => {
-                if !signals.rendering_enabled { return Followup::None; }
-                secondary_oam.read(secondary_oam_buffer);
+                if signals.rendering_enabled {
+                    secondary_oam.read(secondary_oam_buffer);
+                    ppu.next_sprite_tile_number = TileNumber::new(*secondary_oam_buffer);
+                }
+
                 secondary_oam.advance();
-                ppu.next_sprite_tile_number = TileNumber::new(*secondary_oam_buffer);
             }
             ReadSpriteAttributes => {
-                if !signals.rendering_enabled { return Followup::None; }
-                secondary_oam.read(secondary_oam_buffer);
+                if signals.rendering_enabled {
+                    secondary_oam.read(secondary_oam_buffer);
+                    let attributes = SpriteAttributes::from_u8(*secondary_oam_buffer);
+                    ppu.oam_registers[ppu.oam_register_index].set_attributes(attributes);
+                }
+
                 secondary_oam.advance();
-                let attributes = SpriteAttributes::from_u8(*secondary_oam_buffer);
-                ppu.oam_registers[ppu.oam_register_index].set_attributes(attributes);
             }
             ReadSpriteX => {
-                if !signals.rendering_enabled { return Followup::None; }
-                secondary_oam.read(secondary_oam_buffer);
+                if signals.rendering_enabled {
+                    secondary_oam.read(secondary_oam_buffer);
+                    ppu.oam_registers[ppu.oam_register_index].set_x_counter(*secondary_oam_buffer);
+                }
+
                 secondary_oam.advance();
-                ppu.oam_registers[ppu.oam_register_index].set_x_counter(*secondary_oam_buffer);
             }
             DummyReadSpriteX => {
                 // TODO
