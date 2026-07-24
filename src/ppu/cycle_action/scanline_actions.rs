@@ -11,12 +11,12 @@ pub static VISIBLE_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(|
     let mut line = ScanlineActions::new();
     //           ||CYCLE||       ||---------BACKGROUND-TILE-ACTIONS---------||  ||-SPRITE--ACTIONS---||  ||-----DISPLAY-ACTIONS-----||
     // TODO: Remove this section in favor of using EdgeDetectors.
-    line.add(            1, vec![                                               StartClearingSecondaryOam                           ]);
-    line.add(           65, vec![                                               ClearOamRegisterIndex, StartSpriteEvaluation        ]);
-    line.add(          257, vec![StopReadingBackgroundTiles                                                                         ]);
-    line.add(          257, vec![                                               StartLoadingOamRegisters                            ]);
-    line.add(          321, vec![                                               StopLoadingOamRegisters                             ]);
-    line.add(          321, vec![StartReadingBackgroundTiles                                                                        ]);
+    line.add(            1, vec![                                               ResetSecondaryOamIndex                      ]);
+    line.add(           65, vec![                                               ClearOamRegisterIndex, StartSpriteEvaluation]);
+    line.add(          257, vec![StopReadingBackgroundTiles                                                                 ]);
+    line.add(          257, vec![                                               StartLoadingOamRegisters                    ]);
+    line.add(          321, vec![                                               StopLoadingOamRegisters                     ]);
+    line.add(          321, vec![StartReadingBackgroundTiles                                                                ]);
 
     // Fetch the remaining 31 usable background tiles for the current scanline.
     // Secondary OAM clearing then sprite evaluation, transfering OAM to secondary OAM.

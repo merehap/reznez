@@ -352,9 +352,10 @@ impl Ppu {
                 ppu_regs.oam_addr.reset();
             }
 
-            StartClearingSecondaryOam => {
-                info!(target: "ppustage", "{}\t\tCLEARING SECONDARY OAM", clock);
-                secondary_oam.reset_index();
+            ResetSecondaryOamIndex => {
+                if signals.rendering_enabled {
+                    secondary_oam.reset_index();
+                }
             }
             ClearOamRegisterIndex => {
                 ppu.oam_register_index = 0;
