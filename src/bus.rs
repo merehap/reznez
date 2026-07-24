@@ -287,7 +287,7 @@ impl Bus {
         let normal_peek_value = match addr.to_friendly() {
             Addr::CpuInternalRam(index) => self.cpu_internal_ram().peek(index),
             Addr::PpuStatus             => self.ppu_regs.peek_status(),
-            Addr::OamData               => self.ppu_regs.peek_oam_data(&self.oam, &self.signals),
+            Addr::OamData               => self.ppu_regs.peek_oam_data(&self.oam),
             Addr::PpuData => {
                 let old_value = mapper.ppu_peek(self, self.ppu_regs.current_address).value();
                 self.ppu_regs.peek_ppu_data(old_value)

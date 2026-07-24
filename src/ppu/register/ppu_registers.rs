@@ -187,8 +187,8 @@ impl PpuRegisters {
 
     // Peek 0x2004
     // TODO: Sync this up with read_oam_data
-    pub fn peek_oam_data(&self, oam: &Oam, signals: &Signals) -> ReadResult {
-        ReadResult::full(oam.peek(signals, self.oam_addr))
+    pub fn peek_oam_data(&self, oam: &Oam) -> ReadResult {
+        ReadResult::full(oam.peek(self.oam_addr))
     }
 
     // Read 0x2004

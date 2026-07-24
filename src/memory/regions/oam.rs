@@ -5,7 +5,6 @@ use itertools::Itertools;
 use crate::memory::primitives::dram_byte::DramByte;
 use crate::ppu::ppu_clock::PpuClock;
 use crate::ppu::sprite::oam_address::OamAddress;
-use crate::signals::{Signals, SpriteRenderingDotType};
 
 #[derive(Clone)]
 pub struct Oam([DramByte; 256]);
@@ -29,14 +28,8 @@ impl Oam {
         &self.0
     }
 
-    pub fn peek(&self, signals: &Signals, oam_addr: OamAddress) -> u8 {
-        let mut value = self.0[oam_addr.to_u8() as usize].peek();
-        use SpriteRenderingDotType::*;
-        if matches!(signals.sprite_rendering_dot_type(), Some(OamClearing | SecondaryOamTransfer)) && signals.rendering_enabled {
-            value = 0xFF;
-        }
-
-        value
+    pub fn peek(&self, oam_addr: OamAddress) -> u8 {
+        self.0[oam_addr.to_u8() as usize].peek()
     }
 
     pub fn read(&mut self, oam_addr: OamAddress) -> u8 {
@@ -47,13 +40,13 @@ impl Oam {
         self.0[address.to_u8() as usize].write(value);
     }
 
-    pub fn maybe_corrupt_starting_byte(&mut self, signals: &Signals, clock: &PpuClock, oam_addr: OamAddress) {
+    pub fn maybe_corrupt_starting_byte(&mut self, clock: &PpuClock, oam_addr: OamAddress) {
         let index = u8::try_from(clock.cycle()).unwrap() - 1;
         let raw_address = oam_addr.to_u8();
         if raw_address >= 0x08 {
             let corrupted_addr = OamAddress::from_u8((raw_address & 0xF8) + index);
             // TODO: Should this be read() instead of peek()? Probably.
-            let value = self.peek(signals, corrupted_addr);
+            let value = self.peek(corrupted_addr);
             self.write(OamAddress::from_u8(index), value);
         }
     }

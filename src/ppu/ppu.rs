@@ -347,7 +347,7 @@ impl Ppu {
                 if !rendering_enabled { return Followup::None; }
                 // Unclear if these are the correct cycles to trigger on.
                 let oam_addr = ppu_regs.oam_addr;
-                oam.maybe_corrupt_starting_byte(&signals, clock, oam_addr);
+                oam.maybe_corrupt_starting_byte(clock, oam_addr);
             }
 
             ResetOamAddress => {
@@ -377,7 +377,6 @@ impl Ppu {
             }
             ReadOamByte => {
                 if rendering_enabled {
-                    // TODO: Shouldn't this just be calling the same code that PpuRegs::read_oam uses?
                     *secondary_oam_buffer = if signals.sprite_rendering_dot_type() == Some(SpriteRenderingDotType::OamClearing) {
                         0xFF
                     } else {
