@@ -29,6 +29,10 @@ impl SecondaryOam {
         }
     }
 
+    pub fn oam_register_index(&self) -> usize {
+        (u8::from(self.index) / 4).into()
+    }
+
     pub fn peek(&self) -> u8 {
         self.data[to_usize(self.index)]
     }
@@ -46,7 +50,6 @@ impl SecondaryOam {
         self.is_full = false;
     }
 
-    // TODO: Should this be made private and read() be called instead?
     pub fn advance(&mut self) {
         if self.index == u5::MAX {
             self.index = u5::MIN;

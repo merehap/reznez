@@ -12,7 +12,7 @@ pub static VISIBLE_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(|
     //           ||CYCLE||       ||---------BACKGROUND-TILE-ACTIONS---------||  ||-SPRITE--ACTIONS---||  ||-----DISPLAY-ACTIONS-----||
     // TODO: Remove this section in favor of using EdgeDetectors.
     line.add(            1, vec![                                               ResetSecondaryOamIndex                      ]);
-    line.add(           65, vec![                                               ClearOamRegisterIndex, StartSpriteEvaluation]);
+    line.add(           65, vec![                                               StartSpriteEvaluation                       ]);
     line.add(          257, vec![StopReadingBackgroundTiles                                                                 ]);
     line.add(          257, vec![                                               StartLoadingOamRegisters                    ]);
     line.add(          321, vec![                                               StopLoadingOamRegisters                     ]);
@@ -57,7 +57,7 @@ pub static VISIBLE_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(|
         line.add(cycle + 5, vec![Read                       ,                     DummyReadSpriteX                           , ResetOamAddress]);
         line.add(cycle + 6, vec![SetSpritePatternHighAddress,                     DummyReadSpriteX                           , ResetOamAddress]);
         line.add(cycle + 7, vec![Read                       ,                     DummyReadSpriteX                           , ResetOamAddress]);
-        line.add(cycle + 8, vec![                                                                         AdvanceSecondaryOam, IncrementOamRegisterIndex]);
+        line.add(cycle + 8, vec![                                                                         AdvanceSecondaryOam                 ]);
     }
 
     // Fetch the first background tile for the next scanline.
@@ -111,9 +111,7 @@ pub static PRE_RENDER_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::ne
 
     let mut scanline = ScanlineActions::new();
     scanline.add(            0, vec![StartPreRenderScanline                                              ]);
-    // Clear vblank, sprite 0 hit, and sprite overflow.
-    scanline.add(            1, vec![ClearFlags, ResetSecondaryOamIndex                                                          ]);
-    scanline.add(           65, vec![ClearOamRegisterIndex                                               ]);
+    scanline.add(            1, vec![ClearFlags, ResetSecondaryOamIndex                                  ]);
     scanline.add(          321, vec![StartReadingBackgroundTiles                                         ]);
 
     for cycle in 1..9 {
@@ -158,7 +156,7 @@ pub static PRE_RENDER_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::ne
         scanline.add(cycle + 5, vec![Read                       , DummyReadSpriteX                           , ResetOamAddress]);
         scanline.add(cycle + 6, vec![SetSpritePatternHighAddress, DummyReadSpriteX                           , ResetOamAddress]);
         scanline.add(cycle + 7, vec![Read                       , DummyReadSpriteX                           , ResetOamAddress]);
-        scanline.add(cycle + 8, vec![                                                     AdvanceSecondaryOam, IncrementOamRegisterIndex]);
+        scanline.add(cycle + 8, vec![                                                     AdvanceSecondaryOam                 ]);
     }
 
     // Overlaps the above dummy sprite pattern fetches.

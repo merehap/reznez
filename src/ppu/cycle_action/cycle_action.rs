@@ -20,7 +20,6 @@ pub enum CycleAction {
     ReadOamByte,
     WriteSecondaryOamByte,
 
-    IncrementOamRegisterIndex,
     AdvanceSecondaryOam,
     ReadSpriteY,
     ReadSpritePatternIndex,
@@ -37,7 +36,6 @@ pub enum CycleAction {
     StartReadingBackgroundTiles,
     StopReadingBackgroundTiles,
     ResetSecondaryOamIndex,
-    ClearOamRegisterIndex,
     StartSpriteEvaluation,
     StartLoadingOamRegisters,
     StopLoadingOamRegisters,

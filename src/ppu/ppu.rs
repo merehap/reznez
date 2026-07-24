@@ -7,7 +7,7 @@ use crate::bus::Bus;
 use crate::master_clock::MasterClock;
 use crate::memory::ppu::chr_memory::PpuPeek;
 use crate::memory::ppu::ppu_address::{PaletteRamIndex, PpuAddress};
-use crate::memory::regions::secondary_oam::SpriteField;
+use crate::memory::regions::secondary_oam::{SecondaryOam, SpriteField};
 use crate::memory::signal_level::SignalLevel;
 use crate::ppu::cycle_action::cycle_action::CycleAction;
 use crate::ppu::cycle_action::frame_actions::{FrameActions, NTSC_FRAME_ACTIONS};
@@ -32,7 +32,6 @@ use super::palette::bank_color_assigner::BankColorAssigner;
 
 pub struct Ppu {
     oam_registers: OamRegisters,
-    oam_register_index: usize,
 
     next_tile_number: TileNumber,
     pattern_register: PatternRegister,
@@ -62,7 +61,6 @@ impl Ppu {
     pub fn new(bank_color_assigner: BankColorAssigner) -> Ppu {
         Ppu {
             oam_registers: OamRegisters::new(),
-            oam_register_index: 0,
 
             next_tile_number: TileNumber::new(0),
             pattern_register: PatternRegister::new(),
@@ -169,13 +167,13 @@ impl Ppu {
             RenderingRegisterField::SpritePatternLow => {
                 // TODO: Determine if this check should happen at the same time as rendering_enabled()
                 if ppu.sprite_visible {
-                    ppu.oam_registers[ppu.oam_register_index].set_pattern_low(ppu.next_register_value);
+                    ppu.oam_registers[secondary_oam.oam_register_index()].set_pattern_low(ppu.next_register_value);
                 }
             }
             RenderingRegisterField::SpritePatternHighAndNextSprite => {
                 // TODO: Determine if this check should happen at the same time as rendering_enabled()
                 if ppu.sprite_visible {
-                    ppu.oam_registers[ppu.oam_register_index].set_pattern_high(ppu.next_register_value);
+                    ppu.oam_registers[secondary_oam.oam_register_index()].set_pattern_high(ppu.next_register_value);
                 }
             }
         }
@@ -362,9 +360,6 @@ impl Ppu {
                     secondary_oam.reset_index();
                 }
             }
-            ClearOamRegisterIndex => {
-                ppu.oam_register_index = 0;
-            }
             StartSpriteEvaluation => {
                 info!(target: "ppustage", "\t\tSPRITE EVALUATION");
                 ppu.sprite_0_present = false;
@@ -446,9 +441,6 @@ impl Ppu {
                 // If the sprite isn't in range, move to the next sprite.
                 ppu.all_sprites_evaluated = ppu_regs.oam_addr.next_sprite();
             }
-            IncrementOamRegisterIndex => {
-                ppu.oam_register_index += 1;
-            }
             AdvanceSecondaryOam => {
                 secondary_oam.advance();
             }
@@ -468,13 +460,13 @@ impl Ppu {
                 if signals.rendering_enabled {
                     secondary_oam.read(secondary_oam_buffer);
                     let attributes = SpriteAttributes::from_u8(*secondary_oam_buffer);
-                    ppu.oam_registers[ppu.oam_register_index].set_attributes(attributes);
+                    ppu.oam_registers[secondary_oam.oam_register_index()].set_attributes(attributes);
                 }
             }
             ReadSpriteX => {
                 if signals.rendering_enabled {
                     secondary_oam.read(secondary_oam_buffer);
-                    ppu.oam_registers[ppu.oam_register_index].set_x_counter(*secondary_oam_buffer);
+                    ppu.oam_registers[secondary_oam.oam_register_index()].set_x_counter(*secondary_oam_buffer);
                 }
             }
             DummyReadSpriteX => {
@@ -496,7 +488,7 @@ impl Ppu {
 
                 let select_high = false;
                 let addr;
-                (addr, ppu.sprite_visible) = ppu.current_sprite_pattern_address(master_clock, ppu_regs, select_high);
+                (addr, ppu.sprite_visible) = ppu.current_sprite_pattern_address(master_clock, ppu_regs, secondary_oam, select_high);
                 followup = Followup::SetAddressBus(addr)
             }
             SetSpritePatternHighAddress => {
@@ -506,7 +498,7 @@ impl Ppu {
 
                 let select_high = true;
                 let addr;
-                (addr, ppu.sprite_visible) = ppu.current_sprite_pattern_address(master_clock, ppu_regs, select_high);
+                (addr, ppu.sprite_visible) = ppu.current_sprite_pattern_address(master_clock, ppu_regs, secondary_oam, select_high);
                 followup = Followup::SetAddressBus(addr);
             }
 
@@ -573,7 +565,7 @@ impl Ppu {
         &self.pattern_source_debug_buffer
     }
 
-    fn current_sprite_pattern_address(&self, clock: &MasterClock, ppu_regs: &PpuRegisters, select_high: bool) -> (PpuAddress, bool) {
+    fn current_sprite_pattern_address(&self, clock: &MasterClock, ppu_regs: &PpuRegisters, secondary_oam: &SecondaryOam, select_high: bool) -> (PpuAddress, bool) {
         let sprite_table_side = ppu_regs.sprite_table_side();
         let sprite_height = ppu_regs.sprite_height();
         let sprite_table_side = match sprite_height {
@@ -584,7 +576,7 @@ impl Ppu {
         let address;
         let visible;
         if let Some(pixel_row) = clock.ppu_clock().scanline_pixel_row() {
-            let attributes = self.oam_registers[self.oam_register_index].attributes();
+            let attributes = self.oam_registers[secondary_oam.oam_register_index()].attributes();
             if let Some((tile_number, row_in_half, v)) = self.next_sprite_tile_number.number_and_row(
                 self.current_sprite_y,
                 attributes.flip_vertically(),
