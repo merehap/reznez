@@ -396,6 +396,7 @@ impl Ppu {
 
                 if ppu.all_sprites_evaluated {
                     secondary_oam.read(secondary_oam_buffer);
+                    secondary_oam.advance();
                     return followup;
                 }
 
@@ -444,22 +445,26 @@ impl Ppu {
             ReadSpriteY => {
                 if !signals.rendering_enabled { return Followup::None; }
                 secondary_oam.read(secondary_oam_buffer);
+                secondary_oam.advance();
                 ppu.current_sprite_y = SpriteY::new(*secondary_oam_buffer);
             }
             ReadSpritePatternIndex => {
                 if !signals.rendering_enabled { return Followup::None; }
                 secondary_oam.read(secondary_oam_buffer);
+                secondary_oam.advance();
                 ppu.next_sprite_tile_number = TileNumber::new(*secondary_oam_buffer);
             }
             ReadSpriteAttributes => {
                 if !signals.rendering_enabled { return Followup::None; }
                 secondary_oam.read(secondary_oam_buffer);
+                secondary_oam.advance();
                 let attributes = SpriteAttributes::from_u8(*secondary_oam_buffer);
                 ppu.oam_registers[ppu.oam_register_index].set_attributes(attributes);
             }
             ReadSpriteX => {
                 if !signals.rendering_enabled { return Followup::None; }
                 secondary_oam.read(secondary_oam_buffer);
+                secondary_oam.advance();
                 ppu.oam_registers[ppu.oam_register_index].set_x_counter(*secondary_oam_buffer);
             }
             DummyReadSpriteX => {
