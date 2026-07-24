@@ -177,8 +177,6 @@ impl Ppu {
                 if ppu.sprite_visible {
                     ppu.oam_registers[ppu.oam_register_index].set_pattern_high(ppu.next_register_value);
                 }
-
-                ppu.oam_register_index += 1;
             }
         }
     }
@@ -441,6 +439,9 @@ impl Ppu {
 
                 // If the sprite isn't in range, move to the next sprite.
                 ppu.all_sprites_evaluated = ppu_regs.oam_addr.next_sprite();
+            }
+            IncrementOamRegisterIndex => {
+                ppu.oam_register_index += 1;
             }
             AdvanceSecondaryOam => {
                 secondary_oam.advance();

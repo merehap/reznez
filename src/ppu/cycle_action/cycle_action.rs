@@ -20,6 +20,7 @@ pub enum CycleAction {
     ReadOamByte,
     WriteSecondaryOamByte,
 
+    IncrementOamRegisterIndex,
     AdvanceSecondaryOam,
     ReadSpriteY,
     ReadSpritePatternIndex,

@@ -57,6 +57,7 @@ pub static VISIBLE_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(|
         line.add(cycle + 5, vec![Read                       ,                     DummyReadSpriteX                           , ResetOamAddress]);
         line.add(cycle + 6, vec![SetSpritePatternHighAddress,                     DummyReadSpriteX                           , ResetOamAddress]);
         line.add(cycle + 7, vec![Read                       ,                     DummyReadSpriteX                           , ResetOamAddress]);
+        line.add(cycle + 8, vec![                                                                                              IncrementOamRegisterIndex]);
     }
 
     // Fetch the first background tile for the next scanline.
@@ -157,6 +158,7 @@ pub static PRE_RENDER_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::ne
         scanline.add(cycle + 5, vec![Read                       , DummyReadSpriteX                           , ResetOamAddress]);
         scanline.add(cycle + 6, vec![SetSpritePatternHighAddress, DummyReadSpriteX                           , ResetOamAddress]);
         scanline.add(cycle + 7, vec![Read                       , DummyReadSpriteX                           , ResetOamAddress]);
+        scanline.add(cycle + 8, vec![                                                                          IncrementOamRegisterIndex]);
     }
 
     // Overlaps the above dummy sprite pattern fetches.
