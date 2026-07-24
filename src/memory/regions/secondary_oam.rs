@@ -51,11 +51,9 @@ impl SecondaryOam {
     }
 
     pub fn advance(&mut self) {
-        if self.index == u5::MAX {
-            self.index = u5::MIN;
+        self.index = self.index.wrapping_add(u5::new(1));
+        if self.index == u5::MIN {
             self.is_full = true;
-        } else {
-            self.index = self.index + u5::new(1);
         }
     }
 }
