@@ -376,13 +376,14 @@ impl Ppu {
                 info!(target: "ppustage", "\t\tLoading OAM registers ended.");
             }
             ReadOamByte => {
-                if !rendering_enabled { return Followup::None; }
-                // TODO: Shouldn't this just be calling the same code that PpuRegs::read_oam uses?
-                *secondary_oam_buffer = if signals.sprite_rendering_dot_type() == Some(SpriteRenderingDotType::OamClearing) {
-                    0xFF
-                } else {
-                    oam.read(ppu_regs.oam_addr)
-                };
+                if rendering_enabled {
+                    // TODO: Shouldn't this just be calling the same code that PpuRegs::read_oam uses?
+                    *secondary_oam_buffer = if signals.sprite_rendering_dot_type() == Some(SpriteRenderingDotType::OamClearing) {
+                        0xFF
+                    } else {
+                        oam.read(ppu_regs.oam_addr)
+                    };
+                }
             }
             WriteSecondaryOamByte => {
                 if !rendering_enabled { return Followup::None; }
@@ -390,13 +391,13 @@ impl Ppu {
                 if signals.sprite_rendering_dot_type() == Some(SpriteRenderingDotType::OamClearing) {
                     secondary_oam.write(*secondary_oam_buffer);
                     secondary_oam.advance();
-                    return followup;
+                    return Followup::None;
                 }
 
                 if ppu.all_sprites_evaluated {
                     secondary_oam.read(secondary_oam_buffer);
                     secondary_oam.advance();
-                    return followup;
+                    return Followup::None;
                 }
 
                 if !secondary_oam.is_full() {

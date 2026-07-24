@@ -11,7 +11,6 @@ pub static VISIBLE_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(|
     let mut line = ScanlineActions::new();
     //           ||CYCLE||       ||---------BACKGROUND-TILE-ACTIONS---------||  ||-SPRITE--ACTIONS---||  ||-----DISPLAY-ACTIONS-----||
     // TODO: Remove this section in favor of using EdgeDetectors.
-    line.add(            1, vec![                                               ResetSecondaryOamIndex                      ]);
     line.add(           65, vec![                                               StartSpriteEvaluation                       ]);
     line.add(          257, vec![StopReadingBackgroundTiles                                                                 ]);
     line.add(          257, vec![                                               StartLoadingOamRegisters                    ]);
@@ -32,6 +31,9 @@ pub static VISIBLE_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(|
         line.add(cycle + 6, vec![SetPatternHighAddress      ,                     ReadOamByte          , SetPixel, PrepareForNextPixel]);
         line.add(cycle + 7, vec![Read                       ,                     WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
     }
+
+    // Resetting the Secondary OAM index actually happens just AFTER the first ReadOamByte, so the first read sees the pre-reset index.
+    line.add(            1, vec![                                                 ResetSecondaryOamIndex                              ]);
 
     // Fetch a final unused background tile and get ready for the next ROW of tiles.
     // Complete the sprite evaluation.
@@ -111,7 +113,7 @@ pub static PRE_RENDER_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::ne
 
     let mut scanline = ScanlineActions::new();
     scanline.add(            0, vec![StartPreRenderScanline                                              ]);
-    scanline.add(            1, vec![ClearFlags, ResetSecondaryOamIndex                                  ]);
+    scanline.add(            1, vec![ClearFlags                                                          ]);
     scanline.add(          321, vec![StartReadingBackgroundTiles                                         ]);
 
     for cycle in 1..9 {
@@ -132,6 +134,9 @@ pub static PRE_RENDER_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::ne
         scanline.add(cycle + 6, vec![SetPatternHighAddress                                               ]);
         scanline.add(cycle + 7, vec![Read                     ,                                          ]);
     }
+
+    // Resetting the Secondary OAM index actually happens just AFTER the first ReadOamByte, so the first read sees the pre-reset index.
+    scanline.add(            1, vec![ResetSecondaryOamIndex]);
 
     // Fetch a final unused background tile and get ready for the next ROW of tiles.
     scanline.add(          249, vec![SetPatternIndexAddress                                              ]);
