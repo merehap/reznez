@@ -287,6 +287,11 @@ impl Ppu {
                         sprite_color = Transparent;
                     }
 
+                    // TODO: This should probably be a natural consequence of the shifter pipeline instead.
+                    if row == PixelRow::ZERO {
+                        sprite_color = Transparent;
+                    }
+
                     color = match (background_color, sprite_color, sprite_priority) {
                         (Transparent  , Transparent  , _) => palette_ram.backdrop_color(),
                         (Transparent  , Opaque(color), _) => color,
