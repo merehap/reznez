@@ -442,21 +442,20 @@ impl Ppu {
                 // If the sprite isn't in range, move to the next sprite.
                 ppu.all_sprites_evaluated = ppu_regs.oam_addr.next_sprite();
             }
+            AdvanceSecondaryOam => {
+                secondary_oam.advance();
+            }
             ReadSpriteY => {
                 if signals.rendering_enabled {
                     secondary_oam.read(secondary_oam_buffer);
                     ppu.current_sprite_y = SpriteY::new(*secondary_oam_buffer);
                 }
-
-                secondary_oam.advance();
             }
             ReadSpritePatternIndex => {
                 if signals.rendering_enabled {
                     secondary_oam.read(secondary_oam_buffer);
                     ppu.next_sprite_tile_number = TileNumber::new(*secondary_oam_buffer);
                 }
-
-                secondary_oam.advance();
             }
             ReadSpriteAttributes => {
                 if signals.rendering_enabled {
@@ -464,16 +463,12 @@ impl Ppu {
                     let attributes = SpriteAttributes::from_u8(*secondary_oam_buffer);
                     ppu.oam_registers[ppu.oam_register_index].set_attributes(attributes);
                 }
-
-                secondary_oam.advance();
             }
             ReadSpriteX => {
                 if signals.rendering_enabled {
                     secondary_oam.read(secondary_oam_buffer);
                     ppu.oam_registers[ppu.oam_register_index].set_x_counter(*secondary_oam_buffer);
                 }
-
-                secondary_oam.advance();
             }
             DummyReadSpriteX => {
                 // TODO
