@@ -391,7 +391,7 @@ impl Ppu {
                 }
             }
             WriteSecondaryOamByte => {
-                if !signals.rendering_enabled { return Followup::None; }
+                if !ppu_regs.background_enabled() && !ppu_regs.sprites_enabled() { return Followup::None; }
 
                 if signals.sprite_rendering_dot_type() == SpriteRenderingDotType::OamClearing {
                     use ScanlineType::*;
