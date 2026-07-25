@@ -17,8 +17,10 @@ pub enum CycleAction {
     MaybeCorruptOamStart,
     ResetOamAddress,
 
-    ReadOamByte,
-    WriteSecondaryOamByte,
+    ClearSpriteBuffer,
+    WriteSpriteByte,
+    ReadSpriteByte,
+    EvaluateSpriteByte,
 
     AdvanceSecondaryOam,
     ReadSpriteY,

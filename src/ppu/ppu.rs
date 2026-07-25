@@ -26,7 +26,7 @@ use crate::ppu::sprite::oam_registers::OamRegisters;
 use crate::ppu::sprite::sprite_y::SpriteY;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
 use crate::ppu::tile_number::TileNumber;
-use crate::signals::{ScanlineType, SpriteRenderingDotType};
+use crate::signals::ScanlineType;
 
 use super::palette::bank_color_assigner::BankColorAssigner;
 
@@ -378,32 +378,33 @@ impl Ppu {
             StopLoadingOamRegisters => {
                 info!(target: "ppustage", "\t\tLoading OAM registers ended.");
             }
-            ReadOamByte => {
+            ClearSpriteBuffer => {
                 if signals.rendering_enabled {
-                    use ScanlineType::*;
-                    use SpriteRenderingDotType::*;
-                    *secondary_oam_buffer = match (signals.scanline_type(), signals.sprite_rendering_dot_type()) {
-                        (Visible  , OamClearing) => 0xFF,
-                        (Vblank   , _) => unreachable!(),
-                        (Prerender, OamClearing) => secondary_oam.peek(),
-                        _ => oam.read(ppu_regs.oam_addr),
+                    *secondary_oam_buffer = match signals.scanline_type() {
+                        ScanlineType::Visible   => 0xFF,
+                        ScanlineType::Vblank    => unreachable!(),
+                        ScanlineType::Prerender => secondary_oam.peek(),
                     };
                 }
             }
-            WriteSecondaryOamByte => {
-                if !ppu_regs.background_enabled() && !ppu_regs.sprites_enabled() { return Followup::None; }
-
-                if signals.sprite_rendering_dot_type() == SpriteRenderingDotType::OamClearing {
-                    use ScanlineType::*;
+            WriteSpriteByte => {
+                if ppu_regs.background_enabled() || ppu_regs.sprites_enabled() {
                     match signals.scanline_type() {
-                        Visible => secondary_oam.write(*secondary_oam_buffer),
-                        Vblank => unreachable!(),
-                        Prerender => {}
+                        ScanlineType::Visible => secondary_oam.write(*secondary_oam_buffer),
+                        ScanlineType::Vblank => unreachable!(),
+                        ScanlineType::Prerender => {}
                     }
 
                     secondary_oam.advance();
-                    return Followup::None;
                 }
+            }
+            ReadSpriteByte => {
+                if signals.rendering_enabled {
+                    *secondary_oam_buffer = oam.read(ppu_regs.oam_addr);
+                }
+            }
+            EvaluateSpriteByte => {
+                if !ppu_regs.background_enabled() && !ppu_regs.sprites_enabled() { return Followup::None; }
 
                 if ppu.all_sprites_evaluated {
                     secondary_oam.read(secondary_oam_buffer);

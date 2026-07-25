@@ -20,31 +20,43 @@ pub static VISIBLE_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(|
     // Fetch the remaining 31 usable background tiles for the current scanline.
     // Secondary OAM clearing then sprite evaluation, transfering OAM to secondary OAM.
     // Cycles 1 through 249.
-    for tile in 0..31 {
+    for tile in 0..8 {
         let cycle = 8 * tile + 1;
-        line.add(cycle + 0, vec![SetPatternIndexAddress     ,                     ReadOamByte          , SetPixel, PrepareForNextPixel]);
-        line.add(cycle + 1, vec![Read                       ,                     WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
-        line.add(cycle + 2, vec![SetPaletteIndexAddress     ,                     ReadOamByte          , SetPixel, PrepareForNextPixel]);
-        line.add(cycle + 3, vec![Read                       ,                     WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
-        line.add(cycle + 4, vec![SetPatternLowAddress       ,                     ReadOamByte          , SetPixel, PrepareForNextPixel]);
-        line.add(cycle + 5, vec![Read                       ,                     WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
-        line.add(cycle + 6, vec![SetPatternHighAddress      ,                     ReadOamByte          , SetPixel, PrepareForNextPixel]);
-        line.add(cycle + 7, vec![Read                       ,                     WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
+        line.add(cycle + 0, vec![SetPatternIndexAddress     ,                     ClearSpriteBuffer, SetPixel, PrepareForNextPixel]);
+        line.add(cycle + 1, vec![Read                       ,                     WriteSpriteByte  , SetPixel, PrepareForNextPixel]);
+        line.add(cycle + 2, vec![SetPaletteIndexAddress     ,                     ClearSpriteBuffer, SetPixel, PrepareForNextPixel]);
+        line.add(cycle + 3, vec![Read                       ,                     WriteSpriteByte  , SetPixel, PrepareForNextPixel]);
+        line.add(cycle + 4, vec![SetPatternLowAddress       ,                     ClearSpriteBuffer, SetPixel, PrepareForNextPixel]);
+        line.add(cycle + 5, vec![Read                       ,                     WriteSpriteByte  , SetPixel, PrepareForNextPixel]);
+        line.add(cycle + 6, vec![SetPatternHighAddress      ,                     ClearSpriteBuffer, SetPixel, PrepareForNextPixel]);
+        line.add(cycle + 7, vec![Read                       ,                     WriteSpriteByte  , SetPixel, PrepareForNextPixel]);
     }
 
-    // Resetting the Secondary OAM index actually happens just AFTER the first ReadOamByte, so the first read sees the pre-reset index.
+    // Resetting the Secondary OAM index actually happens just AFTER the first ReadSpriteByte, so the first read sees the pre-reset index.
     line.add(            1, vec![                                                 ResetSecondaryOamIndex                              ]);
+
+    for tile in 8..31 {
+        let cycle = 8 * tile + 1;
+        line.add(cycle + 0, vec![SetPatternIndexAddress     ,                     ReadSpriteByte    , SetPixel, PrepareForNextPixel]);
+        line.add(cycle + 1, vec![Read                       ,                     EvaluateSpriteByte, SetPixel, PrepareForNextPixel]);
+        line.add(cycle + 2, vec![SetPaletteIndexAddress     ,                     ReadSpriteByte    , SetPixel, PrepareForNextPixel]);
+        line.add(cycle + 3, vec![Read                       ,                     EvaluateSpriteByte, SetPixel, PrepareForNextPixel]);
+        line.add(cycle + 4, vec![SetPatternLowAddress       ,                     ReadSpriteByte    , SetPixel, PrepareForNextPixel]);
+        line.add(cycle + 5, vec![Read                       ,                     EvaluateSpriteByte, SetPixel, PrepareForNextPixel]);
+        line.add(cycle + 6, vec![SetPatternHighAddress      ,                     ReadSpriteByte    , SetPixel, PrepareForNextPixel]);
+        line.add(cycle + 7, vec![Read                       ,                     EvaluateSpriteByte, SetPixel, PrepareForNextPixel]);
+    }
 
     // Fetch a final unused background tile and get ready for the next ROW of tiles.
     // Complete the sprite evaluation.
-    line.add(          249, vec![SetPatternIndexAddress     ,                     ReadOamByte          , SetPixel, PrepareForNextPixel]);
-    line.add(          250, vec![Read                       ,                     WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
-    line.add(          251, vec![SetPaletteIndexAddress     ,                     ReadOamByte          , SetPixel, PrepareForNextPixel]);
-    line.add(          252, vec![Read                       ,                     WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
-    line.add(          253, vec![SetPatternLowAddress       ,                     ReadOamByte          , SetPixel, PrepareForNextPixel]);
-    line.add(          254, vec![Read                       ,                     WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
-    line.add(          255, vec![SetPatternHighAddress      ,                     ReadOamByte          , SetPixel, PrepareForNextPixel]);
-    line.add(          256, vec![Read                       , GotoNextPixelRow  , WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
+    line.add(          249, vec![SetPatternIndexAddress     ,                     ReadSpriteByte    , SetPixel, PrepareForNextPixel]);
+    line.add(          250, vec![Read                       ,                     EvaluateSpriteByte, SetPixel, PrepareForNextPixel]);
+    line.add(          251, vec![SetPaletteIndexAddress     ,                     ReadSpriteByte    , SetPixel, PrepareForNextPixel]);
+    line.add(          252, vec![Read                       ,                     EvaluateSpriteByte, SetPixel, PrepareForNextPixel]);
+    line.add(          253, vec![SetPatternLowAddress       ,                     ReadSpriteByte    , SetPixel, PrepareForNextPixel]);
+    line.add(          254, vec![Read                       ,                     EvaluateSpriteByte, SetPixel, PrepareForNextPixel]);
+    line.add(          255, vec![SetPatternHighAddress      ,                     ReadSpriteByte    , SetPixel, PrepareForNextPixel]);
+    line.add(          256, vec![Read                       , GotoNextPixelRow  , EvaluateSpriteByte, SetPixel, PrepareForNextPixel]);
     line.add(          257, vec![                             ResetTileColumn                                                         ]);
 
     // Transfer secondary OAM to OAM registers and fetch sprite pattern data.
@@ -124,33 +136,45 @@ pub static PRE_RENDER_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::ne
     // Cycles 1 through 249.
     for tile in 0..8 {
         let cycle = 8 * tile + 1;
-        scanline.add(cycle + 0, vec![ReadOamByte          ]);
-        scanline.add(cycle + 1, vec![WriteSecondaryOamByte]);
-        scanline.add(cycle + 2, vec![ReadOamByte          ]);
-        scanline.add(cycle + 3, vec![WriteSecondaryOamByte]);
-        scanline.add(cycle + 4, vec![ReadOamByte          ]);
-        scanline.add(cycle + 5, vec![WriteSecondaryOamByte]);
-        scanline.add(cycle + 6, vec![ReadOamByte          ]);
-        scanline.add(cycle + 7, vec![WriteSecondaryOamByte]);
+        scanline.add(cycle + 0, vec![ClearSpriteBuffer]);
+        scanline.add(cycle + 1, vec![WriteSpriteByte]);
+        scanline.add(cycle + 2, vec![ClearSpriteBuffer]);
+        scanline.add(cycle + 3, vec![WriteSpriteByte]);
+        scanline.add(cycle + 4, vec![ClearSpriteBuffer]);
+        scanline.add(cycle + 5, vec![WriteSpriteByte]);
+        scanline.add(cycle + 6, vec![ClearSpriteBuffer]);
+        scanline.add(cycle + 7, vec![WriteSpriteByte]);
     }
 
     //               ||CYCLE||       ||---------BACKGROUND-TILE-ACTIONS---------|| ||-DISPLAY-ACTIONS-||
     // Fetch the remaining 31 used background tiles for the current scanline.
     // Cycles 1 through 249.
-    for tile in 0..31 {
+    for tile in 0..8 {
         let cycle = 8 * tile + 1;
-        scanline.add(cycle + 0, vec![SetPatternIndexAddress                                              ]);
-        scanline.add(cycle + 1, vec![Read                                                                ]);
-        scanline.add(cycle + 2, vec![SetPaletteIndexAddress                                              ]);
-        scanline.add(cycle + 3, vec![Read                                                                ]);
-        scanline.add(cycle + 4, vec![SetPatternLowAddress                                                ]);
-        scanline.add(cycle + 5, vec![Read                                                                ]);
-        scanline.add(cycle + 6, vec![SetPatternHighAddress                                               ]);
-        scanline.add(cycle + 7, vec![Read                     ,                                          ]);
+        scanline.add(cycle + 0, vec![SetPatternIndexAddress, ClearSpriteBuffer]);
+        scanline.add(cycle + 1, vec![Read                  , WriteSpriteByte  ]);
+        scanline.add(cycle + 2, vec![SetPaletteIndexAddress, ClearSpriteBuffer]);
+        scanline.add(cycle + 3, vec![Read                  , WriteSpriteByte  ]);
+        scanline.add(cycle + 4, vec![SetPatternLowAddress  , ClearSpriteBuffer]);
+        scanline.add(cycle + 5, vec![Read                  , WriteSpriteByte  ]);
+        scanline.add(cycle + 6, vec![SetPatternHighAddress , ClearSpriteBuffer]);
+        scanline.add(cycle + 7, vec![Read                  , WriteSpriteByte  ]);
     }
 
     // Resetting the Secondary OAM index actually happens just AFTER the first ReadOamByte, so the first read sees the pre-reset index.
     scanline.add(            1, vec![ResetSecondaryOamIndex]);
+
+    for tile in 8..31 {
+        let cycle = 8 * tile + 1;
+        scanline.add(cycle + 0, vec![SetPatternIndexAddress, ReadSpriteByte]);
+        scanline.add(cycle + 1, vec![Read                                  ]);
+        scanline.add(cycle + 2, vec![SetPaletteIndexAddress, ReadSpriteByte]);
+        scanline.add(cycle + 3, vec![Read                                  ]);
+        scanline.add(cycle + 4, vec![SetPatternLowAddress  , ReadSpriteByte]);
+        scanline.add(cycle + 5, vec![Read                                  ]);
+        scanline.add(cycle + 6, vec![SetPatternHighAddress , ReadSpriteByte]);
+        scanline.add(cycle + 7, vec![Read                                  ]);
+    }
 
     // Fetch a final unused background tile and get ready for the next ROW of tiles.
     scanline.add(          249, vec![SetPatternIndexAddress                                              ]);
