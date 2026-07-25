@@ -438,9 +438,10 @@ impl Ppu {
 
                     if secondary_oam.is_full() {
                         ppu_regs.sprite_overflow_pending = true;
+                    } else {
+                        secondary_oam.advance();
                     }
 
-                    secondary_oam.advance();
                     ppu.all_sprites_evaluated = ppu_regs.oam_addr.next_field();
                     return Followup::None;
                 }
