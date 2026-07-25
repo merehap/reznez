@@ -409,7 +409,6 @@ impl Ppu {
                 if ppu.all_sprites_evaluated {
                     let _overflow = ppu_regs.oam_addr.next_sprite();
                     secondary_oam.read(secondary_oam_buffer);
-                    secondary_oam.advance();
                     return Followup::None;
                 }
 
