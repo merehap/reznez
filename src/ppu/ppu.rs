@@ -407,6 +407,7 @@ impl Ppu {
                 if !ppu_regs.background_enabled() && !ppu_regs.sprites_enabled() { return Followup::None; }
 
                 if ppu.all_sprites_evaluated {
+                    let _overflow = ppu_regs.oam_addr.next_sprite();
                     secondary_oam.read(secondary_oam_buffer);
                     secondary_oam.advance();
                     return Followup::None;

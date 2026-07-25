@@ -15,16 +15,17 @@ impl OamAddress {
     }
 
     pub fn next_sprite(&mut self) -> bool {
-        let end_reached;
-        (self.0, end_reached) = self.0.overflowing_add(4);
-        info!(target: "oamaddr", "\tAdvancing to next sprite OamAddress 0x{:02X}.", self.0);
+        self.0 = self.0.checked_add(4).unwrap_or(0);
+
+        let end_reached = self.0 == 0;
+        info!(target: "oamaddr", "\tAdvancing to next sprite OamAddress 0x{:02X}. End reached? {}", self.0, end_reached);
         end_reached
     }
 
     pub fn next_field(&mut self) -> bool {
         let end_reached;
         (self.0, end_reached) = self.0.overflowing_add(1);
-        info!(target: "oamaddr", "\tAdvancing to next field OamAddress 0x{:02X}.", self.0);
+        info!(target: "oamaddr", "\tAdvancing to next field OamAddress 0x{:02X}. End reached? {}", self.0, end_reached);
         end_reached
     }
 
