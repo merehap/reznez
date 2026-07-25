@@ -11,7 +11,7 @@ use crate::ppu::register::ppu_io_bus::PpuIoBus;
 use crate::memory::regions::oam::Oam;
 use crate::ppu::sprite::oam_address::OamAddress;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
-use crate::signals::{ScanlineType, Signals, SpriteRenderingDotType};
+use crate::signals::{ScanlineType, Signals};
 
 pub struct PpuRegisters {
     // PPUCTRL (0x2000) sub-registers
@@ -194,11 +194,7 @@ impl PpuRegisters {
     // Read 0x2004
     pub fn read_oam_data(&mut self, oam: &mut Oam, signals: &Signals, oam_buffer: u8) -> ReadResult {
         let rendering_enabled = self.background_enabled() || self.sprites_enabled();
-        use SpriteRenderingDotType::*;
-        let value = if rendering_enabled &&
-            signals.scanline_type() == ScanlineType::Visible &&
-            matches!(signals.sprite_rendering_dot_type(), OamClearing | SecondaryOamTransfer)
-        {
+        let value = if rendering_enabled && signals.scanline_type() == ScanlineType::Visible {
             oam_buffer
         } else {
             oam.read(self.oam_addr)
