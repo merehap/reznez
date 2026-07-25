@@ -18,18 +18,8 @@ impl Signals {
         self.scanline_type
     }
 
-    pub fn secondary_oam_clearing(&self) -> bool {
-        use SpriteRenderingDotType::*;
-        let dot_matches = matches!(self.sprite_rendering_dot_type(), Some(OamClearing | SecondaryOamTransfer));
-        dot_matches && self.rendering_enabled
-    }
-
-    pub fn sprite_rendering_dot_type(&self) -> Option<SpriteRenderingDotType> {
-        if self.scanline_type == ScanlineType::Visible {
-            Some(self.sprite_rendering_dot_type)
-        } else {
-            None
-        }
+    pub fn sprite_rendering_dot_type(&self) -> SpriteRenderingDotType {
+        self.sprite_rendering_dot_type
     }
 
     pub fn visible_scanlines_starting(&mut self) {

@@ -377,17 +377,18 @@ impl Ppu {
             }
             ReadOamByte => {
                 if rendering_enabled {
-                    *secondary_oam_buffer = if signals.sprite_rendering_dot_type() == Some(SpriteRenderingDotType::OamClearing) {
-                        0xFF
-                    } else {
-                        oam.read(ppu_regs.oam_addr)
+                    use ScanlineType::*;
+                    use SpriteRenderingDotType::*;
+                    *secondary_oam_buffer = match (signals.scanline_type(), signals.sprite_rendering_dot_type()) {
+                        (Visible, OamClearing) => 0xFF,
+                        _ => oam.read(ppu_regs.oam_addr),
                     };
                 }
             }
             WriteSecondaryOamByte => {
                 if !rendering_enabled { return Followup::None; }
 
-                if signals.sprite_rendering_dot_type() == Some(SpriteRenderingDotType::OamClearing) {
+                if signals.scanline_type() == ScanlineType::Visible && signals.sprite_rendering_dot_type() == SpriteRenderingDotType::OamClearing {
                     secondary_oam.write(*secondary_oam_buffer);
                     secondary_oam.advance();
                     return Followup::None;
