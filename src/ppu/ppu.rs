@@ -186,7 +186,6 @@ impl Ppu {
     ) -> Followup {
         let mut followup = Followup::None;
 
-        let rendering_enabled = signals.rendering_enabled;
         let clock = master_clock.ppu_clock();
 
         use CycleAction::*;
@@ -196,14 +195,14 @@ impl Ppu {
                 followup = Followup::SetAddressBus(ppu_regs.current_address.to_name_table_address());
             }
             SetPaletteIndexAddress => {
-                if rendering_enabled {
+                if signals.rendering_enabled {
                     ppu.next_rendering_field_to_set = Some((RenderingRegisterField::PaletteIndex, 2));
                 }
 
                 followup = Followup::SetAddressBus(ppu_regs.current_address.to_attribute_table_address());
             }
             SetPatternLowAddress => {
-                if rendering_enabled {
+                if signals.rendering_enabled {
                     ppu.next_rendering_field_to_set = Some((RenderingRegisterField::BackgroundPatternLow, 2));
                 }
 
@@ -215,7 +214,7 @@ impl Ppu {
                 ));
             }
             SetPatternHighAddress => {
-                if rendering_enabled {
+                if signals.rendering_enabled {
                     ppu.next_rendering_field_to_set = Some((RenderingRegisterField::BackgroundPatternHighAndNextTile, 2));
                 }
 
@@ -235,12 +234,14 @@ impl Ppu {
             }
 
             GotoNextPixelRow => {
-                if !rendering_enabled { return followup; }
-                ppu_regs.current_address.increment_fine_y_scroll();
+                if signals.rendering_enabled {
+                    ppu_regs.current_address.increment_fine_y_scroll();
+                }
             }
             ResetTileColumn => {
-                if !rendering_enabled { return followup; }
-                ppu_regs.current_address.set_tile_column_from(ppu_regs.next_address);
+                if signals.rendering_enabled {
+                    ppu_regs.current_address.set_tile_column_from(ppu_regs.next_address);
+                }
             }
             SetPixel => {
                 let pixel_index = PixelIndex::try_from_clock(clock).unwrap();
@@ -264,7 +265,7 @@ impl Ppu {
                     });
                 }
 
-                // This is not delayed, unlike ppu_regs.rendering_enabled()
+                // This is not delayed, unlike signals.rendering_enabled
                 let rendering_enabled = ppu_regs.background_enabled() || ppu_regs.sprites_enabled();
                 let (mut sprite_color, sprite_priority, is_sprite_0, ppu_peek) =
                     ppu.oam_registers.step(palette_ram, rendering_enabled);
@@ -344,15 +345,17 @@ impl Ppu {
             }
 
             MaybeCorruptOamStart => {
-                if !rendering_enabled { return Followup::None; }
-                // Unclear if these are the correct cycles to trigger on.
-                let oam_addr = ppu_regs.oam_addr;
-                oam.maybe_corrupt_starting_byte(clock, oam_addr);
+                if signals.rendering_enabled {
+                    // Unclear if these are the correct cycles to trigger on.
+                    let oam_addr = ppu_regs.oam_addr;
+                    oam.maybe_corrupt_starting_byte(clock, oam_addr);
+                }
             }
 
             ResetOamAddress => {
-                if !ppu_regs.background_enabled() && !ppu_regs.sprites_enabled() { return Followup::None; }
-                ppu_regs.oam_addr.reset();
+                if ppu_regs.background_enabled() || ppu_regs.sprites_enabled() {
+                    ppu_regs.oam_addr.reset();
+                }
             }
 
             ResetSecondaryOamIndex => {
@@ -376,7 +379,7 @@ impl Ppu {
                 info!(target: "ppustage", "\t\tLoading OAM registers ended.");
             }
             ReadOamByte => {
-                if rendering_enabled {
+                if signals.rendering_enabled {
                     use ScanlineType::*;
                     use SpriteRenderingDotType::*;
                     *secondary_oam_buffer = match (signals.scanline_type(), signals.sprite_rendering_dot_type()) {
@@ -388,7 +391,7 @@ impl Ppu {
                 }
             }
             WriteSecondaryOamByte => {
-                if !rendering_enabled { return Followup::None; }
+                if !signals.rendering_enabled { return Followup::None; }
 
                 if signals.sprite_rendering_dot_type() == SpriteRenderingDotType::OamClearing {
                     use ScanlineType::*;
@@ -482,7 +485,7 @@ impl Ppu {
                 // TODO
             }
             MaybeClearSpriteX => {
-                if !rendering_enabled {
+                if !signals.rendering_enabled {
                     // This is a quirk of the rendering pipeline. There may be a better way to represent this.
                     for i in 0..8 {
                         ppu.oam_registers[i].set_x_counter(0);
@@ -491,7 +494,7 @@ impl Ppu {
             }
 
             SetSpritePatternLowAddress => {
-                if rendering_enabled {
+                if signals.rendering_enabled {
                     ppu.next_rendering_field_to_set = Some((RenderingRegisterField::SpritePatternLow, 2));
                 }
 
@@ -501,7 +504,7 @@ impl Ppu {
                 followup = Followup::SetAddressBus(addr)
             }
             SetSpritePatternHighAddress => {
-                if rendering_enabled {
+                if signals.rendering_enabled {
                     ppu.next_rendering_field_to_set = Some((RenderingRegisterField::SpritePatternHighAndNextSprite, 2));
                 }
 
