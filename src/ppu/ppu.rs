@@ -380,7 +380,9 @@ impl Ppu {
                     use ScanlineType::*;
                     use SpriteRenderingDotType::*;
                     *secondary_oam_buffer = match (signals.scanline_type(), signals.sprite_rendering_dot_type()) {
-                        (Visible, OamClearing) => 0xFF,
+                        (Visible  , OamClearing) => 0xFF,
+                        (Vblank   , _) => unreachable!(),
+                        (Prerender, OamClearing) => secondary_oam.peek(),
                         _ => oam.read(ppu_regs.oam_addr),
                     };
                 }
@@ -388,8 +390,14 @@ impl Ppu {
             WriteSecondaryOamByte => {
                 if !rendering_enabled { return Followup::None; }
 
-                if signals.scanline_type() == ScanlineType::Visible && signals.sprite_rendering_dot_type() == SpriteRenderingDotType::OamClearing {
-                    secondary_oam.write(*secondary_oam_buffer);
+                if signals.sprite_rendering_dot_type() == SpriteRenderingDotType::OamClearing {
+                    use ScanlineType::*;
+                    match signals.scanline_type() {
+                        Visible => secondary_oam.write(*secondary_oam_buffer),
+                        Vblank => unreachable!(),
+                        Prerender => {}
+                    }
+
                     secondary_oam.advance();
                     return Followup::None;
                 }

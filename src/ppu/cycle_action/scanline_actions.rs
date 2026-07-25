@@ -120,6 +120,20 @@ pub static PRE_RENDER_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::ne
         scanline.add(cycle    , vec![MaybeCorruptOamStart                                                ]);
     }
 
+    // Secondary OAM clearing kind of happens during the pre-render scanline.
+    // Cycles 1 through 249.
+    for tile in 0..8 {
+        let cycle = 8 * tile + 1;
+        scanline.add(cycle + 0, vec![ReadOamByte          ]);
+        scanline.add(cycle + 1, vec![WriteSecondaryOamByte]);
+        scanline.add(cycle + 2, vec![ReadOamByte          ]);
+        scanline.add(cycle + 3, vec![WriteSecondaryOamByte]);
+        scanline.add(cycle + 4, vec![ReadOamByte          ]);
+        scanline.add(cycle + 5, vec![WriteSecondaryOamByte]);
+        scanline.add(cycle + 6, vec![ReadOamByte          ]);
+        scanline.add(cycle + 7, vec![WriteSecondaryOamByte]);
+    }
+
     //               ||CYCLE||       ||---------BACKGROUND-TILE-ACTIONS---------|| ||-DISPLAY-ACTIONS-||
     // Fetch the remaining 31 used background tiles for the current scanline.
     // Cycles 1 through 249.
