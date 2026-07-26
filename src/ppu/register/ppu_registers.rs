@@ -86,7 +86,7 @@ impl PpuRegisters {
             sprite_overflow_pending: false,
 
             // OAMADDR (0x2003) and OAMDATA (0x2004)
-            oam_addr: OamAddress::from_u8(0),
+            oam_addr: OamAddress::new(),
 
             // PPUSCROLL (0x2005)
             fine_x_scroll: ColumnInTile::Zero,
@@ -207,10 +207,9 @@ impl PpuRegisters {
     pub fn write_oam_data(&mut self, oam: &mut Oam, signals: &Signals, value: u8) {
         self.ppu_io_bus.update(value);
 
-        // TODO: What happens if this causes OAMADDR to wrap during sprite evaluation? Is all_sprites_evaluated set prematurely?
-        // Forcing all_sprites_evaluated to true here didn't seem to break any tests, so maybe this is untested.
         use ScanlineType::*;
         if signals.rendering_enabled && matches!(signals.scanline_type(), Visible | Prerender) {
+            // TODO: Test ROM needed. Can this set all_sprites_evaluated?
             self.oam_addr.corrupt_by_write();
         } else {
             oam.write(self.oam_addr, value);

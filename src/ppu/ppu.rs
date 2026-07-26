@@ -43,9 +43,6 @@ pub struct Ppu {
     next_sprite_tile_number: TileNumber,
     current_sprite_y: SpriteY,
     sprite_visible: bool,
-
-    // Sprite evaluation
-    all_sprites_evaluated: bool,
     sprite_0_present: bool,
 
     frame_actions: FrameActions,
@@ -73,7 +70,6 @@ impl Ppu {
             current_sprite_y: SpriteY::new(0),
             sprite_visible: false,
 
-            all_sprites_evaluated: false,
             sprite_0_present: false,
 
             frame_actions: NTSC_FRAME_ACTIONS.clone(),
@@ -365,7 +361,7 @@ impl Ppu {
             StartSpriteEvaluation => {
                 info!(target: "ppustage", "\t\tSPRITE EVALUATION");
                 ppu.sprite_0_present = false;
-                ppu.all_sprites_evaluated = false;
+                ppu_regs.oam_addr.clear_all_sprites_evaluated();
                 secondary_oam.reset_index();
             }
             StartLoadingOamRegisters => {
@@ -405,9 +401,12 @@ impl Ppu {
             EvaluateSpriteByte => {
                 if !ppu_regs.background_enabled() && !ppu_regs.sprites_enabled() { return Followup::None; }
 
-                if ppu.all_sprites_evaluated {
-                    let _overflow = ppu_regs.oam_addr.next_sprite();
+                let sprite_height = ppu_regs.sprite_height();
+                let oam_addr = &mut ppu_regs.oam_addr;
+
+                if oam_addr.all_sprites_evaluated() {
                     secondary_oam.read(secondary_oam_buffer);
+                    oam_addr.next_sprite();
                     return Followup::None;
                 }
 
@@ -421,8 +420,7 @@ impl Ppu {
                 // so copy another byte of its data over.
                 if secondary_oam.current_field() != SpriteField::Y {
                     secondary_oam.advance();
-
-                    ppu.all_sprites_evaluated = ppu_regs.oam_addr.next_field();
+                    oam_addr.next_field();
                     return Followup::None;
                 }
 
@@ -430,7 +428,7 @@ impl Ppu {
                 if let Some(pixel_row) = clock.scanline_pixel_row()
                     && let Some(top_sprite_row) = PixelRow::try_from_u8(*secondary_oam_buffer)
                     && let Some(offset) = pixel_row.difference(top_sprite_row)
-                    && offset < ppu_regs.sprite_height().to_dimension()
+                    && offset < sprite_height.to_dimension()
                 {
                     if clock.cycle() == 66 {
                         ppu.sprite_0_present = true;
@@ -442,18 +440,18 @@ impl Ppu {
                         secondary_oam.advance();
                     }
 
-                    ppu.all_sprites_evaluated = ppu_regs.oam_addr.next_field();
+                    oam_addr.next_field();
                     return Followup::None;
                 }
 
                 // If the sprite isn't in range and OAM is full, then corrupt the OAMADDR.
                 // Sprite overflow hardware bug: https://www.nesdev.org/wiki/PPU_sprite_evaluation#Details
                 if secondary_oam.is_full() {
-                    ppu_regs.oam_addr.corrupt_sprite_y_index();
+                    oam_addr.corrupt_sprite_y_index();
+                } else {
+                    // If the sprite isn't in range, move to the next sprite.
+                    oam_addr.next_sprite();
                 }
-
-                // If the sprite isn't in range, move to the next sprite.
-                ppu.all_sprites_evaluated = ppu_regs.oam_addr.next_sprite();
             }
             AdvanceSecondaryOam => {
                 secondary_oam.advance();
