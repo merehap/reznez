@@ -2,25 +2,23 @@ use ux::u5;
 
 pub struct SecondaryOam {
     data: [u8; 32],
-    index: u5,
-    is_full: bool,
+    index: Option<u5>,
 }
 
 impl SecondaryOam {
     pub fn new() -> SecondaryOam {
         SecondaryOam {
             data: [0xFF; 32],
-            index: u5::MIN,
-            is_full: false,
+            index: Some(u5::MIN),
         }
     }
 
     pub fn is_full(&self) -> bool {
-        self.is_full
+        self.index.is_none()
     }
 
     pub fn current_field(&self) -> SpriteField {
-        match u8::from(self.index) % 4 {
+        match to_usize(self.index) % 4 {
             0 => SpriteField::Y,
             1 => SpriteField::Tile,
             2 => SpriteField::Attributes,
@@ -30,7 +28,7 @@ impl SecondaryOam {
     }
 
     pub fn oam_register_index(&self) -> usize {
-        (u8::from(self.index) / 4).into()
+        to_usize(self.index) / 4
     }
 
     pub fn peek(&self) -> u8 {
@@ -46,21 +44,25 @@ impl SecondaryOam {
     }
 
     pub fn reset_index(&mut self) {
-        self.index = u5::MIN;
-        self.is_full = false;
+        self.index = Some(u5::MIN);
     }
 
     pub fn advance(&mut self) {
-        assert!(!self.is_full);
-        self.index = self.index.wrapping_add(u5::new(1));
-        if self.index == u5::MIN {
-            self.is_full = true;
+        let Some(index) = &mut self.index else {
+            panic!("Can't advance index when Secondary OAM is already full.");
+        };
+
+        *index = index.wrapping_add(u5::new(1));
+        if *index == u5::MIN {
+            // Mark SecondaryOam as full.
+            self.index = None;
         }
     }
 }
 
-fn to_usize(value: u5) -> usize {
-    u8::from(value).into()
+fn to_usize(value: Option<u5>) -> usize {
+    // If SecondaryOam is full, then it always points at 0.
+    u8::from(value.unwrap_or(u5::MIN)).into()
 }
 
 #[derive(PartialEq, Eq)]
