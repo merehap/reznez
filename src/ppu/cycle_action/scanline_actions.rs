@@ -57,7 +57,7 @@ pub static VISIBLE_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(|
     line.add(          254, vec![Read                       ,                     EvaluateSpriteByte, SetPixel, PrepareForNextPixel]);
     line.add(          255, vec![SetPatternHighAddress      ,                     ReadSpriteByte    , SetPixel, PrepareForNextPixel]);
     line.add(          256, vec![Read                       , GotoNextPixelRow  , EvaluateSpriteByte, SetPixel, PrepareForNextPixel]);
-    line.add(          257, vec![                             ResetTileColumn                                                         ]);
+    line.add(          257, vec![                             ResetTileColumn   , ResetSecondaryOamIndex                           ]);
 
     // Transfer secondary OAM to OAM registers and fetch sprite pattern data.
     // Cycles 257 through 320
@@ -132,20 +132,6 @@ pub static PRE_RENDER_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::ne
         scanline.add(cycle    , vec![MaybeCorruptOamStart                                                ]);
     }
 
-    // Secondary OAM clearing kind of happens during the pre-render scanline.
-    // Cycles 1 through 249.
-    for tile in 0..8 {
-        let cycle = 8 * tile + 1;
-        scanline.add(cycle + 0, vec![ClearSpriteBuffer]);
-        scanline.add(cycle + 1, vec![WriteSpriteByte]);
-        scanline.add(cycle + 2, vec![ClearSpriteBuffer]);
-        scanline.add(cycle + 3, vec![WriteSpriteByte]);
-        scanline.add(cycle + 4, vec![ClearSpriteBuffer]);
-        scanline.add(cycle + 5, vec![WriteSpriteByte]);
-        scanline.add(cycle + 6, vec![ClearSpriteBuffer]);
-        scanline.add(cycle + 7, vec![WriteSpriteByte]);
-    }
-
     //               ||CYCLE||       ||---------BACKGROUND-TILE-ACTIONS---------|| ||-DISPLAY-ACTIONS-||
     // Fetch the remaining 31 used background tiles for the current scanline.
     // Cycles 1 through 249.
@@ -185,7 +171,7 @@ pub static PRE_RENDER_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::ne
     scanline.add(          254, vec![Read                                                                ]);
     scanline.add(          255, vec![SetPatternHighAddress                                               ]);
     scanline.add(          256, vec![Read                       , GotoNextPixelRow                       ]);
-    scanline.add(          257, vec![                             ResetTileColumn                        ]);
+    scanline.add(          257, vec![                             ResetTileColumn, ResetSecondaryOamIndex]);
 
     // Dummy sprite pattern fetches.
     // Cycles 257 through 320

@@ -51,6 +51,7 @@ impl SecondaryOam {
     }
 
     pub fn advance(&mut self) {
+        assert!(!self.is_full);
         self.index = self.index.wrapping_add(u5::new(1));
         if self.index == u5::MIN {
             self.is_full = true;

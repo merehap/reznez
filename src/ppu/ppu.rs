@@ -358,10 +358,9 @@ impl Ppu {
                 }
             }
 
+            // TODO: There's no test ROM that verifies that this happens even if rendering is disabled.
             ResetSecondaryOamIndex => {
-                if signals.rendering_enabled {
-                    secondary_oam.reset_index();
-                }
+                secondary_oam.reset_index();
             }
             StartSpriteEvaluation => {
                 info!(target: "ppustage", "\t\tSPRITE EVALUATION");
@@ -422,6 +421,7 @@ impl Ppu {
                 // so copy another byte of its data over.
                 if secondary_oam.current_field() != SpriteField::Y {
                     secondary_oam.advance();
+
                     ppu.all_sprites_evaluated = ppu_regs.oam_addr.next_field();
                     return Followup::None;
                 }
