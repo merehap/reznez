@@ -404,44 +404,36 @@ impl Ppu {
                 let mut start_next_field = false;
                 let mut start_next_sprite = false;
                 if ppu_regs.oam_addr.all_sprites_evaluated() {
+                    // Writes are disabled once all sprites are evaluated, but subsequent sprites are still visited.
                     *secondary_oam_buffer = secondary_oam.peek();
                     start_next_sprite = true;
                 } else {
                     if !secondary_oam.is_full() {
-                        // Copy the sprite byte into secondary OAM, but it may be overwritten
-                        // if it is a Y coordinate that is not in range.
-                        secondary_oam.write(*secondary_oam_buffer);
+                        // Copy the sprite byte into secondary OAM (it will be overridden if it's an out-of-range Y coordinate).
+                        secondary_oam.write(*secondary_oam_buffer)
                     }
 
-                    // If the Y-index is not currently being evaluated, then the current sprite was already verified to be on screen,
-                    // so copy another byte of its data over.
                     if secondary_oam.current_field() != SpriteField::Y {
-                        secondary_oam.advance();
+                        // This sprite is already known to be in range, so keep copying fields over.
                         start_next_field = true;
+                        secondary_oam.advance();
                     } else if let Some(pixel_row) = clock.scanline_pixel_row() // Current scanline is visible
                         && let Some(top_sprite_row) = PixelRow::try_from_u8(*secondary_oam_buffer) // Top row of sprite in bounds
                         && let Some(offset) = pixel_row.difference(top_sprite_row) // Current scanline is lower than top-of-sprite
-                        && offset < ppu_regs.sprite_height().to_dimension() // Current scanline is inside of sprite
-                    {
-                        if clock.cycle() == 66 {
-                            ppu.sprite_0_present = true;
-                        }
+                        && offset < ppu_regs.sprite_height().to_dimension() { // Current scanline is inside of sprite
 
-                        if secondary_oam.is_full() {
-                            ppu_regs.sprite_overflow_pending = true;
-                        } else {
+                        // This sprite's Y coordinate is in range, so move to its next field.
+                        start_next_field = true;
+                        ppu.sprite_0_present |= clock.cycle() == 66;
+                        ppu_regs.sprite_overflow_pending |= secondary_oam.is_full();
+                        if !ppu_regs.sprite_overflow_pending {
                             secondary_oam.advance();
                         }
-
-                        start_next_field = true;
                     } else {
-                        // This sprite's not in range, move to the next one.
+                        // This sprite is not in range, move to the next one.
                         start_next_sprite = true;
-                        // If the sprite isn't in range and OAM is full, then corrupt the OAMADDR by sprite AND field.
-                        // Sprite overflow hardware bug: https://www.nesdev.org/wiki/PPU_sprite_evaluation#Details
-                        if secondary_oam.is_full() {
-                            start_next_field = true;
-                        }
+                        // If the sprite isn't in range and OAM is full, then corrupt the OAMADDR by also incrementing field.
+                        start_next_field = secondary_oam.is_full();
                     }
                 }
 
