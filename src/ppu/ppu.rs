@@ -404,7 +404,7 @@ impl Ppu {
                 let mut start_next_field = false;
                 let mut start_next_sprite = false;
                 if ppu_regs.oam_addr.all_sprites_evaluated() {
-                    secondary_oam.read(secondary_oam_buffer);
+                    *secondary_oam_buffer = secondary_oam.peek();
                     start_next_sprite = true;
                 } else {
                     if !secondary_oam.is_full() {
@@ -460,26 +460,26 @@ impl Ppu {
             }
             ReadSpriteY => {
                 if signals.rendering_enabled {
-                    secondary_oam.read(secondary_oam_buffer);
+                    *secondary_oam_buffer = secondary_oam.peek();
                     ppu.current_sprite_y = SpriteY::new(*secondary_oam_buffer);
                 }
             }
             ReadSpritePatternIndex => {
                 if signals.rendering_enabled {
-                    secondary_oam.read(secondary_oam_buffer);
+                    *secondary_oam_buffer = secondary_oam.peek();
                     ppu.next_sprite_tile_number = TileNumber::new(*secondary_oam_buffer);
                 }
             }
             ReadSpriteAttributes => {
                 if signals.rendering_enabled {
-                    secondary_oam.read(secondary_oam_buffer);
+                    *secondary_oam_buffer = secondary_oam.peek();
                     let attributes = SpriteAttributes::from_u8(*secondary_oam_buffer);
                     ppu.oam_registers[secondary_oam.oam_register_index()].set_attributes(attributes);
                 }
             }
             ReadSpriteX => {
                 if signals.rendering_enabled {
-                    secondary_oam.read(secondary_oam_buffer);
+                    *secondary_oam_buffer = secondary_oam.peek();
                     ppu.oam_registers[secondary_oam.oam_register_index()].set_x_counter(*secondary_oam_buffer);
                 }
             }

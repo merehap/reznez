@@ -35,10 +35,6 @@ impl SecondaryOam {
         self.data[to_usize(self.index)]
     }
 
-    pub fn read(&mut self, secondary_oam_buffer: &mut u8) {
-        *secondary_oam_buffer = self.data[to_usize(self.index)];
-    }
-
     pub fn write(&mut self, value: u8) {
         self.data[to_usize(self.index)] = value;
     }
