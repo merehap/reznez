@@ -401,12 +401,11 @@ impl Ppu {
             EvaluateSpriteByte => {
                 if !ppu_regs.background_enabled() && !ppu_regs.sprites_enabled() { return Followup::None; }
 
-                let sprite_height = ppu_regs.sprite_height();
-                let oam_addr = &mut ppu_regs.oam_addr;
-
-                if oam_addr.all_sprites_evaluated() {
+                let mut start_next_field = false;
+                let mut start_next_sprite = false;
+                if ppu_regs.oam_addr.all_sprites_evaluated() {
                     secondary_oam.read(secondary_oam_buffer);
-                    oam_addr.next_sprite();
+                    start_next_sprite = true;
                 } else {
                     if !secondary_oam.is_full() {
                         // Copy the sprite byte into secondary OAM, but it may be overwritten
@@ -418,14 +417,12 @@ impl Ppu {
                     // so copy another byte of its data over.
                     if secondary_oam.current_field() != SpriteField::Y {
                         secondary_oam.advance();
-                        oam_addr.next_field();
-                    } else if let Some(pixel_row) = clock.scanline_pixel_row()
-                        && let Some(top_sprite_row) = PixelRow::try_from_u8(*secondary_oam_buffer)
-                        && let Some(offset) = pixel_row.difference(top_sprite_row)
-                        && offset < sprite_height.to_dimension()
+                        start_next_field = true;
+                    } else if let Some(pixel_row) = clock.scanline_pixel_row() // Current scanline is visible
+                        && let Some(top_sprite_row) = PixelRow::try_from_u8(*secondary_oam_buffer) // Top row of sprite in bounds
+                        && let Some(offset) = pixel_row.difference(top_sprite_row) // Current scanline is lower than top-of-sprite
+                        && offset < ppu_regs.sprite_height().to_dimension() // Current scanline is inside of sprite
                     {
-                        // Check if the sprite's Y-index is on screen and if the current row is inside of the sprite.
-
                         if clock.cycle() == 66 {
                             ppu.sprite_0_present = true;
                         }
@@ -436,17 +433,26 @@ impl Ppu {
                             secondary_oam.advance();
                         }
 
-                        oam_addr.next_field();
+                        start_next_field = true;
                     } else {
-                        // If the sprite isn't in range and OAM is full, then corrupt the OAMADDR.
+                        // This sprite's not in range, move to the next one.
+                        start_next_sprite = true;
+                        // If the sprite isn't in range and OAM is full, then corrupt the OAMADDR by sprite AND field.
                         // Sprite overflow hardware bug: https://www.nesdev.org/wiki/PPU_sprite_evaluation#Details
                         if secondary_oam.is_full() {
-                            oam_addr.corrupt_sprite_y_index();
-                        } else {
-                            // If the sprite isn't in range, move to the next sprite.
-                            oam_addr.next_sprite();
+                            start_next_field = true;
                         }
                     }
+                }
+
+                let mut field_overflowed = false;
+                if start_next_field {
+                    field_overflowed = ppu_regs.oam_addr.next_field();
+                }
+
+                // If the field overflowed, then we're already on the next sprite.
+                if start_next_sprite && !field_overflowed {
+                    ppu_regs.oam_addr.next_sprite();
                 }
             }
             AdvanceSecondaryOam => {

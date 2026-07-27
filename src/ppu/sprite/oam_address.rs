@@ -53,13 +53,15 @@ impl OamAddress {
         info!(target: "oamaddr", "\tAdvancing to next sprite OamAddress 0x{:02X}.", self.to_u8());
     }
 
-    pub fn next_field(&mut self) {
+    pub fn next_field(&mut self) -> bool {
         self.field = self.field.wrapping_add(u2::new(1));
-        if self.field == u2::MIN {
+        let overflowed = self.field == u2::MIN;
+        if overflowed {
             self.next_sprite();
         }
 
         info!(target: "oamaddr", "\tAdvancing to next field OamAddress 0x{:02X}.", self.to_u8());
+        overflowed
     }
 
     pub fn corrupt_sprite_y_index(&mut self) {
