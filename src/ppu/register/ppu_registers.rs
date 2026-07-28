@@ -56,6 +56,8 @@ pub struct PpuRegisters {
 
     // Shared between all registers (0x2000 through 0x2007)
     ppu_io_bus: PpuIoBus,
+
+    rendering_disabled_outside_of_vblank: bool,
 }
 
 impl PpuRegisters {
@@ -103,6 +105,8 @@ impl PpuRegisters {
 
             // Shared between all registers (0x2000 through 0x2007)
             ppu_io_bus: PpuIoBus::new(),
+
+            rendering_disabled_outside_of_vblank: false,
         }
     }
 
@@ -136,9 +140,17 @@ impl PpuRegisters {
     pub fn background_enabled(&self) -> bool { self.mask.background_enabled() }
     pub fn sprites_enabled(&self) -> bool { self.mask.sprites_enabled() }
 
+    pub fn take_rendering_disabled_outside_of_vblank(&mut self) -> bool {
+        let value = self.rendering_disabled_outside_of_vblank;
+        self.rendering_disabled_outside_of_vblank = false;
+        value
+    }
+
     // Write 0x2001
     pub fn write_mask(&mut self, signals: &Signals, value: u8) {
         self.ppu_io_bus.update(value);
+
+        let rendering_enabled_before = self.mask.background_enabled || self.mask.sprites_enabled;
 
         let fields = splitbits!(value, "efgs blmz");
         self.mask.emphasis.blue = fields.e;
@@ -149,6 +161,14 @@ impl PpuRegisters {
         self.mask.left_sprite_columns_enabled = fields.l;
         self.mask.left_background_columns_enabled = fields.m;
         self.mask.greyscale_enabled = fields.z;
+
+        let rendering_enabled_after = self.mask.background_enabled || self.mask.sprites_enabled;
+        if signals.scanline_type() != ScanlineType::Vblank
+            && rendering_enabled_before
+            && !rendering_enabled_after {
+
+            self.rendering_disabled_outside_of_vblank = true;
+        }
 
         if signals.rendering_enabled != (self.mask.sprites_enabled() || self.mask.background_enabled()) {
             self.rendering_toggle_state = RenderingToggleState::Pending;
@@ -295,6 +315,7 @@ impl PpuRegisters {
         ReadResult::full(self.ppu_io_bus.value())
     }
 
+    // Every PPU dot
     pub fn tick(&mut self, signals: &mut Signals, clock: &PpuClock) -> PpuRegistersTickResult {
         if clock.cycle() == 1 {
             self.ppu_io_bus.maybe_decay();

@@ -1,5 +1,7 @@
 use ux::u5;
 
+use crate::signals::{Signals, SpriteRenderingDotType};
+
 pub struct SecondaryOam {
     data: [u8; 32],
     index: Option<u5>,
@@ -31,6 +33,17 @@ impl SecondaryOam {
         to_usize(self.index) / 4
     }
 
+    pub fn oam_row_corruption_target(&self, signals: &Signals) -> u5 {
+        let mut row = self.index.unwrap_or(u5::MIN);
+        if signals.sprite_rendering_dot_type() == SpriteRenderingDotType::Evaluation {
+            // "If OAM Corruption occurs between cycles 65 through 256 when the secondary OAM address is not a multiple of 4,
+            // it appears to be "ceilinged" to the nearest multiple of 4.
+            row = row.wrapping_add(u5::new(3)) & !u5::new(3);
+        }
+
+        row
+    }
+
     pub fn peek(&self) -> u8 {
         self.data[to_usize(self.index)]
     }
@@ -53,6 +66,16 @@ impl SecondaryOam {
             // Mark SecondaryOam as full.
             self.index = None;
         }
+    }
+
+    // For OAM row corruption purposes
+    pub fn peek_head(&self) -> u8 {
+        self.data[0]
+    }
+
+    // For OAM row corruption purposes
+    pub fn write_at(&mut self, index: u5, value: u8) {
+        self.data[usize::from(u8::from(index))] = value;
     }
 }
 

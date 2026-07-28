@@ -38,6 +38,10 @@ impl Signals {
         self.sprite_rendering_dot_type = SpriteRenderingDotType::OamClearing;
     }
 
+    pub fn evaluation_starting(&mut self) {
+        self.sprite_rendering_dot_type = SpriteRenderingDotType::Evaluation;
+    }
+
     pub fn secondary_oam_transfer_starting(&mut self) {
         self.sprite_rendering_dot_type = SpriteRenderingDotType::SecondaryOamTransfer;
     }
@@ -57,6 +61,7 @@ pub enum ScanlineType {
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum SpriteRenderingDotType {
     OamClearing,
+    Evaluation,
     SecondaryOamTransfer,
     Other,
 }

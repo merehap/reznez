@@ -21,6 +21,7 @@ use crate::ppu::register::ppu_registers::{PpuRegisters, Toggle};
 use crate::ppu::register::registers::attribute_register::AttributeRegister;
 use crate::ppu::register::registers::pattern_register::PatternRegister;
 use crate::ppu::render::frame::{DebugBuffer, FrameBuffer, Frame};
+use crate::ppu::sprite::oam_address::OamAddress;
 use crate::ppu::sprite::sprite_attributes::{Priority, SpriteAttributes};
 use crate::ppu::sprite::oam_registers::OamRegisters;
 use crate::ppu::sprite::sprite_y::SpriteY;
@@ -44,6 +45,9 @@ pub struct Ppu {
     current_sprite_y: SpriteY,
     sprite_visible: bool,
     sprite_0_present: bool,
+
+    oam_row_corruption_pending: bool,
+    oam_row_corruption_target: Option<u5>,
 
     frame_actions: FrameActions,
 
@@ -69,8 +73,10 @@ impl Ppu {
             next_sprite_tile_number: TileNumber::new(0),
             current_sprite_y: SpriteY::new(0),
             sprite_visible: false,
-
             sprite_0_present: false,
+
+            oam_row_corruption_pending: false,
+            oam_row_corruption_target: None,
 
             frame_actions: NTSC_FRAME_ACTIONS.clone(),
 
@@ -90,6 +96,28 @@ impl Ppu {
 
         if log_enabled!(target: "ppusteps", Info) {
             info!(" {}\t{}", bus.ppu_clock(), bus.ppu.frame_actions.format_current_cycle_actions(bus.ppu_clock()));
+        }
+
+        if (bus.ppu_regs.background_enabled() || bus.ppu_regs.sprites_enabled())
+            && bus.signals.scanline_type() != ScanlineType::Vblank
+            && let Some(row) = bus.ppu.oam_row_corruption_target.take() {
+
+            let value = bus.secondary_oam.peek_head();
+            bus.secondary_oam.write_at(row, value);
+            info!("Corrupting sprites {:X} and {:X} in OAM", 2 * u8::from(row), 2 * u8::from(row) + 1);
+            for i in 0..8 {
+                let value = bus.oam.peek(OamAddress::from_u8(i));
+                bus.oam.write(OamAddress::from_u8(8 * u8::from(row) + i), value);
+            }
+        }
+
+        if bus.ppu.oam_row_corruption_pending {
+            bus.ppu.oam_row_corruption_pending = false;
+            bus.ppu.oam_row_corruption_target = Some(bus.secondary_oam.oam_row_corruption_target(&bus.signals));
+        }
+
+        if bus.ppu_regs.take_rendering_disabled_outside_of_vblank() {
+            bus.ppu.oam_row_corruption_pending = true;
         }
 
         // TODO: Figure out how to eliminate duplication and the index.
@@ -383,7 +411,7 @@ impl Ppu {
                 }
             }
             WriteSpriteByte => {
-                if ppu_regs.background_enabled() || ppu_regs.sprites_enabled() {
+                if signals.rendering_enabled {
                     match signals.scanline_type() {
                         ScanlineType::Visible => secondary_oam.write(*secondary_oam_buffer),
                         ScanlineType::Vblank => unreachable!(),
@@ -394,7 +422,7 @@ impl Ppu {
                 }
             }
             ReadSpriteByte => {
-                if signals.rendering_enabled {
+                if ppu_regs.background_enabled() || ppu_regs.sprites_enabled() {
                     *secondary_oam_buffer = oam.read(ppu_regs.oam_addr);
                 }
             }
@@ -437,10 +465,11 @@ impl Ppu {
                     }
                 }
 
-                let mut field_overflowed = false;
-                if start_next_field {
-                    field_overflowed = ppu_regs.oam_addr.next_field();
-                }
+                let field_overflowed = if start_next_field {
+                    ppu_regs.oam_addr.next_field()
+                } else {
+                    false
+                };
 
                 // If the field overflowed, then we're already on the next sprite.
                 if start_next_sprite && !field_overflowed {
