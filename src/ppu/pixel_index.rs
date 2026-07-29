@@ -151,7 +151,7 @@ impl PixelRow {
     }
 
     pub fn from_scanline(pixel_row: u16) -> Option<PixelRow> {
-        PixelRow::try_from_u8(pixel_row as u8)
+        PixelRow::try_from_u8((pixel_row & 0xFF) as u8)
     }
 
     pub fn add_row_in_tile(self, row_in_tile: RowInTile) -> Option<PixelRow> {
