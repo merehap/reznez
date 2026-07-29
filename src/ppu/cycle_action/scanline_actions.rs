@@ -152,14 +152,14 @@ pub static PRE_RENDER_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::ne
 
     for tile in 8..31 {
         let cycle = 8 * tile + 1;
-        scanline.add(cycle + 0, vec![SetPatternIndexAddress, ReadSpriteByte]);
-        scanline.add(cycle + 1, vec![Read                                  ]);
-        scanline.add(cycle + 2, vec![SetPaletteIndexAddress, ReadSpriteByte]);
-        scanline.add(cycle + 3, vec![Read                                  ]);
-        scanline.add(cycle + 4, vec![SetPatternLowAddress  , ReadSpriteByte]);
-        scanline.add(cycle + 5, vec![Read                                  ]);
-        scanline.add(cycle + 6, vec![SetPatternHighAddress , ReadSpriteByte]);
-        scanline.add(cycle + 7, vec![Read                                  ]);
+        scanline.add(cycle + 0, vec![SetPatternIndexAddress, ReadSpriteByte    ]);
+        scanline.add(cycle + 1, vec![Read                  , EvaluateSpriteByte]);
+        scanline.add(cycle + 2, vec![SetPaletteIndexAddress, ReadSpriteByte    ]);
+        scanline.add(cycle + 3, vec![Read                  , EvaluateSpriteByte]);
+        scanline.add(cycle + 4, vec![SetPatternLowAddress  , ReadSpriteByte    ]);
+        scanline.add(cycle + 5, vec![Read                  , EvaluateSpriteByte]);
+        scanline.add(cycle + 6, vec![SetPatternHighAddress , ReadSpriteByte    ]);
+        scanline.add(cycle + 7, vec![Read                  , EvaluateSpriteByte]);
     }
 
     // Fetch a final unused background tile and get ready for the next ROW of tiles.
