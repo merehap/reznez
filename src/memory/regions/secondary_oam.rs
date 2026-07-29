@@ -15,6 +15,10 @@ impl SecondaryOam {
         }
     }
 
+    pub fn log_all(&self) {
+        log::info!("Secondary OAM: {}", self.data.map(|value| value.to_string()).join(" "));
+    }
+
     pub fn is_full(&self) -> bool {
         self.index.is_none()
     }

@@ -422,7 +422,7 @@ impl Ppu {
                 }
             }
             ReadSpriteByte => {
-                if ppu_regs.background_enabled() || ppu_regs.sprites_enabled() {
+                if (ppu_regs.background_enabled() || ppu_regs.sprites_enabled()) && signals.scanline_type() != ScanlineType::Prerender {
                     *secondary_oam_buffer = oam.read(ppu_regs.oam_addr);
                 }
             }
@@ -437,8 +437,13 @@ impl Ppu {
                     start_next_sprite = true;
                 } else {
                     if !secondary_oam.is_full() {
-                        // Copy the sprite byte into secondary OAM (it will be overridden if it's an out-of-range Y coordinate).
-                        secondary_oam.write(*secondary_oam_buffer)
+                        if signals.scanline_type() == ScanlineType::Prerender {
+                            log::info!("It's happening");
+                            //*secondary_oam_buffer = secondary_oam.peek()
+                        } else {
+                            // Copy the sprite byte into secondary OAM (it will be overridden if it's an out-of-range Y coordinate).
+                            secondary_oam.write(*secondary_oam_buffer)
+                        }
                     }
 
                     if secondary_oam.current_field() != SpriteField::Y {
@@ -449,6 +454,10 @@ impl Ppu {
                         && let Some(top_sprite_row) = PixelRow::try_from_u8(*secondary_oam_buffer) // Top row of sprite in bounds
                         && let Some(offset) = pixel_row.difference(top_sprite_row) // Current scanline is lower than top-of-sprite
                         && offset < ppu_regs.sprite_height().to_dimension() { // Current scanline is inside of sprite
+
+                        if clock.scanline() == 261 {
+                            secondary_oam.log_all();
+                        }
 
                         // This sprite's Y coordinate is in range, so move to its next field.
                         start_next_field = true;
@@ -465,15 +474,17 @@ impl Ppu {
                     }
                 }
 
-                let field_overflowed = if start_next_field {
-                    ppu_regs.oam_addr.next_field()
-                } else {
-                    false
-                };
+                if signals.scanline_type() != ScanlineType::Prerender {
+                    let field_overflowed = if start_next_field {
+                        ppu_regs.oam_addr.next_field()
+                    } else {
+                        false
+                    };
 
-                // If the field overflowed, then we're already on the next sprite.
-                if start_next_sprite && !field_overflowed {
-                    ppu_regs.oam_addr.next_sprite();
+                    // If the field overflowed, then we're already on the next sprite.
+                    if start_next_sprite && !field_overflowed {
+                        ppu_regs.oam_addr.next_sprite();
+                    }
                 }
             }
             AdvanceSecondaryOam => {
