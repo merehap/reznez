@@ -89,7 +89,7 @@ static SCHEDULED_EVENTS: LazyLock<BTreeMap<Crc, BTreeMap<FrameNumber, (Event, Bu
     presses_by_full_crc.insert(0x10F045A3, vec![(40, 41, Start), (100, 101, Reset), (140, 141, Down), (160, 161, Start)]);
 
     // AccuracyCoin
-    presses_by_full_crc.insert(0x769083E2, vec![(60, 61, Start)]);
+    presses_by_full_crc.insert(0x7F934C90, vec![(60, 61, Start)]);
     // cpu_reset/ram_after_reset
     presses_by_full_crc.insert(0xED9053BC, vec![(200, 201, Reset)]);
     // cpu_reset/ram_after_reset
