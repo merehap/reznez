@@ -150,8 +150,8 @@ impl Ppu {
             if signals.scanline_type() == ScanlineType::Visible {
                 *oam_buffer = match master_clock.ppu_clock().cycle() {
                     0 | 320.. => secondary_oam.peek(),
-                    1..=65 => 0xFF,
-                    66..=319 => *secondary_oam_buffer,
+                    1..=64 => 0xFF,
+                    65..=319 => *secondary_oam_buffer,
                 };
             }
 
