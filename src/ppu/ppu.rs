@@ -467,6 +467,7 @@ impl Ppu {
                             secondary_oam.advance();
                         }
                     } else {
+                        *secondary_oam_buffer = secondary_oam.peek();
                         // This sprite is not in range, move to the next one.
                         start_next_sprite = true;
                         // If the sprite isn't in range and OAM is full, then corrupt the OAMADDR by also incrementing field.
