@@ -45,6 +45,7 @@ pub struct Ppu {
     current_sprite_y: SpriteY,
     sprite_visible: bool,
     sprite_0_present: bool,
+    sprite_field: SpriteField,
 
     oam_row_corruption_pending: bool,
     oam_row_corruption_target: Option<u5>,
@@ -59,8 +60,8 @@ pub struct Ppu {
 }
 
 impl Ppu {
-    pub fn new(bank_color_assigner: BankColorAssigner) -> Ppu {
-        Ppu {
+    pub fn new(bank_color_assigner: BankColorAssigner) -> Self {
+        Self {
             oam_registers: OamRegisters::new(),
 
             next_tile_number: TileNumber::new(0),
@@ -74,6 +75,7 @@ impl Ppu {
             current_sprite_y: SpriteY::new(0),
             sprite_visible: false,
             sprite_0_present: false,
+            sprite_field: SpriteField::Y,
 
             oam_row_corruption_pending: false,
             oam_row_corruption_target: None,
@@ -391,6 +393,7 @@ impl Ppu {
                 ppu.sprite_0_present = false;
                 ppu_regs.oam_addr.clear_all_sprites_evaluated();
                 secondary_oam.reset_index();
+                ppu.sprite_field = SpriteField::Y;
             }
             StartLoadingOamRegisters => {
                 info!(target: "ppustage", "\t\tLoading OAM registers.");
@@ -443,10 +446,11 @@ impl Ppu {
                         should_read = false;
                     }
 
-                    if secondary_oam.current_field() != SpriteField::Y {
+                    if ppu.sprite_field != SpriteField::Y {
                         // This sprite is already known to be in range, so keep copying fields over.
                         start_next_field = true;
                         secondary_oam.advance();
+                        ppu.sprite_field.step();
                     } else if let Some(pixel_row) = clock.scanline_pixel_row() // Current scanline is visible
                         && let Some(top_sprite_row) = PixelRow::try_from_u8(*secondary_oam_buffer) // Top row of sprite in bounds
                         && let Some(offset) = pixel_row.difference(top_sprite_row) // Current scanline is lower than top-of-sprite
@@ -459,6 +463,7 @@ impl Ppu {
                         // This sprite's Y coordinate is in range, so move to its next field.
                         start_next_field = true;
                         ppu.sprite_0_present |= clock.cycle() == 66;
+                        ppu.sprite_field.step();
                         ppu_regs.sprite_overflow_pending |= secondary_oam.is_full();
                         if !ppu_regs.sprite_overflow_pending {
                             secondary_oam.advance();

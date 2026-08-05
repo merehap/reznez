@@ -23,16 +23,6 @@ impl SecondaryOam {
         self.index.is_none()
     }
 
-    pub fn current_field(&self) -> SpriteField {
-        match to_usize(self.index) % 4 {
-            0 => SpriteField::Y,
-            1 => SpriteField::Tile,
-            2 => SpriteField::Attributes,
-            3 => SpriteField::X,
-            _ => unreachable!(),
-        }
-    }
-
     pub fn oam_register_index(&self) -> usize {
         to_usize(self.index) / 4
     }
@@ -61,13 +51,9 @@ impl SecondaryOam {
     }
 
     pub fn advance(&mut self) {
-        let Some(index) = &mut self.index else {
-            panic!("Can't advance index when Secondary OAM is already full.");
-        };
-
-        *index = index.wrapping_add(u5::new(1));
-        if *index == u5::MIN {
-            // Mark SecondaryOam as full.
+        self.index = self.index.map(|i| i.wrapping_add(u5::new(1)));
+        if self.index == Some(u5::MIN) {
+            // The index wrapped, so mark SecondaryOam as full so the index can't advance any further.
             self.index = None;
         }
     }
@@ -88,10 +74,21 @@ fn to_usize(value: Option<u5>) -> usize {
     u8::from(value.unwrap_or(u5::MIN)).into()
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub enum SpriteField {
     Y,
     Tile,
     Attributes,
     X,
+}
+
+impl SpriteField {
+    pub fn step(&mut self) {
+        *self = match self {
+            Self::Y          => Self::Tile,
+            Self::Tile       => Self::Attributes,
+            Self::Attributes => Self::X,
+            Self::X          => Self::Y,
+        };
+    }
 }
