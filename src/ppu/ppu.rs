@@ -426,24 +426,21 @@ impl Ppu {
                     *secondary_oam_buffer = oam.read(ppu_regs.oam_addr);
                 }
             }
+            // TODO: Can this sanely be written branchless? I suspect that's cleanest as it closest models how the hardware works.
             EvaluateSpriteByte => {
                 if !ppu_regs.background_enabled() && !ppu_regs.sprites_enabled() { return Followup::None; }
 
+                let mut should_read = true;
                 let mut start_next_field = false;
                 let mut start_next_sprite = false;
                 if ppu_regs.oam_addr.all_sprites_evaluated() {
                     // Writes are disabled once all sprites are evaluated, but subsequent sprites are still visited.
-                    *secondary_oam_buffer = secondary_oam.peek();
                     start_next_sprite = true;
                 } else {
-                    if !secondary_oam.is_full() {
-                        if signals.scanline_type() == ScanlineType::Prerender {
-                            log::info!("It's happening");
-                            //*secondary_oam_buffer = secondary_oam.peek()
-                        } else {
-                            // Copy the sprite byte into secondary OAM (it will be overridden if it's an out-of-range Y coordinate).
-                            secondary_oam.write(*secondary_oam_buffer)
-                        }
+                    if !secondary_oam.is_full() && signals.scanline_type() != ScanlineType::Prerender {
+                        // Copy the sprite byte into secondary OAM (it will be overridden if it's an out-of-range Y coordinate).
+                        secondary_oam.write(*secondary_oam_buffer);
+                        should_read = false;
                     }
 
                     if secondary_oam.current_field() != SpriteField::Y {
@@ -463,18 +460,20 @@ impl Ppu {
                         start_next_field = true;
                         ppu.sprite_0_present |= clock.cycle() == 66;
                         ppu_regs.sprite_overflow_pending |= secondary_oam.is_full();
-                        if ppu_regs.sprite_overflow_pending {
-                            *secondary_oam_buffer = secondary_oam.peek();
-                        } else {
+                        if !ppu_regs.sprite_overflow_pending {
                             secondary_oam.advance();
                         }
                     } else {
-                        *secondary_oam_buffer = secondary_oam.peek();
                         // This sprite is not in range, move to the next one.
                         start_next_sprite = true;
-                        // If the sprite isn't in range and OAM is full, then corrupt the OAMADDR by also incrementing field.
+                        // If the sprite isn't in range and secondary OAM is full,
+                        // then corrupt the OAMADDR by also incrementing field.
                         start_next_field = secondary_oam.is_full();
                     }
+                }
+
+                if should_read {
+                    *secondary_oam_buffer = secondary_oam.peek();
                 }
 
                 if signals.scanline_type() != ScanlineType::Prerender {
