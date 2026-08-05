@@ -463,7 +463,9 @@ impl Ppu {
                         start_next_field = true;
                         ppu.sprite_0_present |= clock.cycle() == 66;
                         ppu_regs.sprite_overflow_pending |= secondary_oam.is_full();
-                        if !ppu_regs.sprite_overflow_pending {
+                        if ppu_regs.sprite_overflow_pending {
+                            *secondary_oam_buffer = secondary_oam.peek();
+                        } else {
                             secondary_oam.advance();
                         }
                     } else {
