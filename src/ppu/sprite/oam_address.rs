@@ -44,6 +44,10 @@ impl OamAddress {
         self.field = u2::MIN;
     }
 
+    pub fn reset_field(&mut self) {
+        self.field = u2::MIN;
+    }
+
     pub fn next_sprite(&mut self) {
         self.sprite = self.sprite.wrapping_add(u6::new(1));
         if self.sprite == u6::MIN {
