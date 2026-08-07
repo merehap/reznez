@@ -27,7 +27,7 @@ use crate::ppu::sprite::oam_registers::OamRegisters;
 use crate::ppu::sprite::sprite_y::SpriteY;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
 use crate::ppu::tile_number::TileNumber;
-use crate::signals::ScanlineType;
+use crate::signals::{ScanlineType, SpriteRenderingDotType};
 
 use super::palette::bank_color_assigner::BankColorAssigner;
 
@@ -295,8 +295,11 @@ impl Ppu {
 
                 // This is not delayed, unlike signals.rendering_enabled
                 let rendering_enabled = ppu_regs.background_enabled() || ppu_regs.sprites_enabled();
-                let (mut sprite_color, sprite_priority, is_sprite_0, ppu_peek) =
-                    ppu.oam_registers.step(palette_ram, rendering_enabled);
+
+                let should_shift_sprites = rendering_enabled
+                    && matches!(signals.scanline_type(), ScanlineType::Visible | ScanlineType::Prerender)
+                    && matches!(signals.sprite_rendering_dot_type(), SpriteRenderingDotType::OamClearing | SpriteRenderingDotType::Evaluation);
+                let (mut sprite_color, sprite_priority, is_sprite_0, ppu_peek) = ppu.oam_registers.step(palette_ram, should_shift_sprites);
                 let mut color;
                 if rendering_enabled {
                     if !ppu_regs.sprites_enabled() {
@@ -399,7 +402,10 @@ impl Ppu {
             }
             StartLoadingOamRegisters => {
                 info!(target: "ppustage", "\t\tLoading OAM registers.");
-                ppu.oam_registers.set_sprite_0_presence(ppu.sprite_0_present);
+                if ppu_regs.background_enabled() || ppu_regs.sprites_enabled() {
+                    ppu.oam_registers.set_sprite_0_presence(ppu.sprite_0_present);
+                }
+
                 // TODO: Determine if this needs to occur on cycle 256 instead.
                 secondary_oam.reset_index();
                 // Sprite eval is done, so might as well clear this now rather than later.
