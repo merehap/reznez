@@ -376,7 +376,6 @@ impl Bus {
         };
 
         let apu_addr = CpuAddress::new(0x4000 + *addr % 0x20);
-        let is_apu_status_read = self.apu_registers_active() && apu_addr.to_friendly() == Addr::ApuStatus;
         let apu_read_value = if self.apu_registers_active() {
             use FriendlyCpuAddress as Addr;
             match apu_addr.to_friendly() {
@@ -391,17 +390,18 @@ impl Bus {
             ReadResult::OPEN_BUS
         };
 
-        let value = if is_apu_status_read {
-            let apu_read_value = apu_read_value.resolve(self.cpu_pinout.data_bus);
-            self.cpu_pinout.data_bus = if address_bus_type == AddressBusType::Cpu {
-                normal_read_value.resolve(self.cpu_pinout.data_bus)
-            } else {
-                apu_read_value
-            };
-
-            apu_read_value
+        let is_apu_status_read = self.apu_registers_active() && apu_addr.to_friendly() == Addr::ApuStatus;
+        self.cpu_pinout.data_bus = if !is_apu_status_read {
+            normal_read_value.dominate(apu_read_value).resolve(self.cpu_pinout.data_bus)
+        } else if address_bus_type == AddressBusType::Cpu {
+            normal_read_value.resolve(self.cpu_pinout.data_bus)
         } else {
-            self.cpu_pinout.data_bus = normal_read_value.dominate(apu_read_value).resolve(self.cpu_pinout.data_bus);
+            apu_read_value.resolve(self.cpu_pinout.data_bus)
+        };
+
+        let value = if is_apu_status_read {
+            apu_read_value.resolve(self.cpu_pinout.data_bus)
+        } else {
             self.cpu_pinout.data_bus
         };
 
