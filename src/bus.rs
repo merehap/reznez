@@ -392,7 +392,7 @@ impl Bus {
         };
 
         let value = if is_apu_status_read {
-            let apu_read_value = apu_read_value.dominate(normal_read_value).resolve(self.cpu_pinout.data_bus);
+            let apu_read_value = apu_read_value.resolve(self.cpu_pinout.data_bus);
             self.cpu_pinout.data_bus = if address_bus_type == AddressBusType::Cpu {
                 normal_read_value.resolve(self.cpu_pinout.data_bus)
             } else {
