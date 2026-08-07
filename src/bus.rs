@@ -375,38 +375,34 @@ impl Bus {
             _ => ReadResult::OPEN_BUS,
         };
 
-        let mut should_apu_read_dominate_normal_read = false;
-        let mut should_apu_read_update_data_bus = true;
+        let apu_addr = CpuAddress::new(0x4000 + *addr % 0x20);
+        let is_apu_status_read = self.apu_registers_active() && apu_addr.to_friendly() == Addr::ApuStatus;
         let apu_read_value = if self.apu_registers_active() {
-            let addr = CpuAddress::new(0x4000 + *addr % 0x20);
             use FriendlyCpuAddress as Addr;
-            match addr.to_friendly() {
-                Addr::ApuStatus => {
-                    // APU status reads only use the data bus when using a DMA address bus.
-                    should_apu_read_dominate_normal_read = true;
-                    should_apu_read_update_data_bus = address_bus_type != AddressBusType::Cpu;
-                    self.apu_regs.read_status(self.master_clock.apu_clock(), &self.cpu_pinout, &self.dmc_dma)
-                }
+            match apu_addr.to_friendly() {
+                Addr::ApuStatus => self.apu_regs.read_status(self.master_clock.apu_clock(), &self.cpu_pinout, &self.dmc_dma),
                 Addr::Controller1AndStrobe       => self.joypad1.read_status(),
                 Addr::Controller2AndFrameCounter => self.joypad2.read_status(),
                 // Most APU registers and OAM DMA are write-only. CPU Test Mode is not yet supported.
-                _ if addr.is_in_apu_register_range() => ReadResult::OPEN_BUS,
+                _ if apu_addr.is_in_apu_register_range() => ReadResult::OPEN_BUS,
                 _ => unreachable!(),
             }
         } else {
             ReadResult::OPEN_BUS
         };
 
-        let value = if should_apu_read_dominate_normal_read {
-            apu_read_value.dominate(normal_read_value).resolve(self.cpu_pinout.data_bus)
-        } else {
-            normal_read_value.dominate(apu_read_value).resolve(self.cpu_pinout.data_bus)
-        };
+        let value = if is_apu_status_read {
+            let apu_read_value = apu_read_value.dominate(normal_read_value).resolve(self.cpu_pinout.data_bus);
+            self.cpu_pinout.data_bus = if address_bus_type == AddressBusType::Cpu {
+                normal_read_value.resolve(self.cpu_pinout.data_bus)
+            } else {
+                apu_read_value
+            };
 
-        self.cpu_pinout.data_bus = if should_apu_read_update_data_bus {
-            value
+            apu_read_value
         } else {
-            normal_read_value.resolve(self.cpu_pinout.data_bus)
+            self.cpu_pinout.data_bus = normal_read_value.dominate(apu_read_value).resolve(self.cpu_pinout.data_bus);
+            self.cpu_pinout.data_bus
         };
 
         mapper.on_cpu_read(self, addr, value);
