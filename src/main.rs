@@ -8,6 +8,7 @@
 #![feature(unsized_const_params)]
 #![feature(panic_update_hook)]
 #![feature(map_try_insert)]
+#![feature(variant_count)]
 #![expect(incomplete_features)]
 #![expect(clippy::module_inception)]
 #![expect(clippy::new_without_default)]
@@ -18,6 +19,7 @@ mod analysis;
 mod assembler;
 mod bus;
 mod cartridge;
+mod circuit;
 mod config;
 mod controller;
 mod counter;

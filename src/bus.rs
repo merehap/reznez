@@ -346,6 +346,8 @@ impl Bus {
             Addr::PpuStatus             => self.ppu_regs.read_status(),
             Addr::OamData               => self.ppu_regs.read_oam_data(&mut self.oam, &self.signals, self.oam_buffer),
             Addr::PpuData => {
+                self.signals.start_read_2007();
+
                 self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
                 // TODO: Instead of peeking the old data, it must be available as part of some register.
                 let old_data = mapper.ppu_peek(self, self.ppu_pinout.address()).value();

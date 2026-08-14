@@ -214,6 +214,8 @@ impl Cpu {
             return None;
         }
 
+        bus.signals.stop_read_2007();
+
         if bus.cpu.step.is_read() {
             bus.cpu.value = bus.cpu_read(mapper, bus.cpu.step.address_bus_type());
         }

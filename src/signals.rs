@@ -1,5 +1,13 @@
+use crate::circuit::{circuit_board::CircuitBoard, source::PrimarySource};
+
 pub struct Signals {
     pub rendering_enabled: bool,
+
+    circuit_board: CircuitBoard,
+    // On hardware, the $2007_Read circuit is always active, but is almost always in its default state.
+    // But for performance reasons it is important to not run this circuit when it's not progressing.
+    read_2007_active: bool,
+
     scanline_type: ScanlineType,
     sprite_rendering_dot_type: SpriteRenderingDotType,
 }
@@ -8,10 +16,50 @@ impl Signals {
     pub fn new() -> Self {
         Self {
             rendering_enabled: false,
+
+            circuit_board: CircuitBoard::new(),
+            read_2007_active: false,
+
             // FIXME: This needs to come from the initial clock.
             scanline_type: ScanlineType::Visible,
             sprite_rendering_dot_type: SpriteRenderingDotType::Other,
         }
+    }
+
+    pub fn start_ppu_clock_first_half(&mut self) {
+        assert!(self.circuit_board.source(PrimarySource::PpuClockSecondHalf));
+        self.circuit_board.set_source(PrimarySource::PpuClockFirstHalf, true);
+        self.circuit_board.set_source(PrimarySource::PpuClockSecondHalf, false);
+
+        if self.read_2007_active {
+            self.circuit_board.calculate_outputs();
+            if self.circuit_board.is_read_2007_circuit_in_base_state() {
+                self.read_2007_active = false;
+            }
+        }
+    }
+
+    pub fn start_ppu_clock_second_half(&mut self) {
+        assert!(self.circuit_board.source(PrimarySource::PpuClockFirstHalf));
+        self.circuit_board.set_source(PrimarySource::PpuClockFirstHalf, false);
+        self.circuit_board.set_source(PrimarySource::PpuClockSecondHalf, true);
+
+        if self.read_2007_active {
+            self.circuit_board.calculate_outputs();
+            if self.circuit_board.is_read_2007_circuit_in_base_state() {
+                self.read_2007_active = false;
+            }
+        }
+    }
+
+    pub fn start_read_2007(&mut self) {
+        assert!(!self.circuit_board.source(PrimarySource::Read2007));
+        self.circuit_board.set_source(PrimarySource::Read2007, true);
+        self.read_2007_active = true;
+    }
+
+    pub fn stop_read_2007(&mut self) {
+        self.circuit_board.set_source(PrimarySource::Read2007, false);
     }
 
     pub fn scanline_type(&self) -> ScanlineType {

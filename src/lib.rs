@@ -7,6 +7,7 @@
 #![feature(adt_const_params)]
 #![feature(unsized_const_params)]
 #![feature(map_try_insert)]
+#![feature(variant_count)]
 #![expect(incomplete_features)]
 #![expect(clippy::module_inception)]
 #![expect(clippy::new_without_default)]
@@ -17,6 +18,7 @@ pub mod analysis;
 pub mod assembler;
 pub mod bus;
 pub mod cartridge;
+pub mod circuit;
 pub mod config;
 pub mod controller;
 pub mod counter;
