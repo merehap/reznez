@@ -495,7 +495,7 @@ impl Bus {
     pub fn ppu_peek(&self, address: PpuAddress) -> PpuPeek {
         match address.to_section() {
             PpuAddressSection::Chr(chr_index) => self.peek_chr(chr_index.to_ppu_address()),
-            PpuAddressSection::Palette(paletted_ram_index) => self.palette_ram.peek(&self.ppu_regs, paletted_ram_index),
+            PpuAddressSection::Palette(paletted_ram_index) => self.palette_ram.peek(self.ppu_regs.mask(), paletted_ram_index),
         }
     }
 

@@ -167,7 +167,7 @@ impl Mapper for Mapper005 {
                     let palette_byte = palette << 6 | palette << 4 | palette << 2 | palette;
                     PpuPeek::new(palette_byte, EXT_RAM_PEEK_SOURCE)
                 } else {
-                    bus.palette_ram.peek(&bus.ppu_regs, palette_ram_index)
+                    bus.palette_ram.peek(bus.ppu_regs.mask(), palette_ram_index)
                 }
             }
         }

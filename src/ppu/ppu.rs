@@ -365,7 +365,7 @@ impl Ppu {
                     }
                 } else {
                     color = ppu_regs.current_address.to_palette_ram_index()
-                        .map(|palette_ram_index| Color::from(palette_ram.peek(ppu_regs, palette_ram_index).value()))
+                        .map(|palette_ram_index| Color::from(palette_ram.peek(ppu_regs.mask(), palette_ram_index).value()))
                         .unwrap_or(palette_ram.backdrop_color());
                 }
 
