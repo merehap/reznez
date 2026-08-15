@@ -1,6 +1,6 @@
 use std::ops::{Index, IndexMut};
 
-use crate::memory::ppu::chr_memory::PpuPeek;
+use crate::memory::ppu::chr_memory::PeekSource;
 use crate::memory::regions::palette_ram::PaletteRam;
 use crate::ppu::palette::color_t::ColorT;
 use crate::ppu::sprite::sprite_attributes::{SpriteAttributes, Priority};
@@ -20,8 +20,8 @@ impl OamRegisters {
         self.registers[0].is_sprite_0 = present;
     }
 
-    pub fn step(&mut self, palette_ram: &PaletteRam, should_shift: bool) -> (ColorT, Priority, bool, PpuPeek) {
-        let mut result = (ColorT::Transparent, Priority::Behind, false, PpuPeek::VOID);
+    pub fn step(&mut self, palette_ram: &PaletteRam, should_shift: bool) -> (ColorT, Priority, bool, PeekSource) {
+        let mut result = (ColorT::Transparent, Priority::Behind, false, PeekSource::Void);
         for register in self.registers.iter_mut().rev() {
             let candidate@(color_t, _, _, _) = register.step(palette_ram, should_shift);
             if let ColorT::Opaque(_) = color_t {
@@ -50,9 +50,9 @@ impl IndexMut<usize> for OamRegisters {
 #[derive(Clone, Copy)]
 pub struct SpriteRegisters {
     low_pattern: u8,
-    low_pattern_info: PpuPeek,
+    low_pattern_source: PeekSource,
     high_pattern: u8,
-    high_pattern_info: PpuPeek,
+    high_pattern_source: PeekSource,
     attributes: SpriteAttributes,
     x_counter: u8,
     is_sprite_0: bool,
@@ -62,23 +62,23 @@ impl SpriteRegisters {
     pub fn new() -> SpriteRegisters {
         SpriteRegisters {
             low_pattern: 0,
-            low_pattern_info: PpuPeek::VOID,
+            low_pattern_source: PeekSource::Void,
             high_pattern: 0,
-            high_pattern_info: PpuPeek::VOID,
+            high_pattern_source: PeekSource::Void,
             attributes: SpriteAttributes::new(),
             x_counter: 0,
             is_sprite_0: false,
         }
     }
 
-    pub fn set_pattern_low(&mut self, low_pattern: PpuPeek) {
-        self.low_pattern = low_pattern.value();
-        self.low_pattern_info = low_pattern;
+    pub fn set_pattern_low(&mut self, low_pattern: u8, source: PeekSource) {
+        self.low_pattern = low_pattern;
+        self.low_pattern_source = source;
     }
 
-    pub fn set_pattern_high(&mut self, high_pattern: PpuPeek) {
-        self.high_pattern = high_pattern.value();
-        self.high_pattern_info = high_pattern;
+    pub fn set_pattern_high(&mut self, high_pattern: u8, source: PeekSource) {
+        self.high_pattern = high_pattern;
+        self.high_pattern_source = source;
     }
 
     pub fn attributes(self) -> SpriteAttributes {
@@ -93,12 +93,12 @@ impl SpriteRegisters {
         self.x_counter = initial_value;
     }
 
-    pub fn step(&mut self, palette_ram: &PaletteRam, should_shift: bool) -> (ColorT, Priority, bool, PpuPeek) {
+    pub fn step(&mut self, palette_ram: &PaletteRam, should_shift: bool) -> (ColorT, Priority, bool, PeekSource) {
         if self.x_counter > 0 {
             // This sprite is still inactive.
             self.x_counter -= 1;
 
-            return (ColorT::Transparent, Priority::Behind, false, self.low_pattern_info);
+            return (ColorT::Transparent, Priority::Behind, false, self.low_pattern_source);
         }
 
         // Ugly :-(
@@ -122,6 +122,6 @@ impl SpriteRegisters {
 
         let palette = palette_ram.sprite_palette(self.attributes.palette_table_index());
         let color_t = palette.color_t_from_low_high(low_bit, high_bit);
-        (color_t, self.attributes.priority(), self.is_sprite_0, self.low_pattern_info)
+        (color_t, self.attributes.priority(), self.is_sprite_0, self.low_pattern_source)
     }
 }

@@ -16,7 +16,7 @@ use crate::memory::cpu::cpu_address::{CpuAddress, FriendlyCpuAddress};
 use crate::memory::regions::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::cpu_pinout::CpuPinout;
 use crate::memory::cpu::prg_memory::PrgMemory;
-use crate::memory::ppu::chr_memory::{ChrMemory, PpuPeek};
+use crate::memory::ppu::chr_memory::{ChrMemory, PeekSource, PpuPeek};
 use crate::memory::regions::palette_ram::PaletteRam;
 use crate::memory::regions::ciram::{Ciram, CiramSide};
 use crate::memory::ppu::ppu_address::{PpuAddress, PpuAddressSection};
@@ -279,7 +279,7 @@ impl Bus {
     }
 
     pub fn cpu_peek(&self, mapper: &dyn Mapper, address_bus_type: AddressBusType, addr: CpuAddress) -> u8 {
-        self.cpu_peek_unresolved(mapper, address_bus_type, addr).resolve(self.cpu_pinout.data_bus)
+        self.cpu_peek_unresolved(mapper, address_bus_type, addr).resolve_with_bus(self.cpu_pinout.data_bus)
     }
 
     pub fn cpu_peek_unresolved(&self, mapper: &dyn Mapper, _address_bus_type: AddressBusType, addr: CpuAddress) -> ReadResult {
@@ -289,7 +289,7 @@ impl Bus {
             Addr::PpuStatus             => self.ppu_regs.peek_status(),
             Addr::OamData               => self.ppu_regs.peek_oam_data(&self.oam),
             Addr::PpuData => {
-                let old_value = mapper.ppu_peek(self, self.ppu_regs.current_address).value();
+                let old_value = mapper.ppu_peek(self, self.ppu_regs.current_address).value;
                 self.ppu_regs.peek_ppu_data(old_value)
             }
             Addr::PpuControl | Addr::PpuMask | Addr::OamAddress | Addr::PpuScroll | Addr::PpuAddress => {
@@ -350,13 +350,13 @@ impl Bus {
 
                 self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
                 // TODO: Instead of peeking the old data, it must be available as part of some register.
-                let old_data = mapper.ppu_peek(self, self.ppu_pinout.address()).value();
+                let old_data = mapper.ppu_peek(self, self.ppu_pinout.address()).value;
                 let new_data = self.ppu_regs.read_ppu_data(old_data);
 
                 let pending_data_source = self.ppu_regs.current_address.to_pending_data_source();
-                let buffered_data = mapper.ppu_peek(self, pending_data_source).value();
-                mapper.on_ppu_read(self, pending_data_source, buffered_data);
-                self.ppu_regs.set_ppu_read_buffer_and_advance(&self.signals, buffered_data);
+                let buffered_data = mapper.ppu_peek(self, pending_data_source).value;
+                mapper.on_ppu_read(self, pending_data_source, buffered_data.resolve_with_bus(self.ppu_regs.ppu_io_bus().value()));
+                self.ppu_regs.set_ppu_read_buffer_and_advance(&self.signals, buffered_data.resolve_with_bus(self.ppu_regs.ppu_io_bus().value()));
                 self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
 
                 new_data
@@ -394,15 +394,15 @@ impl Bus {
 
         let is_apu_status_read = self.apu_registers_active() && apu_addr.to_friendly() == Addr::ApuStatus;
         self.cpu_pinout.data_bus = if !is_apu_status_read {
-            normal_read_value.dominate(apu_read_value).resolve(self.cpu_pinout.data_bus)
+            normal_read_value.dominate(apu_read_value).resolve_with_bus(self.cpu_pinout.data_bus)
         } else if address_bus_type == AddressBusType::Cpu {
-            normal_read_value.resolve(self.cpu_pinout.data_bus)
+            normal_read_value.resolve_with_bus(self.cpu_pinout.data_bus)
         } else {
-            apu_read_value.resolve(self.cpu_pinout.data_bus)
+            apu_read_value.resolve_with_bus(self.cpu_pinout.data_bus)
         };
 
         let value = if is_apu_status_read {
-            apu_read_value.resolve(self.cpu_pinout.data_bus)
+            apu_read_value.resolve_with_bus(self.cpu_pinout.data_bus)
         } else {
             self.cpu_pinout.data_bus
         };
@@ -495,13 +495,16 @@ impl Bus {
     pub fn ppu_peek(&self, address: PpuAddress) -> PpuPeek {
         match address.to_section() {
             PpuAddressSection::Chr(chr_index) => self.peek_chr(chr_index.to_ppu_address()),
-            PpuAddressSection::Palette(paletted_ram_index) => self.palette_ram.peek(self.ppu_regs.mask(), paletted_ram_index),
+            PpuAddressSection::Palette(palette_ram_index) => {
+                let color = self.palette_ram.peek_color(self.ppu_regs.mask(), palette_ram_index);
+                PpuPeek::new(color.to_read_result(), PeekSource::PaletteTable)
+            }
         }
     }
 
     pub fn ppu_read(&mut self, mapper: &mut dyn Mapper) -> PpuPeek {
         let result = mapper.ppu_peek(self, self.ppu_pinout.address());
-        mapper.on_ppu_read(self, self.ppu_pinout.address(), result.value());
+        mapper.on_ppu_read(self, self.ppu_pinout.address(), result.value.resolve_with_bus(self.ppu_regs.ppu_io_bus().value()));
         result
     }
 

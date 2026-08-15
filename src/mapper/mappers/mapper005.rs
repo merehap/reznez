@@ -165,9 +165,10 @@ impl Mapper for Mapper005 {
                     let palette = Self::peek_ext_rom(bus, self.name_table_index) >> 6;
                     // The same palette is used for all 4 corners.
                     let palette_byte = palette << 6 | palette << 4 | palette << 2 | palette;
-                    PpuPeek::new(palette_byte, EXT_RAM_PEEK_SOURCE)
+                    PpuPeek::new(ReadResult::full(palette_byte), EXT_RAM_PEEK_SOURCE)
                 } else {
-                    bus.palette_ram.peek(bus.ppu_regs.mask(), palette_ram_index)
+                    let color = bus.palette_ram.peek_color(bus.ppu_regs.mask(), palette_ram_index);
+                    PpuPeek::new(color.to_read_result(), PeekSource::PaletteTable)
                 }
             }
         }
@@ -457,7 +458,7 @@ impl Mapper005 {
     }
 
     fn peek_ext_rom(bus: &Bus, index: u16) -> u8 {
-        bus.mapper_custom_pages[EXT_RAM_PAGE_ID].peek(index).resolve(0)
+        bus.mapper_custom_pages[EXT_RAM_PAGE_ID].peek(index).resolve_with_bus(0)
     }
 
     fn write_ext_rom(bus: &mut Bus, index: u16, value: u8) {

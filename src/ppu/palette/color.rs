@@ -4,6 +4,8 @@ use num_traits::FromPrimitive;
 use splitbits::{combinebits, splitbits_ux};
 use ux::{u2, u4, u6};
 
+use crate::memory::read_result::ReadResult;
+
 #[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct Color {
     brightness: Brightness,
@@ -32,12 +34,16 @@ impl Color {
         self.hue
     }
 
-    pub fn to_u6(self) -> u6 {
-        u6::new(combinebits!(self.brightness as u8, self.hue as u8, "00bb hhhh"))
+    pub fn to_read_result(self) -> ReadResult {
+        ReadResult::partial(self.to_u6().into(), 0b0011_1111)
     }
 
     pub fn to_usize(self) -> usize {
         u8::from(self.to_u6()).into()
+    }
+
+    fn to_u6(self) -> u6 {
+        u6::new(combinebits!(self.brightness as u8, self.hue as u8, "00bb hhhh"))
     }
 }
 

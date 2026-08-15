@@ -5,7 +5,7 @@ use ux::u5;
 use crate::mapper::mapper::Mapper;
 use crate::bus::Bus;
 use crate::master_clock::MasterClock;
-use crate::memory::ppu::chr_memory::PpuPeek;
+use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::regions::secondary_oam::{SecondaryOam, SpriteField};
 use crate::memory::signal_level::SignalLevel;
@@ -38,7 +38,8 @@ pub struct Ppu {
     pattern_register: PatternRegister,
     attribute_register: AttributeRegister,
     next_rendering_field_to_set: Option<(RenderingRegisterField, u8)>,
-    next_register_value: PpuPeek,
+    next_register_value: u8,
+    next_register_source: PeekSource,
     pending_register_shift: bool,
 
     next_sprite_tile_number: TileNumber,
@@ -69,7 +70,8 @@ impl Ppu {
             pattern_register: PatternRegister::new(),
             attribute_register: AttributeRegister::new(),
             next_rendering_field_to_set: None,
-            next_register_value: PpuPeek::VOID,
+            next_register_value: 0,
+            next_register_source: PeekSource::Void,
             pending_register_shift: false,
 
             next_sprite_tile_number: TileNumber::new(0),
@@ -132,7 +134,11 @@ impl Ppu {
             let cycle_action = bus.ppu.frame_actions.current_cycle_actions(bus.master_clock.ppu_clock())[i];
             match Ppu::execute_cycle_action(bus, frame, cycle_action) {
                 Followup::None => {}
-                Followup::PpuReadNextRegisterValue => bus.ppu.next_register_value = bus.ppu_read(mapper),
+                Followup::PpuReadNextRegisterValue => {
+                    let PpuPeek { value, source } = bus.ppu_read(mapper);
+                    bus.ppu.next_register_value = value.resolve_with_zeros();
+                    bus.ppu.next_register_source = source;
+                }
                 Followup::SetAddressBus(addr) => bus.set_ppu_address_bus(mapper, addr),
             }
         }
@@ -179,19 +185,21 @@ impl Ppu {
             return;
         }
 
+        let value = ppu.next_register_value;
+        let source = ppu.next_register_source;
         match next_rendering_field_to_set {
             RenderingRegisterField::PatternIndex => {
-                ppu.next_tile_number = TileNumber::new(ppu.next_register_value.value());
+                ppu.next_tile_number = TileNumber::new(value);
             }
             RenderingRegisterField::PaletteIndex => {
-                let index = ppu_regs.current_address.to_palette_table_index(ppu.next_register_value.value());
+                let index = ppu_regs.current_address.to_palette_table_index(value);
                 ppu.attribute_register.set_pending_palette_table_index(index);
             }
             RenderingRegisterField::BackgroundPatternLow => {
-                ppu.pattern_register.set_pending_low_byte(ppu.next_register_value);
+                ppu.pattern_register.set_pending_low_byte(value, source);
             }
             RenderingRegisterField::BackgroundPatternHighAndNextTile => {
-                ppu.pattern_register.set_pending_high_byte(ppu.next_register_value);
+                ppu.pattern_register.set_pending_high_byte(value, source);
                 ppu.attribute_register.prepare_next_palette_table_index();
                 ppu.pattern_register.load_next_palette_indexes();
                 ppu_regs.current_address.increment_coarse_x_scroll();
@@ -199,13 +207,13 @@ impl Ppu {
             RenderingRegisterField::SpritePatternLow => {
                 // TODO: Determine if this check should happen at the same time as rendering_enabled()
                 if ppu.sprite_visible {
-                    ppu.oam_registers[secondary_oam.oam_register_index()].set_pattern_low(ppu.next_register_value);
+                    ppu.oam_registers[secondary_oam.oam_register_index()].set_pattern_low(value, source);
                 }
             }
             RenderingRegisterField::SpritePatternHighAndNextSprite => {
                 // TODO: Determine if this check should happen at the same time as rendering_enabled()
                 if ppu.sprite_visible {
-                    ppu.oam_registers[secondary_oam.oam_register_index()].set_pattern_high(ppu.next_register_value);
+                    ppu.oam_registers[secondary_oam.oam_register_index()].set_pattern_high(value, source);
                 }
             }
         }
@@ -292,7 +300,7 @@ impl Ppu {
                     background_bank_pixel = Some(if background_color.is_transparent() {
                         Rgbt::Transparent
                     } else {
-                        let rgb = ppu.bank_color_assigner.rgb_for_source(ppu.pattern_register.current_peek().source());
+                        let rgb = ppu.bank_color_assigner.rgb_for_source(ppu.pattern_register.current_source());
                         Rgbt::Opaque(rgb)
                     });
                 }
@@ -303,8 +311,8 @@ impl Ppu {
                 let should_shift_sprites = rendering_enabled
                     && matches!(signals.scanline_type(), ScanlineType::Visible | ScanlineType::Prerender)
                     && matches!(signals.sprite_rendering_dot_type(), SpriteRenderingDotType::OamClearing | SpriteRenderingDotType::Evaluation);
-                let (mut sprite_color, sprite_priority, is_sprite_0, ppu_peek) = ppu.oam_registers.step(palette_ram, should_shift_sprites);
-                let mut color;
+                let (mut sprite_color, sprite_priority, is_sprite_0, ppu_peek_source) = ppu.oam_registers.step(palette_ram, should_shift_sprites);
+                let mut pixel_color;
                 if rendering_enabled {
                     if !ppu_regs.sprites_enabled() {
                         sprite_color = ColorT::Transparent;
@@ -326,7 +334,7 @@ impl Ppu {
                         sprite_color = Transparent;
                     }
 
-                    color = match (background_color, sprite_color, sprite_priority) {
+                    pixel_color = match (background_color, sprite_color, sprite_priority) {
                         (Transparent  , Transparent  , _) => palette_ram.backdrop_color(),
                         (Transparent  , Opaque(color), _) => color,
                         (Opaque(color), Transparent  , _) => color,
@@ -352,7 +360,7 @@ impl Ppu {
                     let sprite_bank_pixel = Some(if sprite_color.is_transparent() {
                         Rgbt::Transparent
                     } else {
-                        let rgb = ppu.bank_color_assigner.rgb_for_source(ppu_peek.source());
+                        let rgb = ppu.bank_color_assigner.rgb_for_source(ppu_peek_source);
                         Rgbt::Opaque(rgb)
                     });
                     let is_sprite_pixel = background_color.is_transparent()
@@ -364,16 +372,16 @@ impl Ppu {
                         ppu.pattern_source_debug_buffer.write_rgbt(column, row, bank_pixel);
                     }
                 } else {
-                    color = ppu_regs.current_address.to_palette_ram_index()
+                    pixel_color = ppu_regs.current_address.to_palette_ram_index()
                         .map(|palette_ram_index| palette_ram.peek_color(ppu_regs.mask(), palette_ram_index))
                         .unwrap_or(palette_ram.backdrop_color());
                 }
 
                 if !composite_decoders.show_overscan && pixel_index.is_in_overscan_region() {
-                    color = Color::BLACK;
+                    pixel_color = Color::BLACK;
                 }
 
-                composite_decoders.get_mut().set_color(frame, &master_clock, color, ppumask.emphasis());
+                composite_decoders.get_mut().set_color(frame, &master_clock, pixel_color, ppumask.emphasis());
             }
 
             MaybeCorruptOamStart => {

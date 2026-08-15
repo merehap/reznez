@@ -8,6 +8,7 @@ use crate::memory::bank::bank_number::{BankNumber, ChrBankRegisters, ReadStatus,
 use crate::memory::ppu::chr_layout::{ChrLayouts, ChrLayout};
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::chr_memory_map::{ChrMemTypeStatus, ChrMemoryIndex, ChrMemoryMap};
+use crate::memory::read_result::ReadResult;
 use crate::memory::regions::ciram::Ciram;
 use crate::memory::raw_memory::RawMemory;
 use crate::memory::regions::small_page::SmallPage;
@@ -134,7 +135,7 @@ impl ChrMemory {
     pub fn peek(&self, ciram: &Ciram, mapper_custom_name_tables: &[SmallPage], address: PpuAddress) -> PpuPeek {
         let (index, source) = self.current_memory_map().index_for_address(address);
         assert_eq!(index.read_status(), ReadStatus::Enabled, "Disabling reading CHR RAM isn't supported yet.");
-        let value = match index {
+        let value = ReadResult::full(match index {
             ChrMemoryIndex::Absent => {
                 // TODO: CHR Open Bus behavior
                 0
@@ -149,10 +150,9 @@ impl ChrMemory {
                 ciram.side(side)[index as usize]
             }
             ChrMemoryIndex::MapperCustom { page_id, index } => {
-                mapper_custom_name_tables[page_id as usize].peek(index as u16).resolve(0)
+                mapper_custom_name_tables[page_id as usize].peek(index as u16).resolve_with_bus(0)
             }
-        };
-
+        });
 
         PpuPeek { value, source }
     }
@@ -161,8 +161,8 @@ impl ChrMemory {
         match (self.rom_present(), self.ram_present()) {
             (false, false) => panic!("CHR ROM or RAM must be present for peek_raw."),
             (true , true ) => panic!("CHR ROM and RAM must not both be present for peek_raw."),
-            (true , false) => PpuPeek::new(self.rom[index % self.rom.size()], PeekSource::Rom(0.into())),
-            (false, true ) => PpuPeek::new(self.ram[index % self.ram.size()], PeekSource::Ram(0.into())),
+            (true , false) => PpuPeek::new(ReadResult::full(self.rom[index % self.rom.size()]), PeekSource::Rom(0.into())),
+            (false, true ) => PpuPeek::new(ReadResult::full(self.ram[index % self.ram.size()]), PeekSource::Ram(0.into())),
         }
     }
 
@@ -433,23 +433,19 @@ impl ChrMemory {
 
 #[derive(Clone, Copy)]
 pub struct PpuPeek {
-    value: u8,
-    source: PeekSource,
+    pub value: ReadResult,
+    pub source: PeekSource,
 }
 
 impl PpuPeek {
-    pub const VOID: PpuPeek = PpuPeek { value: 0, source: PeekSource::Void };
+    pub const VOID: PpuPeek = PpuPeek {
+        // TODO: Should this be open bus?
+        value: ReadResult::full(0),
+        source: PeekSource::Void,
+    };
 
-    pub fn new(value: u8, source: PeekSource) -> Self {
+    pub fn new(value: ReadResult, source: PeekSource) -> Self {
         Self { value, source }
-    }
-
-    pub fn value(self) -> u8 {
-        self.value
-    }
-
-    pub fn source(self) -> PeekSource {
-        self.source
     }
 }
 

@@ -271,12 +271,12 @@ impl PpuRegisters {
     }
 
     // Peek 0x2007
-    pub fn peek_ppu_data(&self, old_data: u8) -> ReadResult {
+    pub fn peek_ppu_data(&self, old_data: ReadResult) -> ReadResult {
         let data = if self.current_address.is_in_palette_table() {
             // When reading palette data only, read the current data pointed to
             // by self.current_address, not what was previously pointed to.
             // Retain the previous ppu_io_bus values for the unused bits of palette data.
-            (self.ppu_io_bus.value() & 0b1100_0000) | (old_data & 0b0011_1111)
+            (self.ppu_io_bus.value() & 0b1100_0000) | (old_data.unmasked_value() & 0b0011_1111)
         } else {
             self.ppu_read_buffer
         };
@@ -286,7 +286,7 @@ impl PpuRegisters {
     }
 
     // Read 0x2007
-    pub fn read_ppu_data(&mut self, old_data: u8) -> ReadResult {
+    pub fn read_ppu_data(&mut self, old_data: ReadResult) -> ReadResult {
         let value_read = self.peek_ppu_data(old_data);
         self.ppu_io_bus.update(value_read.unmasked_value());
         value_read
@@ -362,6 +362,10 @@ impl PpuRegisters {
 
     pub fn write_toggle(&self) -> WriteToggle {
         self.write_toggle
+    }
+
+    pub fn ppu_io_bus(&self) -> &PpuIoBus {
+        &self.ppu_io_bus
     }
 }
 

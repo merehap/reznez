@@ -1,6 +1,5 @@
 use ux::u5;
 
-use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
 use crate::memory::ppu::ppu_address::PaletteRamIndex;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::register::ppu_registers::Mask;
@@ -36,11 +35,6 @@ impl PaletteRam {
         }
 
         palette_ram
-    }
-
-    pub fn peek(&self, ppumask: Mask, index: PaletteRamIndex) -> PpuPeek {
-        let color = self.peek_color(ppumask, index);
-        PpuPeek::new(color.to_u6().into(), PeekSource::PaletteTable)
     }
 
     pub fn peek_color(&self, ppumask: Mask, index: PaletteRamIndex) -> Color {
@@ -98,15 +92,19 @@ impl PaletteRam {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ppu::register::ppu_registers::PpuRegisters;
+    use crate::{memory::ppu::chr_memory::{PeekSource, PpuPeek}, ppu::register::ppu_registers::PpuRegisters};
 
     #[test]
     fn blank_first_bits() {
         let ppumask = PpuRegisters::new().mask();
         let mut palette_ram = PaletteRam::new();
         let index = PaletteRamIndex::new(u5::new(12));
-        assert_eq!(palette_ram.peek(ppumask, index).value(), 0b0000_0000);
-        palette_ram.write(index                            , 0b1110_1010);
-        assert_eq!(palette_ram.peek(ppumask, index).value(), 0b0010_1010);
+        let color = palette_ram.peek_color(ppumask, index);
+        let ppu_peek = PpuPeek::new(color.to_read_result(), PeekSource::PaletteTable);
+        assert_eq!(ppu_peek.value.unmasked_value(), 0b0000_0000);
+        palette_ram.write(index                   , 0b1110_1010);
+        let color = palette_ram.peek_color(ppumask, index);
+        let ppu_peek = PpuPeek::new(color.to_read_result(), PeekSource::PaletteTable);
+        assert_eq!(ppu_peek.value.unmasked_value(), 0b0010_1010);
     }
 }

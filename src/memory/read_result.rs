@@ -8,7 +8,7 @@ pub struct ReadResult {
 impl ReadResult {
     pub const OPEN_BUS: Self = Self { value: 0, mask: 0b0000_0000 };
 
-    pub fn full(value: u8) -> Self {
+    pub const fn full(value: u8) -> Self {
         Self { value, mask: 0b1111_1111 }
     }
 
@@ -23,8 +23,12 @@ impl ReadResult {
         }
     }
 
-    pub fn resolve(self, data_bus_value: u8) -> u8 {
+    pub fn resolve_with_bus(self, data_bus_value: u8) -> u8 {
         (self.value & self.mask) | (data_bus_value & !self.mask)
+    }
+
+    pub fn resolve_with_zeros(self) -> u8 {
+        self.value & self.mask
     }
 
     // Bus conflicts occur when a register exists at the same address as ROM, for boards that don't
@@ -38,8 +42,8 @@ impl ReadResult {
         (self.value & register_value & self.mask) | (register_value & !self.mask)
     }
 
+    // TODO: Eliminate this.
     pub fn unmasked_value(self) -> u8 {
-        assert_eq!(self.mask, 0b1111_1111);
         self.value
     }
 }

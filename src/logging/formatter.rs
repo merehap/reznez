@@ -253,7 +253,7 @@ impl Formatter for MesenFormatter {
             }
             ZP => {
                 let address = CpuAddress::zero_page(low);
-                let value = maybe_peek(address).resolve(low);
+                let value = maybe_peek(address).resolve_with_bus(low);
                 write!(argument_string, "${low:02X} = ${value:02X}").unwrap();
             }
             ZPX => {
@@ -271,13 +271,13 @@ impl Formatter for MesenFormatter {
                 argument_string.push_str(&address.to_mesen_string());
                 match instruction.op_code() {
                     OpCode::JMP | OpCode::JSR => {}
-                    _ => write!(argument_string, " = ${:02X}", maybe_peek(address).resolve(high)).unwrap(),
+                    _ => write!(argument_string, " = ${:02X}", maybe_peek(address).resolve_with_bus(high)).unwrap(),
                 }
             }
             AbX => {
                 let start_address = CpuAddress::from_low_high(low, high);
                 let address = start_address.advance(cpu.x_index());
-                let value = maybe_peek(address).resolve(high);
+                let value = maybe_peek(address).resolve_with_bus(high);
                 write!(
                     argument_string,
                     "{},X [{}] = ${value:02X}",
