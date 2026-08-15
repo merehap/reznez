@@ -39,6 +39,11 @@ impl PaletteRam {
     }
 
     pub fn peek(&self, ppumask: Mask, index: PaletteRamIndex) -> PpuPeek {
+        let color = self.peek_color(ppumask, index);
+        PpuPeek::new(color.to_u6().into(), PeekSource::PaletteTable)
+    }
+
+    pub fn peek_color(&self, ppumask: Mask, index: PaletteRamIndex) -> Color {
         let mut color = match index {
             PaletteRamIndex::BackdropColor => self.backdrop_color,
             PaletteRamIndex::Unused1 => self.unused_colors[0],
@@ -55,7 +60,7 @@ impl PaletteRam {
             color = color.to_greyscale();
         }
 
-        PpuPeek::new(color.to_u6().into(), PeekSource::PaletteTable)
+        color
     }
 
     pub fn write(&mut self, index: PaletteRamIndex, value: u8) {
