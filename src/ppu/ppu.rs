@@ -6,7 +6,7 @@ use crate::mapper::mapper::Mapper;
 use crate::bus::Bus;
 use crate::master_clock::MasterClock;
 use crate::memory::ppu::chr_memory::PpuPeek;
-use crate::memory::ppu::ppu_address::{PaletteRamIndex, PpuAddress};
+use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::regions::secondary_oam::{SecondaryOam, SpriteField};
 use crate::memory::signal_level::SignalLevel;
 use crate::ppu::cycle_action::cycle_action::CycleAction;
@@ -364,12 +364,9 @@ impl Ppu {
                         ppu.pattern_source_debug_buffer.write_rgbt(column, row, bank_pixel);
                     }
                 } else {
-                    color = if ppu_regs.current_address.is_in_palette_table() {
-                        let index = PaletteRamIndex::new(u5::new((ppu_regs.current_address.to_u16() & 0b0001_1111) as u8));
-                        Color::from(palette_ram.peek(ppu_regs, index).value())
-                    } else {
-                        palette_ram.backdrop_color()
-                    };
+                    color = ppu_regs.current_address.to_palette_ram_index()
+                        .map(|palette_ram_index| Color::from(palette_ram.peek(ppu_regs, palette_ram_index).value()))
+                        .unwrap_or(palette_ram.backdrop_color());
                 }
 
                 if !composite_decoders.show_overscan && pixel_index.is_in_overscan_region() {

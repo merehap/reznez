@@ -162,6 +162,14 @@ impl PpuAddress {
         matches!(self.to_u16(), 0x3F00..=0x3FFF)
     }
 
+    pub fn to_palette_ram_index(self) -> Option<PaletteRamIndex> {
+        if self.is_in_palette_table() {
+            Some(PaletteRamIndex::new(u5::new((self.to_u16() & 0b0001_1111) as u8)))
+        } else {
+            None
+        }
+    }
+
     pub fn coarse_x_scroll(self) -> TileColumn {
         splitbits_named_ux!(self.to_u16(), ".... .... ...x xxxx").into()
     }
