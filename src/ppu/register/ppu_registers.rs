@@ -273,10 +273,7 @@ impl PpuRegisters {
     // Peek 0x2007
     pub fn peek_ppu_data(&self, old_data: ReadResult) -> ReadResult {
         let data = if self.current_address.is_in_palette_table() {
-            // When reading palette data only, read the current data pointed to
-            // by self.current_address, not what was previously pointed to.
-            // Retain the previous ppu_io_bus values for the unused bits of palette data.
-            (self.ppu_io_bus.value() & 0b1100_0000) | (old_data.unmasked_value() & 0b0011_1111)
+            old_data.resolve_with_bus(self.ppu_io_bus.value())
         } else {
             self.ppu_read_buffer
         };
