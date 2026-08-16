@@ -144,36 +144,6 @@ impl Mapper for Mapper005 {
         bus.mapper_custom_pages.push(SmallPage::new("FillModeTile".to_owned(), ReadStatus::Enabled, WriteStatus::Disabled));
     }
 
-    fn ppu_peek(&self, bus: &Bus, address: PpuAddress) -> PpuPeek {
-        let should_substitute = self.substitutions_enabled
-            && self.extended_ram_mode == ExtendedRamMode::ExtendedAttributes
-            && !self.frame_state.sprite_fetching();
-
-        match address.to_section() {
-            PpuAddressSection::Chr(_) => {
-                if matches!(address.to_u16(), 0x0000..=0x1FFF) && should_substitute {
-                    let lower_chr_bank_bits = Self::peek_ext_rom(bus, self.name_table_index) & 0b0011_1111;
-                    let pattern_bank = (self.upper_chr_bank_bits << 6) | lower_chr_bank_bits;
-                    let raw_chr_index = 4 * KIBIBYTE * u32::from(pattern_bank) * KIBIBYTE + u32::from(address.to_u16() % 0x1000);
-                    bus.chr_memory().peek_raw(raw_chr_index)
-                } else {
-                    bus.chr_memory().peek(&bus.ciram, &bus.mapper_custom_pages, address)
-                }
-            }
-            PpuAddressSection::Palette(palette_ram_index) => {
-                if should_substitute {
-                    let palette = Self::peek_ext_rom(bus, self.name_table_index) >> 6;
-                    // The same palette is used for all 4 corners.
-                    let palette_byte = palette << 6 | palette << 4 | palette << 2 | palette;
-                    PpuPeek::new(ReadResult::full(palette_byte), EXT_RAM_PEEK_SOURCE)
-                } else {
-                    let color = bus.palette_ram.peek_color(bus.ppu_regs.mask(), palette_ram_index);
-                    PpuPeek::new(color.to_read_result(), PeekSource::PaletteTable)
-                }
-            }
-        }
-    }
-
     fn on_cpu_read(&mut self, bus: &mut Bus, addr: CpuAddress, _value: u8) {
         match *addr {
             0x5204 => {
@@ -205,7 +175,7 @@ impl Mapper for Mapper005 {
         }
     }
 
-    fn on_ppu_read(&mut self, bus: &mut Bus, addr: PpuAddress, _value: u8) {
+    fn on_ppu_read(&mut self, bus: &mut Bus, addr: PpuAddress, _value: u8) -> Option<PpuPeek> {
         self.frame_state.sync_frame_status(addr);
 
         // Syncing the frame status may have switched in or out of special background banking mode.
@@ -217,6 +187,33 @@ impl Mapper for Mapper005 {
 
         if addr.is_in_name_table_proper() {
             self.name_table_index = addr.to_u16() % 0x400;
+        }
+
+        let should_substitute = self.substitutions_enabled
+            && self.extended_ram_mode == ExtendedRamMode::ExtendedAttributes
+            && !self.frame_state.sprite_fetching();
+
+        match addr.to_section() {
+            PpuAddressSection::Chr(_) => {
+                if matches!(addr.to_u16(), 0x0000..=0x1FFF) && should_substitute {
+                    let lower_chr_bank_bits = Self::peek_ext_rom(bus, self.name_table_index) & 0b0011_1111;
+                    let pattern_bank = (self.upper_chr_bank_bits << 6) | lower_chr_bank_bits;
+                    let raw_chr_index = 4 * KIBIBYTE * u32::from(pattern_bank) * KIBIBYTE + u32::from(addr.to_u16() % 0x1000);
+                    Some(bus.chr_memory().peek_raw(raw_chr_index))
+                } else {
+                    None
+                }
+            }
+            PpuAddressSection::Palette(_) => {
+                if should_substitute {
+                    let palette = Self::peek_ext_rom(bus, self.name_table_index) >> 6;
+                    // The same palette is used for all 4 corners.
+                    let palette_byte = palette << 6 | palette << 4 | palette << 2 | palette;
+                    Some(PpuPeek::new(ReadResult::full(palette_byte), EXT_RAM_PEEK_SOURCE))
+                } else {
+                    None
+                }
+            }
         }
     }
 

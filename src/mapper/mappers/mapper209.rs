@@ -1,6 +1,7 @@
 use std::num::NonZeroI8;
 
 use crate::mapper::mapper::*;
+use crate::memory::ppu::chr_memory::PpuPeek;
 use crate::memory::window::ChrSource;
 use crate::util::pattern_table_transition_detector::{PatternTableTransitionDetector, AllowedAddresses};
 
@@ -408,7 +409,7 @@ impl Mapper for Mapper209 {
         }
     }
 
-    fn on_ppu_read(&mut self, bus: &mut Bus, address: PpuAddress, _value: u8) {
+    fn on_ppu_read(&mut self, bus: &mut Bus, address: PpuAddress, _value: u8) -> Option<PpuPeek> {
         let transitioned_right = self.transition_detector.detect(address) == Some(PatternTableSide::Right);
         let should_tick_from_right_transition =
             self.irq_ticked_by == IrqTickedBy::ChangedToRightSidePatternTable && transitioned_right;
@@ -425,10 +426,11 @@ impl Mapper for Mapper209 {
             0x1FD8..=0x1FDF => (MR1, G),
             0x1FE8..=0x1FEF => (MR1, L),
             // Skip to standard CHR memory operation.
-            _ => return,
+            _ => return None,
         };
 
         bus.set_chr_meta_register(meta_id, bank_register_id);
+        None
     }
 
     fn layout(&self) -> Layout {

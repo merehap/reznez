@@ -55,18 +55,14 @@ pub trait Mapper {
     // Most mappers don't care about PPU cycles.
     fn on_end_of_ppu_cycle(&mut self) {}
     // Most mappers don't trigger anything based upon ppu reads.
-    fn on_ppu_read(&mut self, _bus: &mut Bus, _address: PpuAddress, _value: u8) {}
+    #[must_use]
+    fn on_ppu_read(&mut self, _bus: &mut Bus, _address: PpuAddress, _value: u8) -> Option<PpuPeek> { None }
     // Most mappers don't care about changes to the current PPU address.
     fn on_ppu_address_change(&mut self, _bus: &mut Bus, _address: PpuAddress) {}
     // Most mappers don't have bus conflicts.
     fn has_bus_conflicts(&self) -> bool { false }
     // Used for debug screens.
     fn irq_counter_info(&self) -> Option<IrqCounterInfo> { None }
-
-    // Hack? Only used by MMC5 for overriding. Should be a better way to do this.
-    fn ppu_peek(&self, bus: &Bus, address: PpuAddress) -> PpuPeek {
-        bus.ppu_peek(address)
-    }
 
     fn supported(self) -> LookupResult where Self: Sized, Self: 'static {
         LookupResult::Supported(Box::new(self))
