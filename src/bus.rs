@@ -359,21 +359,15 @@ impl Bus {
 
                 self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
                 let data = if self.ppu_regs.current_address.is_in_palette_table() {
-                    self.ppu_peek(self.ppu_pinout.address())
-                        .value
-                        .resolve_with_bus(self.ppu_regs.ppu_io_bus.value())
+                    self.ppu_read(mapper, self.ppu_pinout.address()).value.resolve_with_bus(self.ppu_regs.ppu_io_bus.value())
                 } else {
                     self.ppu_read_buffer
                 };
 
-                let new_data = ReadResult::full(data);
-                self.ppu_regs.ppu_io_bus.update(new_data.unmasked_value());
+                self.ppu_regs.ppu_io_bus.update(data);
 
                 let pending_data_source = self.ppu_regs.current_address.to_pending_data_source();
-                let mut buffered_data = self.ppu_peek(pending_data_source).value;
-                if let Some(substitute) = mapper.on_ppu_read(self, pending_data_source, buffered_data.resolve_with_bus(self.ppu_regs.ppu_io_bus().value())) {
-                    buffered_data = substitute.value;
-                }
+                let buffered_data = self.ppu_read(mapper, pending_data_source).value;
 
                 self.ppu_read_buffer = buffered_data.resolve_with_bus(self.ppu_regs.ppu_io_bus().value());
                 self.ppu_regs.current_address.advance(self.ppu_regs.current_address_increment());
@@ -386,7 +380,7 @@ impl Bus {
 
                 self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
 
-                new_data
+                ReadResult::full(data)
             }
             Addr::PpuControl | Addr::PpuMask | Addr::OamAddress | Addr::PpuScroll | Addr::PpuAddress => {
                 self.ppu_regs.peek_from_write_only_register()
@@ -529,9 +523,9 @@ impl Bus {
         }
     }
 
-    pub fn ppu_read(&mut self, mapper: &mut dyn Mapper) -> PpuPeek {
-        let result = self.ppu_peek(self.ppu_pinout.address());
-        if let Some(substitute) = mapper.on_ppu_read(self, self.ppu_pinout.address(), result.value.resolve_with_bus(self.ppu_regs.ppu_io_bus().value())) {
+    pub fn ppu_read(&mut self, mapper: &mut dyn Mapper, addr: PpuAddress) -> PpuPeek {
+        let result = self.ppu_peek(addr);
+        if let Some(substitute) = mapper.on_ppu_read(self, addr, result.value.resolve_with_bus(self.ppu_regs.ppu_io_bus().value())) {
             substitute
         } else {
             result
