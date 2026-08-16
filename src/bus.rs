@@ -34,7 +34,7 @@ use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::ppu::Ppu;
 use crate::ppu::register::ppu_registers::{PpuRegisters, WriteToggle};
 use crate::memory::regions::oam::Oam;
-use crate::signals::Signals;
+use crate::signals::{ScanlineType, Signals};
 use crate::util::unit::KIBIBYTE;
 
 pub const NMI_VECTOR_LOW: CpuAddress     = CpuAddress::new(0xFFFA);
@@ -64,6 +64,7 @@ pub struct Bus {
     pub apu_regs: ApuRegisters,
     pub oam_buffer: u8,
     pub secondary_oam_buffer: u8,
+    ppu_read_buffer: u8,
 
     // Memory
     pub cpu_internal_ram: CpuInternalRam,
@@ -118,6 +119,7 @@ impl Bus {
             apu_regs: ApuRegisters::new(),
             secondary_oam_buffer: 0,
             oam_buffer: 0,
+            ppu_read_buffer: 0,
 
             cpu_internal_ram: CpuInternalRam::new(),
             ciram: Ciram::new(),
@@ -290,7 +292,7 @@ impl Bus {
             Addr::OamData               => self.ppu_regs.peek_oam_data(&self.oam),
             Addr::PpuData => {
                 let old_value = mapper.ppu_peek(self, self.ppu_regs.current_address).value;
-                self.ppu_regs.peek_ppu_data(old_value)
+                self.peek_ppu_data(old_value)
             }
             Addr::PpuControl | Addr::PpuMask | Addr::OamAddress | Addr::PpuScroll | Addr::PpuAddress => {
                 // Write-only PPU registers.
@@ -336,6 +338,38 @@ impl Bus {
         }
     }
 
+
+    // Peek 0x2007
+    fn peek_ppu_data(&self, old_data: ReadResult) -> ReadResult {
+        let data = if self.ppu_regs.current_address.is_in_palette_table() {
+            old_data.resolve_with_bus(self.ppu_regs.ppu_io_bus.value())
+        } else {
+            self.ppu_read_buffer
+        };
+
+        // While the read may have had open bus bits on the PPU side (above), it doesn't on the CPU side.
+        ReadResult::full(data)
+    }
+
+    // Read 0x2007
+    fn read_ppu_data(&mut self, old_data: ReadResult) -> ReadResult {
+        let value_read = self.peek_ppu_data(old_data);
+        self.ppu_regs.ppu_io_bus.update(value_read.unmasked_value());
+        value_read
+    }
+
+    // Read 0x2007
+    fn set_ppu_read_buffer_and_advance(&mut self, new_buffer_data: u8) {
+        self.ppu_read_buffer = new_buffer_data;
+        self.ppu_regs.current_address.advance(self.ppu_regs.current_address_increment());
+
+        // The current address is corrupted when reading PPUDATA during rendering. Some games depend on this.
+        let is_rendering = self.signals.rendering_enabled && self.signals.scanline_type() != ScanlineType::Vblank;
+        if is_rendering {
+            self.ppu_regs.current_address.increment_fine_y_scroll();
+        }
+    }
+
     #[inline]
     #[rustfmt::skip]
     pub fn cpu_read(&mut self, mapper: &mut dyn Mapper, address_bus_type: AddressBusType) -> u8 {
@@ -351,12 +385,12 @@ impl Bus {
                 self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
                 // TODO: Instead of peeking the old data, it must be available as part of some register.
                 let old_data = mapper.ppu_peek(self, self.ppu_pinout.address()).value;
-                let new_data = self.ppu_regs.read_ppu_data(old_data);
+                let new_data = self.read_ppu_data(old_data);
 
                 let pending_data_source = self.ppu_regs.current_address.to_pending_data_source();
                 let buffered_data = mapper.ppu_peek(self, pending_data_source).value;
                 mapper.on_ppu_read(self, pending_data_source, buffered_data.resolve_with_bus(self.ppu_regs.ppu_io_bus().value()));
-                self.ppu_regs.set_ppu_read_buffer_and_advance(&self.signals, buffered_data.resolve_with_bus(self.ppu_regs.ppu_io_bus().value()));
+                self.set_ppu_read_buffer_and_advance(buffered_data.resolve_with_bus(self.ppu_regs.ppu_io_bus().value()));
                 self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
 
                 new_data

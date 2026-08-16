@@ -51,11 +51,8 @@ pub struct PpuRegisters {
     // PPUADDR (0x2006) and PPUDATA (0x2007)
     pub current_address: PpuAddress, // "v"
 
-    // PPUDATA (0x2007)
-    ppu_read_buffer: u8,
-
     // Shared between all registers (0x2000 through 0x2007)
-    ppu_io_bus: PpuIoBus,
+    pub ppu_io_bus: PpuIoBus,
 
     rendering_disabled_outside_of_vblank: bool,
 }
@@ -99,9 +96,6 @@ impl PpuRegisters {
 
             // PPUADDR (0x2006) and PPUDATA (0x2007)
             current_address: PpuAddress::ZERO,
-
-            // PPUDATA (0x2007)
-            ppu_read_buffer: 0,
 
             // Shared between all registers (0x2000 through 0x2007)
             ppu_io_bus: PpuIoBus::new(),
@@ -268,37 +262,6 @@ impl PpuRegisters {
         }
 
         self.write_toggle.toggle();
-    }
-
-    // Peek 0x2007
-    pub fn peek_ppu_data(&self, old_data: ReadResult) -> ReadResult {
-        let data = if self.current_address.is_in_palette_table() {
-            old_data.resolve_with_bus(self.ppu_io_bus.value())
-        } else {
-            self.ppu_read_buffer
-        };
-
-        // While the read may have had open bus bits on the PPU side (above), it doesn't on the CPU side.
-        ReadResult::full(data)
-    }
-
-    // Read 0x2007
-    pub fn read_ppu_data(&mut self, old_data: ReadResult) -> ReadResult {
-        let value_read = self.peek_ppu_data(old_data);
-        self.ppu_io_bus.update(value_read.unmasked_value());
-        value_read
-    }
-
-    // Read 0x2007
-    pub fn set_ppu_read_buffer_and_advance(&mut self, signals: &Signals, new_buffer_data: u8) {
-        self.ppu_read_buffer = new_buffer_data;
-        self.current_address.advance(self.current_address_increment);
-
-        // The current address is corrupted when reading PPUDATA during rendering. Some games depend on this.
-        let is_rendering = signals.rendering_enabled && signals.scanline_type() != ScanlineType::Vblank;
-        if is_rendering {
-            self.current_address.increment_fine_y_scroll();
-        }
     }
 
     // Write 0x2007
