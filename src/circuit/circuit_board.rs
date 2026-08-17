@@ -170,6 +170,7 @@ impl CircuitBoard {
         self.read_2007_components.compute_primary_sinks(primary_sources);
 
         ppu_pinout.ppu_data_ale = self.read_2007_components.primary_sinks[&PrimarySink::Ale];
+        ppu_pinout.ppu_data_read = self.read_2007_components.primary_sinks[&PrimarySink::Read];
     }
 
     pub fn is_read_2007_circuit_in_base_state(&self) -> bool {

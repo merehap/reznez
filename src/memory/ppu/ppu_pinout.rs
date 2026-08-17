@@ -13,9 +13,12 @@ pub struct PpuPinout {
     // /RST
     // /WR
     // /RD
+    pub fetch_cadence_read: bool,
+    pub ppu_data_read: bool,
+    // A13-A8, AD7-AD0
     address_and_data_bus_detector: EdgeDetector<PpuAddress>,
     // /ALE
-    pub read_cadence_ale: bool,
+    pub fetch_cadence_ale: bool,
     pub ppu_data_ale: bool,
     // +5V
 
@@ -25,11 +28,17 @@ pub struct PpuPinout {
 impl PpuPinout {
     pub fn new() -> Self {
         Self {
+            fetch_cadence_read: false,
+            ppu_data_read: false,
             address_and_data_bus_detector: EdgeDetector::any_edge(),
             address_latch: 0,
-            read_cadence_ale: false,
+            fetch_cadence_ale: false,
             ppu_data_ale: false,
         }
+    }
+
+    pub fn read(&self) -> bool {
+        self.fetch_cadence_read || self.ppu_data_read
     }
 
     pub fn address(&self) -> PpuAddress {
@@ -57,6 +66,6 @@ impl PpuPinout {
     }
 
     pub fn ale(&self) -> bool {
-        self.read_cadence_ale || self.ppu_data_ale
+        self.fetch_cadence_ale || self.ppu_data_ale
     }
 }

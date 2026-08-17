@@ -128,6 +128,9 @@ impl Ppu {
             bus.ppu.oam_row_corruption_pending = true;
         }
 
+        bus.ppu_pinout.fetch_cadence_ale = false;
+        bus.ppu_pinout.fetch_cadence_read = false;
+
         // TODO: Figure out how to eliminate duplication and the index.
         let len = bus.ppu.frame_actions.current_cycle_actions(bus.ppu_clock()).len();
         for i in 0..len {
@@ -220,7 +223,8 @@ impl Ppu {
     }
 
     fn execute_cycle_action(
-        Bus { ppu, ppu_regs, master_clock, signals, palette_ram, ciram, oam, secondary_oam, secondary_oam_buffer, composite_decoders, .. }: &mut Bus,
+        Bus { ppu, ppu_regs, ppu_pinout, master_clock, signals, palette_ram, ciram, oam,
+            secondary_oam, secondary_oam_buffer, composite_decoders, .. }: &mut Bus,
         frame: &mut Frame,
         cycle_action: CycleAction
     ) -> Followup {
@@ -233,6 +237,7 @@ impl Ppu {
             SetPatternIndexAddress => {
                 ppu.next_rendering_field_to_set = Some((RenderingRegisterField::PatternIndex, 2));
                 followup = Followup::SetAddressBus(ppu_regs.current_address.to_name_table_address());
+                ppu_pinout.fetch_cadence_ale = true;
             }
             SetPaletteIndexAddress => {
                 if signals.rendering_enabled {
@@ -240,6 +245,7 @@ impl Ppu {
                 }
 
                 followup = Followup::SetAddressBus(ppu_regs.current_address.to_attribute_table_address());
+                ppu_pinout.fetch_cadence_ale = true;
             }
             SetPatternLowAddress => {
                 if signals.rendering_enabled {
@@ -252,6 +258,7 @@ impl Ppu {
                     ppu_regs.current_address.fine_y_scroll(),
                     false,
                 ));
+                ppu_pinout.fetch_cadence_ale = true;
             }
             SetPatternHighAddress => {
                 if signals.rendering_enabled {
@@ -264,10 +271,12 @@ impl Ppu {
                     ppu_regs.current_address.fine_y_scroll(),
                     true,
                 ));
+                ppu_pinout.fetch_cadence_ale = true;
             }
 
             Read => {
                 followup = Followup::PpuReadNextRegisterValue;
+                ppu_pinout.fetch_cadence_read = true;
             }
             PrepareForNextPixel => {
                 ppu.pending_register_shift = true;
@@ -570,7 +579,8 @@ impl Ppu {
                 let select_high = false;
                 let addr;
                 (addr, ppu.sprite_visible) = ppu.current_sprite_pattern_address(master_clock, ppu_regs, secondary_oam, select_high);
-                followup = Followup::SetAddressBus(addr)
+                followup = Followup::SetAddressBus(addr);
+                ppu_pinout.fetch_cadence_ale = true;
             }
             SetSpritePatternHighAddress => {
                 if signals.rendering_enabled {
@@ -581,6 +591,7 @@ impl Ppu {
                 let addr;
                 (addr, ppu.sprite_visible) = ppu.current_sprite_pattern_address(master_clock, ppu_regs, secondary_oam, select_high);
                 followup = Followup::SetAddressBus(addr);
+                ppu_pinout.fetch_cadence_ale = true;
             }
 
             // TODO: Remove this section in favor of using EdgeDetectors.
