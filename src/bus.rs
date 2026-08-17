@@ -358,8 +358,10 @@ impl Bus {
                 self.signals.start_read_2007();
 
                 self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
-                let data = if self.ppu_regs.current_address.is_in_palette_table() {
-                    self.ppu_read(mapper, self.ppu_pinout.address()).value.resolve_with_bus(self.ppu_regs.ppu_io_bus.value())
+                let data = if let Some(palette_ram_index) = self.ppu_regs.current_address.to_palette_ram_index() {
+                    // This doesn't count as a PPU read for mapper purposes: /RD hasn't been asserted yet!
+                    let color = self.palette_ram.peek_color(self.ppu_regs.mask(), palette_ram_index);
+                    color.to_read_result().resolve_with_bus(self.ppu_regs.ppu_io_bus.value())
                 } else {
                     self.ppu_read_buffer
                 };
