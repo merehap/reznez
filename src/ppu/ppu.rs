@@ -94,7 +94,7 @@ impl Ppu {
     }
 
     pub fn step_first_half(bus: &mut Bus, mapper: &mut dyn Mapper, frame: &mut Frame) {
-        bus.signals.start_ppu_clock_first_half();
+        bus.signals.start_ppu_clock_first_half(&mut bus.ppu_pinout);
 
         let tick_result = bus.ppu_regs.tick(&mut bus.signals, bus.master_clock.ppu_clock());
         if tick_result.rendering_toggled == Some(Toggle::Disable) {
@@ -157,8 +157,8 @@ impl Ppu {
         mapper.on_end_of_ppu_cycle();
     }
 
-    pub fn step_second_half(Bus { ppu, ppu_regs, master_clock, signals, secondary_oam, oam_buffer, secondary_oam_buffer, .. }: &mut Bus) {
-        signals.start_ppu_clock_second_half();
+    pub fn step_second_half(Bus { ppu, ppu_regs, ppu_pinout, master_clock, signals, secondary_oam, oam_buffer, secondary_oam_buffer, .. }: &mut Bus) {
+        signals.start_ppu_clock_second_half(ppu_pinout);
 
         if ppu_regs.background_enabled() || ppu_regs.sprites_enabled() {
             if signals.scanline_type() == ScanlineType::Visible {

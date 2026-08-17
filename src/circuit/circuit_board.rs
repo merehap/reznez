@@ -10,6 +10,7 @@ use crate::circuit::signal::Signal;
 use crate::circuit::signal_state::SignalState;
 use crate::circuit::sink::{PrimarySink, Sink, SinkTerminal};
 use crate::circuit::source::{PrimarySource, Source, SourceTerminal};
+use crate::memory::ppu::ppu_pinout::PpuPinout;
 
 static READ_2007_COMPONENTS: LazyLock<ComponentGraph> = LazyLock::new(|| {
     let mut graph = ComponentGraphBuilder::new()
@@ -161,19 +162,14 @@ impl CircuitBoard {
         self.primary_source_states[primary_source as usize] = value;
     }
 
-    pub fn calculate_outputs(&mut self) {
-        let mut text = String::new();
-        for (signal, state) in &self.read_2007_components.signal_states {
-            text.push_str(&format!("{}: {state}, ", signal.source));
-        }
-
-        log::info!("{text}");
-
+    pub fn calculate_outputs(&mut self, ppu_pinout: &mut PpuPinout) {
         let source_names = [PrimarySource::PpuClockFirstHalf, PrimarySource::PpuClockSecondHalf, PrimarySource::Read2007];
         let primary_sources = source_names.iter()
             .map(|name| (*name, self.primary_source_states[*name as usize]))
             .collect();
         self.read_2007_components.compute_primary_sinks(primary_sources);
+
+        ppu_pinout.ppu_data_ale = self.read_2007_components.primary_sinks[&PrimarySink::Ale];
     }
 
     pub fn is_read_2007_circuit_in_base_state(&self) -> bool {

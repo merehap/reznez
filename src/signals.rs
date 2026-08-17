@@ -1,4 +1,6 @@
-use crate::circuit::{circuit_board::CircuitBoard, source::PrimarySource};
+use crate::circuit::circuit_board::CircuitBoard;
+use crate::circuit::source::PrimarySource;
+use crate::memory::ppu::ppu_pinout::PpuPinout;
 
 pub struct Signals {
     pub rendering_enabled: bool,
@@ -26,26 +28,26 @@ impl Signals {
         }
     }
 
-    pub fn start_ppu_clock_first_half(&mut self) {
+    pub fn start_ppu_clock_first_half(&mut self, ppu_pinout: &mut PpuPinout) {
         assert!(self.circuit_board.source(PrimarySource::PpuClockSecondHalf));
         self.circuit_board.set_source(PrimarySource::PpuClockFirstHalf, true);
         self.circuit_board.set_source(PrimarySource::PpuClockSecondHalf, false);
 
         if self.read_2007_active {
-            self.circuit_board.calculate_outputs();
+            self.circuit_board.calculate_outputs(ppu_pinout);
             if self.circuit_board.is_read_2007_circuit_in_base_state() {
                 self.read_2007_active = false;
             }
         }
     }
 
-    pub fn start_ppu_clock_second_half(&mut self) {
+    pub fn start_ppu_clock_second_half(&mut self, ppu_pinout: &mut PpuPinout) {
         assert!(self.circuit_board.source(PrimarySource::PpuClockFirstHalf));
         self.circuit_board.set_source(PrimarySource::PpuClockFirstHalf, false);
         self.circuit_board.set_source(PrimarySource::PpuClockSecondHalf, true);
 
         if self.read_2007_active {
-            self.circuit_board.calculate_outputs();
+            self.circuit_board.calculate_outputs(ppu_pinout);
             if self.circuit_board.is_read_2007_circuit_in_base_state() {
                 self.read_2007_active = false;
             }

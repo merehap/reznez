@@ -15,6 +15,8 @@ pub struct PpuPinout {
     // /RD
     address_and_data_bus_detector: EdgeDetector<PpuAddress>,
     // /ALE
+    pub read_cadence_ale: bool,
+    pub ppu_data_ale: bool,
     // +5V
 
     address_latch: u8,
@@ -25,6 +27,8 @@ impl PpuPinout {
         Self {
             address_and_data_bus_detector: EdgeDetector::any_edge(),
             address_latch: 0,
+            read_cadence_ale: false,
+            ppu_data_ale: false,
         }
     }
 
@@ -50,5 +54,9 @@ impl PpuPinout {
         let mut value = self.address_and_data_bus_detector.current_value();
         value.set_low_byte(data);
         self.address_and_data_bus_detector.set_value_then_detect(value)
+    }
+
+    pub fn ale(&self) -> bool {
+        self.read_cadence_ale || self.ppu_data_ale
     }
 }
