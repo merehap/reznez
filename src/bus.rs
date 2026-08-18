@@ -346,8 +346,8 @@ impl Bus {
                 self.signals.start_read_2007();
 
                 let data = self.ppu_regs.read_ppu_data(&self.palette_ram);
-                let pending_data_source = self.ppu_regs.current_address.to_pending_data_source();
-                self.ppu_regs.ppu_read_buffer = self.ppu_read(mapper, pending_data_source)
+                self.set_ppu_address_bus(mapper, self.ppu_regs.current_address.to_read_buffer_source());
+                self.ppu_regs.ppu_read_buffer = self.ppu_read(mapper)
                     .value
                     .resolve_with_bus(self.ppu_regs.ppu_io_bus().value());
                 self.ppu_regs.current_address.advance(self.ppu_regs.current_address_increment());
@@ -503,9 +503,11 @@ impl Bus {
         }
     }
 
-    pub fn ppu_read(&mut self, mapper: &mut dyn Mapper, addr: PpuAddress) -> PpuPeek {
+    pub fn ppu_read(&mut self, mapper: &mut dyn Mapper) -> PpuPeek {
+        let addr = self.ppu_pinout.address();
         let result = self.ppu_peek(addr);
-        if let Some(substitute) = mapper.on_ppu_read(self, addr, result.value.resolve_with_bus(self.ppu_regs.ppu_io_bus().value())) {
+        let resolved_value = result.value.resolve_with_bus(self.ppu_regs.ppu_io_bus().value());
+        if let Some(substitute) = mapper.on_ppu_read(self, addr, resolved_value) {
             substitute
         } else {
             result

@@ -117,13 +117,13 @@ impl PpuAddress {
         }
     }
 
-    pub fn to_pending_data_source(self) -> PpuAddress {
-        let mut data_source = self;
-        if data_source.to_u16() >= 0x3000 {
-            data_source = PpuAddress::from_u16(data_source.to_u16() - 0x1000);
+    pub fn to_read_buffer_source(self) -> PpuAddress {
+        let mut buffer_addr = self;
+        if buffer_addr.to_u16() >= 0x3000 {
+            buffer_addr = PpuAddress::from_u16(buffer_addr.to_u16() - 0x1000);
         }
 
-        data_source
+        buffer_addr
     }
 
     pub fn name_table_quadrant(self) -> NameTableQuadrant {

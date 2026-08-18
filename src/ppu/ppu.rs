@@ -138,7 +138,7 @@ impl Ppu {
             match Ppu::execute_cycle_action(bus, frame, cycle_action) {
                 Followup::None => {}
                 Followup::PpuReadNextRegisterValue => {
-                    let PpuPeek { value, source } = bus.ppu_read(mapper, bus.ppu_pinout.address());
+                    let PpuPeek { value, source } = bus.ppu_read(mapper);
                     bus.ppu.next_register_value = value.resolve_with_zeros();
                     bus.ppu.next_register_source = source;
                 }
