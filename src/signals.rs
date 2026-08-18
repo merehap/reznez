@@ -6,9 +6,10 @@ pub struct Signals {
     pub rendering_enabled: bool,
 
     circuit_board: CircuitBoard,
-    // On hardware, the $2007_Read circuit is always active, but is almost always in its default state.
-    // But for performance reasons it is important to not run this circuit when it's not progressing.
+    // On hardware, the $2007_Read and $2007_Write circuits are always active, but almost always in their default state.
+    // But for performance reasons it is important to not run these circuits when they are not progressing.
     read_2007_active: bool,
+    write_2007_active: bool,
 
     scanline_type: ScanlineType,
     sprite_rendering_dot_type: SpriteRenderingDotType,
@@ -21,6 +22,7 @@ impl Signals {
 
             circuit_board: CircuitBoard::new(),
             read_2007_active: false,
+            write_2007_active: false,
 
             // FIXME: This needs to come from the initial clock.
             scanline_type: ScanlineType::Visible,
@@ -34,9 +36,16 @@ impl Signals {
         self.circuit_board.set_source(PrimarySource::PpuClockSecondHalf, false);
 
         if self.read_2007_active {
-            self.circuit_board.calculate_outputs(ppu_pinout);
+            self.circuit_board.calculate_read_2007_outputs(ppu_pinout);
             if self.circuit_board.is_read_2007_circuit_in_base_state() {
                 self.read_2007_active = false;
+            }
+        }
+
+        if self.write_2007_active {
+            self.circuit_board.calculate_write_2007_outputs(ppu_pinout);
+            if self.circuit_board.is_write_2007_circuit_in_base_state() {
+                self.write_2007_active = false;
             }
         }
     }
@@ -47,9 +56,16 @@ impl Signals {
         self.circuit_board.set_source(PrimarySource::PpuClockSecondHalf, true);
 
         if self.read_2007_active {
-            self.circuit_board.calculate_outputs(ppu_pinout);
+            self.circuit_board.calculate_read_2007_outputs(ppu_pinout);
             if self.circuit_board.is_read_2007_circuit_in_base_state() {
                 self.read_2007_active = false;
+            }
+        }
+
+        if self.write_2007_active {
+            self.circuit_board.calculate_write_2007_outputs(ppu_pinout);
+            if self.circuit_board.is_write_2007_circuit_in_base_state() {
+                self.write_2007_active = false;
             }
         }
     }
@@ -62,6 +78,16 @@ impl Signals {
 
     pub fn stop_read_2007(&mut self) {
         self.circuit_board.set_source(PrimarySource::Read2007, false);
+    }
+
+    pub fn start_write_2007(&mut self) {
+        assert!(!self.circuit_board.source(PrimarySource::Write2007));
+        self.circuit_board.set_source(PrimarySource::Write2007, true);
+        self.write_2007_active = true;
+    }
+
+    pub fn stop_write_2007(&mut self) {
+        self.circuit_board.set_source(PrimarySource::Write2007, false);
     }
 
     pub fn scanline_type(&self) -> ScanlineType {

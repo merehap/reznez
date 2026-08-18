@@ -24,6 +24,7 @@ pub enum PrimarySource {
     PpuClockFirstHalf,
     PpuClockSecondHalf,
     Read2007,
+    Write2007,
 }
 
 impl fmt::Display for PrimarySource {

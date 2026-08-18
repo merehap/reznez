@@ -135,9 +135,133 @@ static READ_2007_COMPONENTS: LazyLock<ComponentGraph> = LazyLock::new(|| {
     graph
 });
 
+static WRITE_2007_COMPONENTS: LazyLock<ComponentGraph> = LazyLock::new(|| {
+    let mut graph = ComponentGraphBuilder::new()
+        .component(Component::new("DLatch_0", Box::new(DLatch::new(false))))
+        .component(Component::new("DLatch_1", Box::new(DLatch::new(true))))
+        .component(Component::new("DLatch_2", Box::new(DLatch::new(false))))
+        .component(Component::new("DLatch_3", Box::new(DLatch::new(true))))
+        .component(Component::new("DLatch_4", Box::new(DLatch::new(false))))
+        // This latch storing "true" at startup ensures that calculation doesn't start until a Read2007 occurs.
+        .component(Component::new("SRLatch", Box::new(SRLatch::new(true))))
+        .component(Component::new("NOR_0", Box::new(Nor)))
+        .component(Component::new("NOR_ALE", Box::new(Nor)))
+        .component(Component::new("NOR_WRITE", Box::new(Nor)))
+        .signal(Signal {
+            source: Source::Primary(PrimarySource::PpuClockFirstHalf),
+            sinks: BTreeSet::from([
+                Sink::Internal(SinkTerminal::from_raw("DLatch_0", 'E')),
+                Sink::Internal(SinkTerminal::from_raw("DLatch_2", 'E')),
+                Sink::Internal(SinkTerminal::from_raw("DLatch_4", 'E')),
+            ]),
+        })
+        .signal(Signal {
+            source: Source::Primary(PrimarySource::PpuClockSecondHalf),
+            sinks: BTreeSet::from([
+                Sink::Internal(SinkTerminal::from_raw("DLatch_1", 'E')),
+                Sink::Internal(SinkTerminal::from_raw("DLatch_3", 'E')),
+            ]),
+        })
+        .signal(Signal {
+            source: Source::Primary(PrimarySource::Write2007),
+            sinks: BTreeSet::from([
+                Sink::Internal(SinkTerminal::from_raw("NOR_0", 'A'))
+            ]),
+        })
+        .signal(Signal {
+            source: Source::Primary(PrimarySource::Write2007),
+            sinks: BTreeSet::from([
+                Sink::Internal(SinkTerminal::from_raw("SRLatch", 'S'))
+            ]),
+        })
+        .signal(Signal {
+            source: Source::Internal(SourceTerminal::from_raw("SRLatch", 'Q')),
+            sinks: BTreeSet::from([
+                Sink::Internal(SinkTerminal::from_raw("NOR_0", 'B'))
+            ]),
+        })
+        .signal(Signal {
+            source: Source::Internal(SourceTerminal::from_raw("NOR_0", 'Q')),
+            sinks: BTreeSet::from([
+                Sink::Internal(SinkTerminal::from_raw("DLatch_0", 'D'))
+            ]),
+        })
+        .signal(Signal {
+            source: Source::Internal(SourceTerminal::from_raw("DLatch_0", 'N')),
+            sinks: BTreeSet::from([
+                Sink::Internal(SinkTerminal::from_raw("DLatch_1", 'D'))
+            ]),
+        })
+        .signal(Signal {
+            source: Source::Internal(SourceTerminal::from_raw("DLatch_1", 'N')),
+            sinks: BTreeSet::from([
+                Sink::Internal(SinkTerminal::from_raw("DLatch_2", 'D'))
+            ]),
+        })
+        .signal(Signal {
+            source: Source::Internal(SourceTerminal::from_raw("DLatch_1", 'N')),
+            sinks: BTreeSet::from([
+                Sink::Internal(SinkTerminal::from_raw("NOR_WRITE", 'B')),
+            ]),
+        })
+        .signal(Signal {
+            source: Source::Internal(SourceTerminal::from_raw("DLatch_2", 'N')),
+            sinks: BTreeSet::from([
+                Sink::Internal(SinkTerminal::from_raw("DLatch_3", 'D')),
+                Sink::Internal(SinkTerminal::from_raw("NOR_ALE", 'A')),
+            ]),
+        })
+        .signal(Signal {
+            source: Source::Internal(SourceTerminal::from_raw("DLatch_3", 'N')),
+            sinks: BTreeSet::from([
+                Sink::Internal(SinkTerminal::from_raw("DLatch_4", 'D'))
+            ]),
+        })
+        .signal(Signal {
+            source: Source::Internal(SourceTerminal::from_raw("DLatch_3", 'N')),
+            sinks: BTreeSet::from([
+                Sink::Internal(SinkTerminal::from_raw("SRLatch", 'R'))
+            ]),
+        })
+        .signal(Signal {
+            source: Source::Internal(SourceTerminal::from_raw("DLatch_4", 'Q')),
+            sinks: BTreeSet::from([
+                Sink::Internal(SinkTerminal::from_raw("NOR_ALE", 'B')),
+            ]),
+        })
+        .signal(Signal {
+            source: Source::Internal(SourceTerminal::from_raw("DLatch_3", 'Q')),
+            sinks: BTreeSet::from([
+                Sink::Internal(SinkTerminal::from_raw("NOR_WRITE", 'A')),
+            ]),
+        })
+        .signal(Signal {
+            source: Source::Internal(SourceTerminal::from_raw("NOR_ALE", 'Q')),
+            sinks: BTreeSet::from([
+                Sink::Primary(PrimarySink::Ale)
+            ]),
+        })
+        .signal(Signal {
+            source: Source::Internal(SourceTerminal::from_raw("NOR_WRITE", 'Q')),
+            sinks: BTreeSet::from([
+                Sink::Primary(PrimarySink::Write)
+            ]),
+        })
+        .build();
+
+    graph.compute_primary_sinks(BTreeMap::from([
+        (PrimarySource::PpuClockFirstHalf, false),
+        (PrimarySource::PpuClockSecondHalf, true),
+        (PrimarySource::Write2007, false),
+    ]));
+
+    graph
+});
+
 pub struct CircuitBoard {
     primary_source_states: Box<[bool]>,
     read_2007_components: ComponentGraph,
+    write_2007_components: ComponentGraph,
 }
 
 impl CircuitBoard {
@@ -147,6 +271,7 @@ impl CircuitBoard {
         let mut circuit_board = Self {
             primary_source_states: vec![false; Self::INPUT_COUNT].into_boxed_slice(),
             read_2007_components: READ_2007_COMPONENTS.clone(),
+            write_2007_components: WRITE_2007_COMPONENTS.clone(),
         };
         // This way the first PPU tick will start the first half of the PPU dot.
         circuit_board.set_source(PrimarySource::PpuClockSecondHalf, true);
@@ -162,7 +287,7 @@ impl CircuitBoard {
         self.primary_source_states[primary_source as usize] = value;
     }
 
-    pub fn calculate_outputs(&mut self, ppu_pinout: &mut PpuPinout) {
+    pub fn calculate_read_2007_outputs(&mut self, ppu_pinout: &mut PpuPinout) {
         let source_names = [PrimarySource::PpuClockFirstHalf, PrimarySource::PpuClockSecondHalf, PrimarySource::Read2007];
         let primary_sources = source_names.iter()
             .map(|name| (*name, self.primary_source_states[*name as usize]))
@@ -175,6 +300,21 @@ impl CircuitBoard {
 
     pub fn is_read_2007_circuit_in_base_state(&self) -> bool {
         !self.source(PrimarySource::Read2007) && self.read_2007_components.signal_states_equal(&READ_2007_COMPONENTS)
+    }
+
+    pub fn calculate_write_2007_outputs(&mut self, ppu_pinout: &mut PpuPinout) {
+        let source_names = [PrimarySource::PpuClockFirstHalf, PrimarySource::PpuClockSecondHalf, PrimarySource::Write2007];
+        let primary_sources = source_names.iter()
+            .map(|name| (*name, self.primary_source_states[*name as usize]))
+            .collect();
+        self.write_2007_components.compute_primary_sinks(primary_sources);
+
+        ppu_pinout.ppu_data_ale = self.write_2007_components.primary_sinks[&PrimarySink::Ale];
+        ppu_pinout.ppu_data_write = self.write_2007_components.primary_sinks[&PrimarySink::Write];
+    }
+
+    pub fn is_write_2007_circuit_in_base_state(&self) -> bool {
+        !self.source(PrimarySource::Write2007) && self.write_2007_components.signal_states_equal(&WRITE_2007_COMPONENTS)
     }
 }
 
@@ -203,7 +343,9 @@ impl ComponentGraph {
         for (_current_component_name, (_component, labeled_signals)) in &self.sink_label_and_signal_by_component_name {
             for (_, signal) in labeled_signals {
                 if let Source::Primary(primary_source) = &signal.source {
-                    self.signal_states.insert(signal.clone(), SignalState::Resolved(primary_sources[&primary_source]));
+                    let primary_source_value = primary_sources.get(&primary_source)
+                        .expect(&format!("Primary source {primary_source:?} has not be wired in for this component graph."));
+                    self.signal_states.insert(signal.clone(), SignalState::Resolved(*primary_source_value));
                 }
             }
         }

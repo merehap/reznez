@@ -437,6 +437,7 @@ impl Bus {
                 }
             }
             Addr::PpuData => {
+                self.signals.start_write_2007();
                 // FIXME: The ordering of these three statements seems wrong. Surely the address bus should be set first?
                 // This seems likely to be related to how the PPU data bus and address bus have shared bits.
                 self.ppu_write(self.ppu_regs.current_address, self.cpu_pinout.data_bus);

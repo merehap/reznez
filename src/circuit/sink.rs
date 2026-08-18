@@ -13,6 +13,7 @@ pub enum Sink {
 pub enum PrimarySink {
     Ale,
     Read,
+    Write,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]

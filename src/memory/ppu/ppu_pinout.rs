@@ -12,6 +12,7 @@ pub struct PpuPinout {
     // VOUT
     // /RST
     // /WR
+    pub ppu_data_write: bool,
     // /RD
     pub fetch_cadence_read: bool,
     pub ppu_data_read: bool,
@@ -28,6 +29,7 @@ pub struct PpuPinout {
 impl PpuPinout {
     pub fn new() -> Self {
         Self {
+            ppu_data_write: false,
             fetch_cadence_read: false,
             ppu_data_read: false,
             address_and_data_bus_detector: EdgeDetector::any_edge(),
