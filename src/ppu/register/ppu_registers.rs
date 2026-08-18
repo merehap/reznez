@@ -3,6 +3,7 @@ use splitbits::{splitbits, combinebits};
 
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll};
 use crate::memory::read_result::ReadResult;
+use crate::memory::regions::palette_ram::PaletteRam;
 use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::ppu::ppu_clock::PpuClock;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
@@ -51,6 +52,9 @@ pub struct PpuRegisters {
     // PPUADDR (0x2006) and PPUDATA (0x2007)
     pub current_address: PpuAddress, // "v"
 
+    // PPUDATA (0x2007)
+    pub ppu_read_buffer: u8,
+
     // Shared between all registers (0x2000 through 0x2007)
     pub ppu_io_bus: PpuIoBus,
 
@@ -96,6 +100,8 @@ impl PpuRegisters {
 
             // PPUADDR (0x2006) and PPUDATA (0x2007)
             current_address: PpuAddress::ZERO,
+
+            ppu_read_buffer: 0,
 
             // Shared between all registers (0x2000 through 0x2007)
             ppu_io_bus: PpuIoBus::new(),
@@ -262,6 +268,26 @@ impl PpuRegisters {
         }
 
         self.write_toggle.toggle();
+    }
+
+    // Peek 0x2007
+    pub fn peek_ppu_data(&self, palette_ram: &PaletteRam) -> ReadResult {
+        let data = if let Some(palette_ram_index) = self.current_address.to_palette_ram_index() {
+            // This doesn't count as a PPU read for mapper purposes: /RD hasn't been asserted yet!
+            let color = palette_ram.peek_color(self.mask(), palette_ram_index);
+            color.to_read_result().resolve_with_bus(self.ppu_io_bus.value())
+        } else {
+            self.ppu_read_buffer
+        };
+
+        ReadResult::full(data)
+    }
+
+    // Read 0x2007
+    pub fn read_ppu_data(&mut self, palette_ram: &PaletteRam) -> ReadResult {
+        let data = self.peek_ppu_data(palette_ram);
+        self.ppu_io_bus.update(data.unmasked_value());
+        data
     }
 
     // Write 0x2007

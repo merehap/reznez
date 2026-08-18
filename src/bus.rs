@@ -64,7 +64,6 @@ pub struct Bus {
     pub apu_regs: ApuRegisters,
     pub oam_buffer: u8,
     pub secondary_oam_buffer: u8,
-    ppu_read_buffer: u8,
 
     // Memory
     pub cpu_internal_ram: CpuInternalRam,
@@ -119,7 +118,6 @@ impl Bus {
             apu_regs: ApuRegisters::new(),
             secondary_oam_buffer: 0,
             oam_buffer: 0,
-            ppu_read_buffer: 0,
 
             cpu_internal_ram: CpuInternalRam::new(),
             ciram: Ciram::new(),
@@ -290,17 +288,7 @@ impl Bus {
             Addr::CpuInternalRam(index) => self.cpu_internal_ram().peek(index),
             Addr::PpuStatus             => self.ppu_regs.peek_status(),
             Addr::OamData               => self.ppu_regs.peek_oam_data(&self.oam),
-            Addr::PpuData => {
-                let old_value = self.ppu_peek(self.ppu_regs.current_address).value;
-                let data = if self.ppu_regs.current_address.is_in_palette_table() {
-                    old_value.resolve_with_bus(self.ppu_regs.ppu_io_bus.value())
-                } else {
-                    self.ppu_read_buffer
-                };
-
-                // While the read may have had open bus bits on the PPU side (above), it doesn't on the CPU side.
-                ReadResult::full(data)
-            }
+            Addr::PpuData               => self.ppu_regs.peek_ppu_data(&self.palette_ram),
             Addr::PpuControl | Addr::PpuMask | Addr::OamAddress | Addr::PpuScroll | Addr::PpuAddress => {
                 // Write-only PPU registers.
                 self.ppu_regs.peek_from_write_only_register()
@@ -357,20 +345,11 @@ impl Bus {
             Addr::PpuData => {
                 self.signals.start_read_2007();
 
-                let data = if let Some(palette_ram_index) = self.ppu_regs.current_address.to_palette_ram_index() {
-                    // This doesn't count as a PPU read for mapper purposes: /RD hasn't been asserted yet!
-                    let color = self.palette_ram.peek_color(self.ppu_regs.mask(), palette_ram_index);
-                    color.to_read_result().resolve_with_bus(self.ppu_regs.ppu_io_bus.value())
-                } else {
-                    self.ppu_read_buffer
-                };
-
-                self.ppu_regs.ppu_io_bus.update(data);
-
+                let data = self.ppu_regs.read_ppu_data(&self.palette_ram);
                 let pending_data_source = self.ppu_regs.current_address.to_pending_data_source();
-                let buffered_data = self.ppu_read(mapper, pending_data_source).value;
-
-                self.ppu_read_buffer = buffered_data.resolve_with_bus(self.ppu_regs.ppu_io_bus().value());
+                self.ppu_regs.ppu_read_buffer = self.ppu_read(mapper, pending_data_source)
+                    .value
+                    .resolve_with_bus(self.ppu_regs.ppu_io_bus().value());
                 self.ppu_regs.current_address.advance(self.ppu_regs.current_address_increment());
 
                 // The current address is corrupted when reading PPUDATA during rendering. Some games depend on this.
@@ -381,7 +360,7 @@ impl Bus {
 
                 self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
 
-                ReadResult::full(data)
+                data
             }
             Addr::PpuControl | Addr::PpuMask | Addr::OamAddress | Addr::PpuScroll | Addr::PpuAddress => {
                 self.ppu_regs.peek_from_write_only_register()
