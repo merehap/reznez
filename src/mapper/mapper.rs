@@ -55,6 +55,7 @@ pub trait Mapper {
     // Most mappers don't care about PPU cycles.
     fn on_end_of_ppu_cycle(&mut self) {}
     // Most mappers don't trigger anything based upon ppu reads.
+
     #[must_use]
     fn on_ppu_read(&mut self, _bus: &mut Bus, _address: PpuAddress, _value: u8) -> Option<PpuPeek> { None }
     // Most mappers don't care about changes to the current PPU address.

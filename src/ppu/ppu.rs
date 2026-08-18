@@ -52,6 +52,8 @@ pub struct Ppu {
     oam_row_corruption_pending: bool,
     oam_row_corruption_target: Option<u5>,
 
+    next_fetch_cadence_addr: PpuAddress,
+
     frame_actions: FrameActions,
 
     // Used only for debug screens
@@ -83,6 +85,8 @@ impl Ppu {
 
             oam_row_corruption_pending: false,
             oam_row_corruption_target: None,
+
+            next_fetch_cadence_addr: PpuAddress::ZERO,
 
             frame_actions: NTSC_FRAME_ACTIONS.clone(),
 
@@ -142,8 +146,13 @@ impl Ppu {
                     bus.ppu.next_register_value = value.resolve_with_zeros();
                     bus.ppu.next_register_source = source;
                 }
-                Followup::SetAddressBus(addr) => bus.set_ppu_address_bus(mapper, addr),
             }
+        }
+
+        if bus.ppu_pinout.fetch_cadence_ale {
+            bus.set_ppu_address_bus(mapper, bus.ppu.next_fetch_cadence_addr)
+        } else if bus.ppu_pinout.ppu_data_ale {
+            bus.set_ppu_address_bus(mapper, bus.ppu_regs.current_address.to_read_buffer_source())
         }
 
         if bus.ppu_regs.suppress_vblank_active {
@@ -236,7 +245,7 @@ impl Ppu {
         match cycle_action {
             SetPatternIndexAddress => {
                 ppu.next_rendering_field_to_set = Some((RenderingRegisterField::PatternIndex, 2));
-                followup = Followup::SetAddressBus(ppu_regs.current_address.to_name_table_address());
+                ppu.next_fetch_cadence_addr = ppu_regs.current_address.to_name_table_address();
                 ppu_pinout.fetch_cadence_ale = true;
             }
             SetPaletteIndexAddress => {
@@ -244,7 +253,7 @@ impl Ppu {
                     ppu.next_rendering_field_to_set = Some((RenderingRegisterField::PaletteIndex, 2));
                 }
 
-                followup = Followup::SetAddressBus(ppu_regs.current_address.to_attribute_table_address());
+                ppu.next_fetch_cadence_addr = ppu_regs.current_address.to_attribute_table_address();
                 ppu_pinout.fetch_cadence_ale = true;
             }
             SetPatternLowAddress => {
@@ -252,12 +261,12 @@ impl Ppu {
                     ppu.next_rendering_field_to_set = Some((RenderingRegisterField::BackgroundPatternLow, 2));
                 }
 
-                followup = Followup::SetAddressBus(PpuAddress::in_pattern_table(
+                ppu.next_fetch_cadence_addr = PpuAddress::in_pattern_table(
                     ppu_regs.background_table_side(),
                     ppu.next_tile_number,
                     ppu_regs.current_address.fine_y_scroll(),
                     false,
-                ));
+                );
                 ppu_pinout.fetch_cadence_ale = true;
             }
             SetPatternHighAddress => {
@@ -265,12 +274,12 @@ impl Ppu {
                     ppu.next_rendering_field_to_set = Some((RenderingRegisterField::BackgroundPatternHighAndNextTile, 2));
                 }
 
-                followup = Followup::SetAddressBus(PpuAddress::in_pattern_table(
+                ppu.next_fetch_cadence_addr = PpuAddress::in_pattern_table(
                     ppu_regs.background_table_side(),
                     ppu.next_tile_number,
                     ppu_regs.current_address.fine_y_scroll(),
                     true,
-                ));
+                );
                 ppu_pinout.fetch_cadence_ale = true;
             }
 
@@ -579,7 +588,7 @@ impl Ppu {
                 let select_high = false;
                 let addr;
                 (addr, ppu.sprite_visible) = ppu.current_sprite_pattern_address(master_clock, ppu_regs, secondary_oam, select_high);
-                followup = Followup::SetAddressBus(addr);
+                ppu.next_fetch_cadence_addr = addr;
                 ppu_pinout.fetch_cadence_ale = true;
             }
             SetSpritePatternHighAddress => {
@@ -590,7 +599,7 @@ impl Ppu {
                 let select_high = true;
                 let addr;
                 (addr, ppu.sprite_visible) = ppu.current_sprite_pattern_address(master_clock, ppu_regs, secondary_oam, select_high);
-                followup = Followup::SetAddressBus(addr);
+                ppu.next_fetch_cadence_addr = addr;
                 ppu_pinout.fetch_cadence_ale = true;
             }
 
@@ -619,7 +628,7 @@ impl Ppu {
             StartVblank => {
                 ppu_regs.vblank_active = true;
                 // "During VBlank ... the value on the PPU address bus is the current value of the v register."
-                followup = Followup::SetAddressBus(ppu_regs.current_address);
+                ppu.next_fetch_cadence_addr = ppu_regs.current_address;
             }
             SetInitialScrollOffsets => {
                 if !ppu_regs.background_enabled() { return Followup::None; }
@@ -714,5 +723,4 @@ enum RenderingRegisterField {
 enum Followup {
     None,
     PpuReadNextRegisterValue,
-    SetAddressBus(PpuAddress),
 }

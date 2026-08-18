@@ -424,9 +424,7 @@ impl Bus {
             Addr::CpuInternalRam(index) => self.cpu_internal_ram.write(index, self.cpu_pinout.data_bus),
 
             // PPU registers.
-            Addr::PpuControl => {
-                self.ppu_regs.write_ctrl(self.cpu_pinout.data_bus);
-            }
+            Addr::PpuControl => self.ppu_regs.write_ctrl(self.cpu_pinout.data_bus),
             Addr::PpuMask    => self.ppu_regs.write_mask(&self.signals, self.cpu_pinout.data_bus),
             Addr::PpuStatus  => self.ppu_regs.write_status(self.cpu_pinout.data_bus), // Read-only
             Addr::OamAddress => self.ppu_regs.write_oam_addr(self.cpu_pinout.data_bus),
