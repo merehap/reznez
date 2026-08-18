@@ -126,11 +126,7 @@ static READ_2007_COMPONENTS: LazyLock<ComponentGraph> = LazyLock::new(|| {
         })
         .build();
 
-    graph.compute_primary_sinks(BTreeMap::from([
-        (PrimarySource::PpuClockFirstHalf, false),
-        (PrimarySource::PpuClockSecondHalf, true),
-        (PrimarySource::Read2007, false),
-    ]));
+    graph.compute_primary_sinks(&STARTUP_PRIMARY_SOURCE_STATES);
 
     graph
 });
@@ -249,27 +245,27 @@ static WRITE_2007_COMPONENTS: LazyLock<ComponentGraph> = LazyLock::new(|| {
         })
         .build();
 
-    graph.compute_primary_sinks(BTreeMap::from([
-        (PrimarySource::PpuClockFirstHalf, false),
-        (PrimarySource::PpuClockSecondHalf, true),
-        (PrimarySource::Write2007, false),
-    ]));
-
+    graph.compute_primary_sinks(&STARTUP_PRIMARY_SOURCE_STATES);
     graph
 });
 
+const STARTUP_PRIMARY_SOURCE_STATES: [bool; std::mem::variant_count::<PrimarySource>()] = [
+    false, // PpuClockFirstHalf
+    true,  // PpuClockSecondHalf
+    false, // Read2007
+    false, // Write2007
+];
+
 pub struct CircuitBoard {
-    primary_source_states: Box<[bool]>,
+    primary_source_states: [bool; std::mem::variant_count::<PrimarySource>()],
     read_2007_components: ComponentGraph,
     write_2007_components: ComponentGraph,
 }
 
 impl CircuitBoard {
-    const INPUT_COUNT: usize = std::mem::variant_count::<PrimarySource>();
-
     pub fn new() -> Self {
         let mut circuit_board = Self {
-            primary_source_states: vec![false; Self::INPUT_COUNT].into_boxed_slice(),
+            primary_source_states: STARTUP_PRIMARY_SOURCE_STATES,
             read_2007_components: READ_2007_COMPONENTS.clone(),
             write_2007_components: WRITE_2007_COMPONENTS.clone(),
         };
@@ -288,11 +284,7 @@ impl CircuitBoard {
     }
 
     pub fn calculate_read_2007_outputs(&mut self, ppu_pinout: &mut PpuPinout) {
-        let source_names = [PrimarySource::PpuClockFirstHalf, PrimarySource::PpuClockSecondHalf, PrimarySource::Read2007];
-        let primary_sources = source_names.iter()
-            .map(|name| (*name, self.primary_source_states[*name as usize]))
-            .collect();
-        self.read_2007_components.compute_primary_sinks(primary_sources);
+        self.read_2007_components.compute_primary_sinks(&self.primary_source_states);
 
         ppu_pinout.ppu_data_ale = self.read_2007_components.primary_sinks[&PrimarySink::Ale];
         ppu_pinout.ppu_data_read = self.read_2007_components.primary_sinks[&PrimarySink::Read];
@@ -303,11 +295,7 @@ impl CircuitBoard {
     }
 
     pub fn calculate_write_2007_outputs(&mut self, ppu_pinout: &mut PpuPinout) {
-        let source_names = [PrimarySource::PpuClockFirstHalf, PrimarySource::PpuClockSecondHalf, PrimarySource::Write2007];
-        let primary_sources = source_names.iter()
-            .map(|name| (*name, self.primary_source_states[*name as usize]))
-            .collect();
-        self.write_2007_components.compute_primary_sinks(primary_sources);
+        self.write_2007_components.compute_primary_sinks(&self.primary_source_states);
 
         ppu_pinout.ppu_data_ale = self.write_2007_components.primary_sinks[&PrimarySink::Ale];
         ppu_pinout.ppu_data_write = self.write_2007_components.primary_sinks[&PrimarySink::Write];
@@ -339,13 +327,12 @@ impl ComponentGraph {
         true
     }
 
-    pub fn compute_primary_sinks(&mut self, primary_sources: BTreeMap<PrimarySource, bool>) {
+    pub fn compute_primary_sinks(&mut self, primary_sources: &[bool]) {
         for (_current_component_name, (_component, labeled_signals)) in &self.sink_label_and_signal_by_component_name {
             for (_, signal) in labeled_signals {
                 if let Source::Primary(primary_source) = &signal.source {
-                    let primary_source_value = primary_sources.get(&primary_source)
-                        .expect(&format!("Primary source {primary_source:?} has not be wired in for this component graph."));
-                    self.signal_states.insert(signal.clone(), SignalState::Resolved(*primary_source_value));
+                    let primary_source_value = primary_sources[*primary_source as usize];
+                    self.signal_states.insert(signal.clone(), SignalState::Resolved(primary_source_value));
                 }
             }
         }
@@ -410,6 +397,13 @@ impl ComponentGraphBuilder {
     }
 
     pub fn build(mut self) -> ComponentGraph {
+        let mut primary_sources = BTreeMap::new();
+        for signal in &self.signals {
+            if let Source::Primary(primary_source) = signal.source {
+                primary_sources.insert(primary_source, false);
+            }
+        }
+
         let mut primary_sinks = BTreeMap::new();
         for signal in &self.signals {
             for sink in &signal.sinks {
@@ -452,6 +446,11 @@ impl ComponentGraphBuilder {
             }
         }
 
-        ComponentGraph { primary_sinks, sink_label_and_signal_by_component_name, signals_by_source_terminal, signal_states }
+        ComponentGraph {
+            primary_sinks,
+            sink_label_and_signal_by_component_name,
+            signals_by_source_terminal,
+            signal_states,
+        }
     }
 }
