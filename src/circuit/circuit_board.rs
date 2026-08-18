@@ -138,7 +138,7 @@ static WRITE_2007_COMPONENTS: LazyLock<ComponentGraph> = LazyLock::new(|| {
         .component(Component::new("DLatch_2", Box::new(DLatch::new(false))))
         .component(Component::new("DLatch_3", Box::new(DLatch::new(true))))
         .component(Component::new("DLatch_4", Box::new(DLatch::new(false))))
-        // This latch storing "true" at startup ensures that calculation doesn't start until a Read2007 occurs.
+        // This latch storing "true" at startup ensures that calculation doesn't start until a Write2007 occurs.
         .component(Component::new("SRLatch", Box::new(SRLatch::new(true))))
         .component(Component::new("NOR_0", Box::new(Nor)))
         .component(Component::new("NOR_ALE", Box::new(Nor)))
@@ -338,7 +338,7 @@ impl ComponentGraph {
         }
 
         // TODO: Find a proper way to terminate this rather than just iterating 10 times and hoping for the best.
-        for _ in 0..10 {
+        for _ in 0..3 {
             for (component_name, (component, labeled_signals)) in &mut self.sink_label_and_signal_by_component_name {
                 let mut input_signal_states = BTreeMap::new();
                 for (label, signal) in labeled_signals.iter() {
