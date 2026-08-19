@@ -12,7 +12,7 @@ pub struct Component<Name: ConstParamTy_> {
     component_type: Box<dyn ComponentType + Send + Sync>,
 }
 
-impl <Name: ConstParamTy_ + Clone + Copy> Component<Name> {
+impl <Name: ConstParamTy_ + Clone + Copy + ToIndex> Component<Name> {
     pub fn new(name: Name, component_type: Box<dyn ComponentType + Send + Sync>) -> Self {
         Self {
             name,
@@ -27,6 +27,10 @@ impl <Name: ConstParamTy_ + Clone + Copy> Component<Name> {
     pub fn name(&self) -> Name {
         self.name
     }
+}
+
+pub trait ToIndex {
+    fn to_index(&self) -> usize;
 }
 
 #[allow(dead_code)]
