@@ -1,7 +1,9 @@
 use std::collections::{BTreeSet, BTreeMap};
+use std::fmt;
+use std::marker::{ConstParamTy, ConstParamTy_};
 use std::sync::LazyLock;
 
-use crate::circuit::component::{Component, ComponentName};
+use crate::circuit::component::Component;
 use crate::circuit::component_types::d_latch::DLatch;
 use crate::circuit::component_types::nor::Nor;
 use crate::circuit::component_types::sr_latch::SRLatch;
@@ -12,114 +14,115 @@ use crate::circuit::sink::{PrimarySink, Sink, SinkTerminal};
 use crate::circuit::source::{PrimarySource, Source, SourceTerminal};
 use crate::memory::ppu::ppu_pinout::PpuPinout;
 
-static READ_2007_COMPONENTS: LazyLock<ComponentGraph> = LazyLock::new(|| {
+static READ_2007_COMPONENTS: LazyLock<ComponentGraph<Read2007ComponentName>> = LazyLock::new(|| {
+    use Read2007ComponentName::*;
     let mut graph = ComponentGraphBuilder::new()
-        .component(Component::new("DLatch_0", Box::new(DLatch::new(false))))
-        .component(Component::new("DLatch_1", Box::new(DLatch::new(true))))
-        .component(Component::new("DLatch_2", Box::new(DLatch::new(false))))
-        .component(Component::new("DLatch_3", Box::new(DLatch::new(true))))
-        .component(Component::new("DLatch_4", Box::new(DLatch::new(false))))
+        .component(Component::new(DLatch0, Box::new(DLatch::new(false))))
+        .component(Component::new(DLatch1, Box::new(DLatch::new(true))))
+        .component(Component::new(DLatch2, Box::new(DLatch::new(false))))
+        .component(Component::new(DLatch3, Box::new(DLatch::new(true))))
+        .component(Component::new(DLatch4, Box::new(DLatch::new(false))))
         // This latch storing "true" at startup ensures that calculation doesn't start until a Read2007 occurs.
-        .component(Component::new("SRLatch", Box::new(SRLatch::new(true))))
-        .component(Component::new("NOR_0", Box::new(Nor)))
-        .component(Component::new("NOR_ALE", Box::new(Nor)))
-        .component(Component::new("NOR_READ", Box::new(Nor)))
+        .component(Component::new(SRLatch0, Box::new(SRLatch::new(true))))
+        .component(Component::new(Nor0, Box::new(Nor)))
+        .component(Component::new(NorAle, Box::new(Nor)))
+        .component(Component::new(NorRead, Box::new(Nor)))
         .signal(Signal {
             source: Source::Primary(PrimarySource::PpuClockFirstHalf),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("DLatch_0", 'E')),
-                Sink::Internal(SinkTerminal::from_raw("DLatch_2", 'E')),
-                Sink::Internal(SinkTerminal::from_raw("DLatch_4", 'E')),
+                Sink::Internal(SinkTerminal::from_raw(DLatch0, 'E')),
+                Sink::Internal(SinkTerminal::from_raw(DLatch2, 'E')),
+                Sink::Internal(SinkTerminal::from_raw(DLatch4, 'E')),
             ]),
         })
         .signal(Signal {
             source: Source::Primary(PrimarySource::PpuClockSecondHalf),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("DLatch_1", 'E')),
-                Sink::Internal(SinkTerminal::from_raw("DLatch_3", 'E')),
+                Sink::Internal(SinkTerminal::from_raw(DLatch1, 'E')),
+                Sink::Internal(SinkTerminal::from_raw(DLatch3, 'E')),
             ]),
         })
         .signal(Signal {
             source: Source::Primary(PrimarySource::Read2007),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("NOR_0", 'A'))
+                Sink::Internal(SinkTerminal::from_raw(Nor0, 'A'))
             ]),
         })
         .signal(Signal {
             source: Source::Primary(PrimarySource::Read2007),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("SRLatch", 'S'))
+                Sink::Internal(SinkTerminal::from_raw(SRLatch0, 'S'))
             ]),
         })
         .signal(Signal {
-            source: Source::Internal(SourceTerminal::from_raw("SRLatch", 'Q')),
+            source: Source::Internal(SourceTerminal::from_raw(SRLatch0, 'Q')),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("NOR_0", 'B'))
+                Sink::Internal(SinkTerminal::from_raw(Nor0, 'B'))
             ]),
         })
         .signal(Signal {
-            source: Source::Internal(SourceTerminal::from_raw("NOR_0", 'Q')),
+            source: Source::Internal(SourceTerminal::from_raw(Nor0, 'Q')),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("DLatch_0", 'D'))
+                Sink::Internal(SinkTerminal::from_raw(DLatch0, 'D'))
             ]),
         })
         .signal(Signal {
-            source: Source::Internal(SourceTerminal::from_raw("DLatch_0", 'N')),
+            source: Source::Internal(SourceTerminal::from_raw(DLatch0, 'N')),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("DLatch_1", 'D'))
+                Sink::Internal(SinkTerminal::from_raw(DLatch1, 'D'))
             ]),
         })
         .signal(Signal {
-            source: Source::Internal(SourceTerminal::from_raw("DLatch_1", 'N')),
+            source: Source::Internal(SourceTerminal::from_raw(DLatch1, 'N')),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("DLatch_2", 'D'))
+                Sink::Internal(SinkTerminal::from_raw(DLatch2, 'D'))
             ]),
         })
         .signal(Signal {
-            source: Source::Internal(SourceTerminal::from_raw("DLatch_2", 'Q')),
+            source: Source::Internal(SourceTerminal::from_raw(DLatch2, 'Q')),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("NOR_READ", 'B')),
+                Sink::Internal(SinkTerminal::from_raw(NorRead, 'B')),
             ]),
         })
         .signal(Signal {
-            source: Source::Internal(SourceTerminal::from_raw("DLatch_2", 'N')),
+            source: Source::Internal(SourceTerminal::from_raw(DLatch2, 'N')),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("DLatch_3", 'D')),
-                Sink::Internal(SinkTerminal::from_raw("NOR_ALE", 'A')),
+                Sink::Internal(SinkTerminal::from_raw(DLatch3, 'D')),
+                Sink::Internal(SinkTerminal::from_raw(NorAle, 'A')),
             ]),
         })
         .signal(Signal {
-            source: Source::Internal(SourceTerminal::from_raw("DLatch_3", 'N')),
+            source: Source::Internal(SourceTerminal::from_raw(DLatch3, 'N')),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("DLatch_4", 'D'))
+                Sink::Internal(SinkTerminal::from_raw(DLatch4, 'D'))
             ]),
         })
         .signal(Signal {
-            source: Source::Internal(SourceTerminal::from_raw("DLatch_3", 'N')),
+            source: Source::Internal(SourceTerminal::from_raw(DLatch3, 'N')),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("SRLatch", 'R'))
+                Sink::Internal(SinkTerminal::from_raw(SRLatch0, 'R'))
             ]),
         })
         .signal(Signal {
-            source: Source::Internal(SourceTerminal::from_raw("DLatch_4", 'Q')),
+            source: Source::Internal(SourceTerminal::from_raw(DLatch4, 'Q')),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("NOR_ALE", 'B')),
+                Sink::Internal(SinkTerminal::from_raw(NorAle, 'B')),
             ]),
         })
         .signal(Signal {
-            source: Source::Internal(SourceTerminal::from_raw("DLatch_4", 'N')),
+            source: Source::Internal(SourceTerminal::from_raw(DLatch4, 'N')),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("NOR_READ", 'A')),
+                Sink::Internal(SinkTerminal::from_raw(NorRead, 'A')),
             ]),
         })
         .signal(Signal {
-            source: Source::Internal(SourceTerminal::from_raw("NOR_ALE", 'Q')),
+            source: Source::Internal(SourceTerminal::from_raw(NorAle, 'Q')),
             sinks: BTreeSet::from([
                 Sink::Primary(PrimarySink::Ale)
             ]),
         })
         .signal(Signal {
-            source: Source::Internal(SourceTerminal::from_raw("NOR_READ", 'Q')),
+            source: Source::Internal(SourceTerminal::from_raw(NorRead, 'Q')),
             sinks: BTreeSet::from([
                 Sink::Primary(PrimarySink::Read)
             ]),
@@ -131,114 +134,134 @@ static READ_2007_COMPONENTS: LazyLock<ComponentGraph> = LazyLock::new(|| {
     graph
 });
 
-static WRITE_2007_COMPONENTS: LazyLock<ComponentGraph> = LazyLock::new(|| {
+#[derive(ConstParamTy, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
+enum Read2007ComponentName {
+    DLatch0,
+    DLatch1,
+    DLatch2,
+    DLatch3,
+    DLatch4,
+    SRLatch0,
+    Nor0,
+    NorAle,
+    NorRead,
+}
+
+impl fmt::Display for Read2007ComponentName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self:?}")
+    }
+}
+
+static WRITE_2007_COMPONENTS: LazyLock<ComponentGraph<Write2007ComponentName>> = LazyLock::new(|| {
+    use Write2007ComponentName::*;
     let mut graph = ComponentGraphBuilder::new()
-        .component(Component::new("DLatch_0", Box::new(DLatch::new(false))))
-        .component(Component::new("DLatch_1", Box::new(DLatch::new(true))))
-        .component(Component::new("DLatch_2", Box::new(DLatch::new(false))))
-        .component(Component::new("DLatch_3", Box::new(DLatch::new(true))))
-        .component(Component::new("DLatch_4", Box::new(DLatch::new(false))))
+        .component(Component::new(DLatch0, Box::new(DLatch::new(false))))
+        .component(Component::new(DLatch1, Box::new(DLatch::new(true))))
+        .component(Component::new(DLatch2, Box::new(DLatch::new(false))))
+        .component(Component::new(DLatch3, Box::new(DLatch::new(true))))
+        .component(Component::new(DLatch4, Box::new(DLatch::new(false))))
         // This latch storing "true" at startup ensures that calculation doesn't start until a Write2007 occurs.
-        .component(Component::new("SRLatch", Box::new(SRLatch::new(true))))
-        .component(Component::new("NOR_0", Box::new(Nor)))
-        .component(Component::new("NOR_ALE", Box::new(Nor)))
-        .component(Component::new("NOR_WRITE", Box::new(Nor)))
+        .component(Component::new(SRLatch0, Box::new(SRLatch::new(true))))
+        .component(Component::new(Nor0, Box::new(Nor)))
+        .component(Component::new(NorAle, Box::new(Nor)))
+        .component(Component::new(NorWrite, Box::new(Nor)))
         .signal(Signal {
             source: Source::Primary(PrimarySource::PpuClockFirstHalf),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("DLatch_0", 'E')),
-                Sink::Internal(SinkTerminal::from_raw("DLatch_2", 'E')),
-                Sink::Internal(SinkTerminal::from_raw("DLatch_4", 'E')),
+                Sink::Internal(SinkTerminal::from_raw(DLatch0, 'E')),
+                Sink::Internal(SinkTerminal::from_raw(DLatch2, 'E')),
+                Sink::Internal(SinkTerminal::from_raw(DLatch4, 'E')),
             ]),
         })
         .signal(Signal {
             source: Source::Primary(PrimarySource::PpuClockSecondHalf),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("DLatch_1", 'E')),
-                Sink::Internal(SinkTerminal::from_raw("DLatch_3", 'E')),
+                Sink::Internal(SinkTerminal::from_raw(DLatch1, 'E')),
+                Sink::Internal(SinkTerminal::from_raw(DLatch3, 'E')),
             ]),
         })
         .signal(Signal {
             source: Source::Primary(PrimarySource::Write2007),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("NOR_0", 'A'))
+                Sink::Internal(SinkTerminal::from_raw(Nor0, 'A'))
             ]),
         })
         .signal(Signal {
             source: Source::Primary(PrimarySource::Write2007),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("SRLatch", 'S'))
+                Sink::Internal(SinkTerminal::from_raw(SRLatch0, 'S'))
             ]),
         })
         .signal(Signal {
-            source: Source::Internal(SourceTerminal::from_raw("SRLatch", 'Q')),
+            source: Source::Internal(SourceTerminal::from_raw(SRLatch0, 'Q')),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("NOR_0", 'B'))
+                Sink::Internal(SinkTerminal::from_raw(Nor0, 'B'))
             ]),
         })
         .signal(Signal {
-            source: Source::Internal(SourceTerminal::from_raw("NOR_0", 'Q')),
+            source: Source::Internal(SourceTerminal::from_raw(Nor0, 'Q')),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("DLatch_0", 'D'))
+                Sink::Internal(SinkTerminal::from_raw(DLatch0, 'D'))
             ]),
         })
         .signal(Signal {
-            source: Source::Internal(SourceTerminal::from_raw("DLatch_0", 'N')),
+            source: Source::Internal(SourceTerminal::from_raw(DLatch0, 'N')),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("DLatch_1", 'D'))
+                Sink::Internal(SinkTerminal::from_raw(DLatch1, 'D'))
             ]),
         })
         .signal(Signal {
-            source: Source::Internal(SourceTerminal::from_raw("DLatch_1", 'N')),
+            source: Source::Internal(SourceTerminal::from_raw(DLatch1, 'N')),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("DLatch_2", 'D'))
+                Sink::Internal(SinkTerminal::from_raw(DLatch2, 'D'))
             ]),
         })
         .signal(Signal {
-            source: Source::Internal(SourceTerminal::from_raw("DLatch_1", 'N')),
+            source: Source::Internal(SourceTerminal::from_raw(DLatch1, 'N')),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("NOR_WRITE", 'B')),
+                Sink::Internal(SinkTerminal::from_raw(NorWrite, 'B')),
             ]),
         })
         .signal(Signal {
-            source: Source::Internal(SourceTerminal::from_raw("DLatch_2", 'N')),
+            source: Source::Internal(SourceTerminal::from_raw(DLatch2, 'N')),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("DLatch_3", 'D')),
-                Sink::Internal(SinkTerminal::from_raw("NOR_ALE", 'A')),
+                Sink::Internal(SinkTerminal::from_raw(DLatch3, 'D')),
+                Sink::Internal(SinkTerminal::from_raw(NorAle, 'A')),
             ]),
         })
         .signal(Signal {
-            source: Source::Internal(SourceTerminal::from_raw("DLatch_3", 'N')),
+            source: Source::Internal(SourceTerminal::from_raw(DLatch3, 'N')),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("DLatch_4", 'D'))
+                Sink::Internal(SinkTerminal::from_raw(DLatch4, 'D'))
             ]),
         })
         .signal(Signal {
-            source: Source::Internal(SourceTerminal::from_raw("DLatch_3", 'N')),
+            source: Source::Internal(SourceTerminal::from_raw(DLatch3, 'N')),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("SRLatch", 'R'))
+                Sink::Internal(SinkTerminal::from_raw(SRLatch0, 'R'))
             ]),
         })
         .signal(Signal {
-            source: Source::Internal(SourceTerminal::from_raw("DLatch_4", 'Q')),
+            source: Source::Internal(SourceTerminal::from_raw(DLatch4, 'Q')),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("NOR_ALE", 'B')),
+                Sink::Internal(SinkTerminal::from_raw(NorAle, 'B')),
             ]),
         })
         .signal(Signal {
-            source: Source::Internal(SourceTerminal::from_raw("DLatch_3", 'Q')),
+            source: Source::Internal(SourceTerminal::from_raw(DLatch3, 'Q')),
             sinks: BTreeSet::from([
-                Sink::Internal(SinkTerminal::from_raw("NOR_WRITE", 'A')),
+                Sink::Internal(SinkTerminal::from_raw(NorWrite, 'A')),
             ]),
         })
         .signal(Signal {
-            source: Source::Internal(SourceTerminal::from_raw("NOR_ALE", 'Q')),
+            source: Source::Internal(SourceTerminal::from_raw(NorAle, 'Q')),
             sinks: BTreeSet::from([
                 Sink::Primary(PrimarySink::Ale)
             ]),
         })
         .signal(Signal {
-            source: Source::Internal(SourceTerminal::from_raw("NOR_WRITE", 'Q')),
+            source: Source::Internal(SourceTerminal::from_raw(NorWrite, 'Q')),
             sinks: BTreeSet::from([
                 Sink::Primary(PrimarySink::Write)
             ]),
@@ -249,6 +272,25 @@ static WRITE_2007_COMPONENTS: LazyLock<ComponentGraph> = LazyLock::new(|| {
     graph
 });
 
+#[derive(ConstParamTy, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
+enum Write2007ComponentName {
+    DLatch0,
+    DLatch1,
+    DLatch2,
+    DLatch3,
+    DLatch4,
+    SRLatch0,
+    Nor0,
+    NorAle,
+    NorWrite,
+}
+
+impl fmt::Display for Write2007ComponentName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self:?}")
+    }
+}
+
 const STARTUP_PRIMARY_SOURCE_STATES: [bool; std::mem::variant_count::<PrimarySource>()] = [
     false, // PpuClockFirstHalf
     true,  // PpuClockSecondHalf
@@ -258,8 +300,8 @@ const STARTUP_PRIMARY_SOURCE_STATES: [bool; std::mem::variant_count::<PrimarySou
 
 pub struct CircuitBoard {
     primary_source_states: [bool; std::mem::variant_count::<PrimarySource>()],
-    read_2007_components: ComponentGraph,
-    write_2007_components: ComponentGraph,
+    read_2007_components: ComponentGraph<Read2007ComponentName>,
+    write_2007_components: ComponentGraph<Write2007ComponentName>,
 }
 
 impl CircuitBoard {
@@ -307,16 +349,16 @@ impl CircuitBoard {
 }
 
 #[derive(Clone)]
-pub struct ComponentGraph {
+pub struct ComponentGraph<Name: ConstParamTy_> {
     primary_sinks: BTreeMap<PrimarySink, bool>,
-    sink_label_and_signal_by_component_name: BTreeMap<ComponentName, (Component, Vec<(Label, Signal)>)>,
-    signals_by_source_terminal: BTreeMap<SourceTerminal, BTreeSet<Signal>>,
-    signal_states: BTreeMap<Signal, SignalState>,
+    sink_label_and_signal_by_component_name: BTreeMap<Name, (Component<Name>, Vec<(Label, Signal<Name>)>)>,
+    signals_by_source_terminal: BTreeMap<SourceTerminal<Name>, BTreeSet<Signal<Name>>>,
+    signal_states: BTreeMap<Signal<Name>, SignalState>,
 }
 
-impl ComponentGraph {
+impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + fmt::Debug + fmt::Display> ComponentGraph<Name> {
     // FIXME: This should fail to compile if called between two different types of ComponentGraphs.
-    pub fn signal_states_equal(&self, other: &ComponentGraph) -> bool {
+    pub fn signal_states_equal(&self, other: &ComponentGraph<Name>) -> bool {
         assert_eq!(self.signal_states.len(), other.signal_states.len());
         for (signal, state) in &self.signal_states {
             if other.signal_states[&signal] != *state {
@@ -348,7 +390,7 @@ impl ComponentGraph {
 
                 let output_signal_states = component.calculate_output_signal_states(input_signal_states);
                 for (source_label, signal_state) in output_signal_states {
-                    let source_terminal = SourceTerminal::new(component_name.clone(), source_label);
+                    let source_terminal = SourceTerminal::<Name>::new(*component_name, source_label);
                     let Some(signals) = self.signals_by_source_terminal.get(&source_terminal) else {
                         continue;
                     };
@@ -373,12 +415,12 @@ impl ComponentGraph {
     }
 }
 
-pub struct ComponentGraphBuilder  {
-    components: BTreeMap<ComponentName, Component>,
-    signals: BTreeSet<Signal>,
+pub struct ComponentGraphBuilder<Name: ConstParamTy_> {
+    components: BTreeMap<Name, Component<Name>>,
+    signals: BTreeSet<Signal<Name>>,
 }
 
-impl ComponentGraphBuilder {
+impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + fmt::Debug> ComponentGraphBuilder<Name> {
     pub fn new() -> Self {
         Self {
             components: BTreeMap::new(),
@@ -386,17 +428,17 @@ impl ComponentGraphBuilder {
         }
     }
 
-    pub fn component(mut self, component: Component) -> Self {
+    pub fn component(mut self, component: Component<Name>) -> Self {
         self.components.insert(component.name(), component);
         self
     }
 
-    pub fn signal(mut self, signal: Signal) -> Self {
+    pub fn signal(mut self, signal: Signal<Name>) -> Self {
         self.signals.insert(signal);
         self
     }
 
-    pub fn build(mut self) -> ComponentGraph {
+    pub fn build(mut self) -> ComponentGraph<Name> {
         let mut primary_sources = BTreeMap::new();
         for signal in &self.signals {
             if let Source::Primary(primary_source) = signal.source {
@@ -404,16 +446,16 @@ impl ComponentGraphBuilder {
             }
         }
 
-        let mut primary_sinks = BTreeMap::new();
+        let mut primary_sinks: BTreeMap<PrimarySink, bool> = BTreeMap::new();
         for signal in &self.signals {
             for sink in &signal.sinks {
                 if let Sink::Primary(primary_sink) = sink {
-                    primary_sinks.insert(*primary_sink, false);
+                    primary_sinks.insert(primary_sink.clone(), false);
                 }
             }
         }
 
-        let mut sink_label_and_signal_by_component_name: BTreeMap<ComponentName, (Component, Vec<(Label, Signal)>)> = BTreeMap::new();
+        let mut sink_label_and_signal_by_component_name: BTreeMap<Name, (Component<Name>, Vec<(Label, Signal<Name>)>)> = BTreeMap::new();
         for (signal, sink_terminal) in self.signals.iter().flat_map(|signal| signal.clone().sink_terminals().into_iter().map(|sink_terminal| (signal.clone(), sink_terminal))) {
             if let Some((_, signals)) = sink_label_and_signal_by_component_name.get_mut(&sink_terminal.component_name()) {
                 signals.push((sink_terminal.label(), signal));
@@ -425,7 +467,7 @@ impl ComponentGraphBuilder {
             }
         }
 
-        let mut signals_by_source_terminal: BTreeMap<SourceTerminal, BTreeSet<Signal>> = BTreeMap::new();
+        let mut signals_by_source_terminal: BTreeMap<SourceTerminal<Name>, BTreeSet<Signal<Name>>> = BTreeMap::new();
         for signal in self.signals {
             match signal.source {
                 Source::Primary(_) => {}
@@ -439,7 +481,7 @@ impl ComponentGraphBuilder {
             }
         }
 
-        let mut signal_states: BTreeMap<Signal, SignalState> = BTreeMap::new();
+        let mut signal_states: BTreeMap<Signal<Name>, SignalState> = BTreeMap::new();
         for (_current_component_name, (_component, labeled_signals)) in &sink_label_and_signal_by_component_name {
             for (_, signal) in labeled_signals {
                 signal_states.insert(signal.clone(), SignalState::Unknown);

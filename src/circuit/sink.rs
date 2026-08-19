@@ -1,12 +1,12 @@
 use std::fmt;
+use std::marker::ConstParamTy_;
 
-use crate::circuit::component::ComponentName;
 use crate::circuit::label::Label;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]
-pub enum Sink {
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
+pub enum Sink<Name: ConstParamTy_> {
     Primary(PrimarySink),
-    Internal(SinkTerminal),
+    Internal(SinkTerminal<Name>),
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
@@ -16,21 +16,21 @@ pub enum PrimarySink {
     Write,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]
-pub struct SinkTerminal {
-    component_name: ComponentName,
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
+pub struct SinkTerminal<Name: ConstParamTy_> {
+    component_name: Name,
     label: Label,
 }
 
-impl SinkTerminal {
-    pub fn from_raw(component_name: &'static str, label: char) -> Self {
+impl <Name: ConstParamTy_ + Clone + Copy> SinkTerminal<Name> {
+    pub fn from_raw(component_name: Name, label: char) -> Self {
         Self {
-            component_name: ComponentName::new(component_name),
+            component_name,
             label: Label::new(label),
         }
     }
 
-    pub fn component_name(&self) -> ComponentName {
+    pub fn component_name(&self) -> Name {
         self.component_name
     }
 
@@ -39,7 +39,7 @@ impl SinkTerminal {
     }
 }
 
-impl fmt::Display for SinkTerminal {
+impl <Name: ConstParamTy_ + fmt::Debug + fmt::Display> fmt::Display for SinkTerminal<Name> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Sink: {}-{:?}", self.component_name, self.label)
     }

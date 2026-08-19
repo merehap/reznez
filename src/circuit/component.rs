@@ -1,20 +1,21 @@
 use std::collections::BTreeMap;
 use std::fmt;
+use std::marker::ConstParamTy_;
 
 use crate::circuit::label::Label;
 use crate::circuit::signal_state::SignalState;
 use crate::circuit::component_type::ComponentType;
 
 #[derive(Clone)]
-pub struct Component {
-    name: ComponentName,
+pub struct Component<Name: ConstParamTy_> {
+    name: Name,
     component_type: Box<dyn ComponentType + Send + Sync>,
 }
 
-impl Component {
-    pub fn new(name: &'static str, component_type: Box<dyn ComponentType + Send + Sync>) -> Self {
+impl <Name: ConstParamTy_ + Clone + Copy> Component<Name> {
+    pub fn new(name: Name, component_type: Box<dyn ComponentType + Send + Sync>) -> Self {
         Self {
-            name: ComponentName::new(name),
+            name,
             component_type,
         }
     }
@@ -23,14 +24,16 @@ impl Component {
         self.component_type.calculate_output_signal_states(input_signal_states)
     }
 
-    pub fn name(&self) -> ComponentName {
+    pub fn name(&self) -> Name {
         self.name
     }
 }
 
+#[allow(dead_code)]
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
 pub struct ComponentName(&'static str);
 
+#[allow(dead_code)]
 impl ComponentName {
     pub const fn new(raw: &'static str) -> Self {
         assert!(!raw.is_empty());

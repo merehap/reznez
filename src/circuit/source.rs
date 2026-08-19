@@ -1,15 +1,15 @@
 use std::fmt;
+use std::marker::ConstParamTy_;
 
-use crate::circuit::component::ComponentName;
 use crate::circuit::label::Label;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]
-pub enum Source {
+pub enum Source<Name: ConstParamTy_> {
     Primary(PrimarySource),
-    Internal(SourceTerminal),
+    Internal(SourceTerminal<Name>),
 }
 
-impl fmt::Display for Source {
+impl <Name: ConstParamTy_ + fmt::Display> fmt::Display for Source<Name> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let text = match self {
             Self::Primary(primary_source) => primary_source.to_string(),
@@ -34,25 +34,25 @@ impl fmt::Display for PrimarySource {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]
-pub struct SourceTerminal {
-    component_name: ComponentName,
+pub struct SourceTerminal<Name: ConstParamTy_> {
+    component_name: Name,
     label: Label,
 }
 
-impl SourceTerminal {
-    pub fn new(component_name: ComponentName, label: Label) -> Self {
+impl <Name: ConstParamTy_ + fmt::Debug + fmt::Display> SourceTerminal<Name> {
+    pub fn new(component_name: Name, label: Label) -> Self {
         Self { component_name, label }
     }
 
-    pub fn from_raw(component_name: &'static str, label: char) -> Self {
+    pub fn from_raw(component_name: Name, label: char) -> Self {
         Self {
-            component_name: ComponentName::new(component_name),
+            component_name,
             label: Label::new(label),
         }
     }
 }
 
-impl fmt::Display for SourceTerminal {
+impl <Name: ConstParamTy_ + fmt::Display> fmt::Display for SourceTerminal<Name> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}-{:?}", self.component_name, self.label)
     }
