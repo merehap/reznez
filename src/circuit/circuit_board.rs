@@ -365,11 +365,10 @@ pub struct ComponentGraph<Name: ConstParamTy_> {
     primary_sinks: BTreeMap<PrimarySink, bool>,
     component_sink_info: Box<[(Component<Name>, Vec<(Label, Signal<Name>)>)]>,
     signals_by_source_terminal: BTreeMap<SourceTerminal<Name>, BTreeSet<Signal<Name>>>,
-    signal_states: BTreeMap<Signal<Name>, SignalState>,
+    signal_states: BTreeMap<Source<Name>, SignalState>,
 }
 
 impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + fmt::Debug + fmt::Display + ToIndex> ComponentGraph<Name> {
-    // FIXME: This should fail to compile if called between two different types of ComponentGraphs.
     pub fn signal_states_equal(&self, other: &ComponentGraph<Name>) -> bool {
         assert_eq!(self.signal_states.len(), other.signal_states.len());
         for (signal, state) in &self.signal_states {
@@ -386,7 +385,7 @@ impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + f
             for (_, signal) in labeled_signals {
                 if let Source::Primary(primary_source) = &signal.source {
                     let primary_source_value = primary_sources[*primary_source as usize];
-                    self.signal_states.insert(signal.clone(), SignalState::Resolved(primary_source_value));
+                    self.signal_states.insert(signal.source.clone(), SignalState::Resolved(primary_source_value));
                 }
             }
         }
@@ -396,7 +395,7 @@ impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + f
             for (component, labeled_signals) in &mut self.component_sink_info {
                 let mut input_signal_states = BTreeMap::new();
                 for (label, signal) in labeled_signals.iter() {
-                    let signal_state = self.signal_states[&signal];
+                    let signal_state = self.signal_states[&signal.source];
                     input_signal_states.insert(*label, signal_state);
                 }
 
@@ -416,7 +415,7 @@ impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + f
                                     }
                                 }
                                 Sink::Internal(_) => {
-                                    *self.signal_states.get_mut(&signal).unwrap() = signal_state;
+                                    *self.signal_states.get_mut(&signal.source).unwrap() = signal_state;
                                 }
                             }
                         }
@@ -497,10 +496,10 @@ impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + f
             }
         }
 
-        let mut signal_states: BTreeMap<Signal<Name>, SignalState> = BTreeMap::new();
+        let mut signal_states: BTreeMap<Source<Name>, SignalState> = BTreeMap::new();
         for (_component, labeled_signals) in &sink_label_and_signal_by_component_name {
             for (_, signal) in labeled_signals {
-                signal_states.insert(signal.clone(), SignalState::Unknown);
+                signal_states.insert(signal.source.clone(), SignalState::Unknown);
             }
         }
 
