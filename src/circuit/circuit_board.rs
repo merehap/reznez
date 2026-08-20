@@ -7,14 +7,14 @@ use crate::circuit::component::{Component, ToIndex};
 use crate::circuit::component_types::d_latch::DLatch;
 use crate::circuit::component_types::nor::Nor;
 use crate::circuit::component_types::sr_latch::SRLatch;
-use crate::circuit::label::Label;
+use crate::circuit::label::{LABEL_COUNT, Label};
 use crate::circuit::signal::Signal;
 use crate::circuit::signal_state::SignalState;
 use crate::circuit::sink::{PrimarySink, Sink, SinkTerminal};
 use crate::circuit::source::{PrimarySource, Source, SourceTerminal};
 use crate::memory::ppu::ppu_pinout::PpuPinout;
 
-static READ_2007_COMPONENTS: LazyLock<ComponentGraph<Read2007ComponentName>> = LazyLock::new(|| {
+static READ_2007_COMPONENTS: LazyLock<ComponentGraph<Read2007ComponentName, {READ_2007_COMPONENT_NAME_COUNT}, {LABEL_COUNT}>> = LazyLock::new(|| {
     use Read2007ComponentName::*;
     let mut graph = ComponentGraphBuilder::new()
         .component(Component::new(DLatch0, Box::new(DLatch::new(false))))
@@ -134,6 +134,8 @@ static READ_2007_COMPONENTS: LazyLock<ComponentGraph<Read2007ComponentName>> = L
     graph
 });
 
+const READ_2007_COMPONENT_NAME_COUNT: usize = std::mem::variant_count::<Read2007ComponentName>();
+
 #[derive(ConstParamTy, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
 enum Read2007ComponentName {
     DLatch0,
@@ -159,7 +161,7 @@ impl ToIndex for Read2007ComponentName {
     }
 }
 
-static WRITE_2007_COMPONENTS: LazyLock<ComponentGraph<Write2007ComponentName>> = LazyLock::new(|| {
+static WRITE_2007_COMPONENTS: LazyLock<ComponentGraph<Write2007ComponentName, {WRITE_2007_COMPONENT_NAME_COUNT}, {LABEL_COUNT}>> = LazyLock::new(|| {
     use Write2007ComponentName::*;
     let mut graph = ComponentGraphBuilder::new()
         .component(Component::new(DLatch0, Box::new(DLatch::new(false))))
@@ -278,6 +280,8 @@ static WRITE_2007_COMPONENTS: LazyLock<ComponentGraph<Write2007ComponentName>> =
     graph
 });
 
+const WRITE_2007_COMPONENT_NAME_COUNT: usize = std::mem::variant_count::<Write2007ComponentName>();
+
 #[derive(ConstParamTy, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
 enum Write2007ComponentName {
     DLatch0,
@@ -312,8 +316,8 @@ const STARTUP_PRIMARY_SOURCE_STATES: [bool; std::mem::variant_count::<PrimarySou
 
 pub struct CircuitBoard {
     primary_source_states: [bool; std::mem::variant_count::<PrimarySource>()],
-    read_2007_components: ComponentGraph<Read2007ComponentName>,
-    write_2007_components: ComponentGraph<Write2007ComponentName>,
+    read_2007_components: ComponentGraph<Read2007ComponentName, {std::mem::variant_count::<Read2007ComponentName>()}, {std::mem::variant_count::<Label>()}>,
+    write_2007_components: ComponentGraph<Write2007ComponentName, {std::mem::variant_count::<Write2007ComponentName>()}, {std::mem::variant_count::<Label>()}>,
 }
 
 impl CircuitBoard {
@@ -361,23 +365,17 @@ impl CircuitBoard {
 }
 
 #[derive(Clone)]
-pub struct ComponentGraph<Name: ConstParamTy_> {
+pub struct ComponentGraph<Name: ConstParamTy_, const NAME_COUNT: usize, const LABEL_COUNT: usize> {
     primary_sinks: BTreeMap<PrimarySink, bool>,
     component_sink_info: Box<[(Component<Name>, Vec<(Label, Signal<Name>)>)]>,
     signals_by_source_terminal: BTreeMap<SourceTerminal<Name>, BTreeSet<Signal<Name>>>,
-    signal_states: BTreeMap<Source<Name>, SignalState>,
+    primary_signal_states: [bool; std::mem::variant_count::<PrimarySource>()],
+    internal_signal_states: Box<[[SignalState; LABEL_COUNT]; NAME_COUNT]>,
 }
 
-impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + fmt::Debug + fmt::Display + ToIndex> ComponentGraph<Name> {
-    pub fn signal_states_equal(&self, other: &ComponentGraph<Name>) -> bool {
-        assert_eq!(self.signal_states.len(), other.signal_states.len());
-        for (signal, state) in &self.signal_states {
-            if other.signal_states[&signal] != *state {
-                return false
-            }
-        }
-
-        true
+impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + fmt::Debug + fmt::Display + ToIndex, const NAME_COUNT: usize, const LABEL_COUNT: usize> ComponentGraph<Name, NAME_COUNT, LABEL_COUNT> {
+    pub fn signal_states_equal(&self, other: &ComponentGraph<Name, NAME_COUNT, LABEL_COUNT>) -> bool {
+        self.internal_signal_states == other.internal_signal_states
     }
 
     pub fn compute_primary_sinks(&mut self, primary_sources: &[bool]) {
@@ -385,7 +383,7 @@ impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + f
             for (_, signal) in labeled_signals {
                 if let Source::Primary(primary_source) = &signal.source {
                     let primary_source_value = primary_sources[*primary_source as usize];
-                    self.signal_states.insert(signal.source.clone(), SignalState::Resolved(primary_source_value));
+                    self.primary_signal_states[*primary_source as usize] = primary_source_value;
                 }
             }
         }
@@ -395,7 +393,10 @@ impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + f
             for (component, labeled_signals) in &mut self.component_sink_info {
                 let mut input_signal_states = BTreeMap::new();
                 for (label, signal) in labeled_signals.iter() {
-                    let signal_state = self.signal_states[&signal.source];
+                    let signal_state = match &signal.source {
+                        Source::Primary(primary_source) => SignalState::Resolved(self.primary_signal_states[*primary_source as usize]),
+                        Source::Internal(terminal) => self.internal_signal_states[terminal.component_name.to_index()][terminal.label.to_index()],
+                    };
                     input_signal_states.insert(*label, signal_state);
                 }
 
@@ -415,7 +416,10 @@ impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + f
                                     }
                                 }
                                 Sink::Internal(_) => {
-                                    *self.signal_states.get_mut(&signal.source).unwrap() = signal_state;
+                                    match &signal.source {
+                                        Source::Primary(_) => panic!(),
+                                        Source::Internal(terminal) => self.internal_signal_states[terminal.component_name.to_index()][terminal.label.to_index()] = signal_state,
+                                    }
                                 }
                             }
                         }
@@ -426,12 +430,12 @@ impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + f
     }
 }
 
-pub struct ComponentGraphBuilder<Name: ConstParamTy_> {
+pub struct ComponentGraphBuilder<Name: ConstParamTy_, const NAME_COUNT: usize, const LABEL_COUNT: usize> {
     components: BTreeMap<Name, Component<Name>>,
     signals: BTreeSet<Signal<Name>>,
 }
 
-impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + fmt::Debug + ToIndex> ComponentGraphBuilder<Name> {
+impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + fmt::Debug + ToIndex, const NAME_COUNT: usize, const LABEL_COUNT: usize> ComponentGraphBuilder<Name, NAME_COUNT, LABEL_COUNT> {
     pub fn new() -> Self {
         Self {
             components: BTreeMap::new(),
@@ -449,14 +453,7 @@ impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + f
         self
     }
 
-    pub fn build(mut self) -> ComponentGraph<Name> {
-        let mut primary_sources = BTreeMap::new();
-        for signal in &self.signals {
-            if let Source::Primary(primary_source) = signal.source {
-                primary_sources.insert(primary_source, false);
-            }
-        }
-
+    pub fn build(mut self) -> ComponentGraph<Name, {NAME_COUNT}, {LABEL_COUNT}> {
         let mut primary_sinks: BTreeMap<PrimarySink, bool> = BTreeMap::new();
         for signal in &self.signals {
             for sink in &signal.sinks {
@@ -496,18 +493,15 @@ impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + f
             }
         }
 
-        let mut signal_states: BTreeMap<Source<Name>, SignalState> = BTreeMap::new();
-        for (_component, labeled_signals) in &sink_label_and_signal_by_component_name {
-            for (_, signal) in labeled_signals {
-                signal_states.insert(signal.source.clone(), SignalState::Unknown);
-            }
-        }
-
+        let primary_signal_states: [bool; std::mem::variant_count::<PrimarySource>()] =
+            [false; std::mem::variant_count::<PrimarySource>()];
+        let internal_signal_states = Box::new([[SignalState::Unknown ; LABEL_COUNT]; NAME_COUNT]);
         ComponentGraph {
             primary_sinks,
             component_sink_info: sink_label_and_signal_by_component_name,
             signals_by_source_terminal,
-            signal_states,
+            primary_signal_states,
+            internal_signal_states,
         }
     }
 }

@@ -35,8 +35,8 @@ impl fmt::Display for PrimarySource {
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]
 pub struct SourceTerminal<Name: ConstParamTy_> {
-    component_name: Name,
-    label: Label,
+    pub component_name: Name,
+    pub label: Label,
 }
 
 impl <Name: ConstParamTy_ + fmt::Debug + fmt::Display> SourceTerminal<Name> {

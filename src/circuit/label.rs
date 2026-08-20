@@ -1,3 +1,7 @@
+use crate::circuit::component::ToIndex;
+
+pub const LABEL_COUNT: usize = std::mem::variant_count::<Label>();
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
 pub enum Label { A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z }
 
@@ -32,5 +36,11 @@ impl Label {
             'Z' => Self::Z,
             _ => panic!("Bad label"),
         }
+    }
+}
+
+impl ToIndex for Label {
+    fn to_index(&self) -> usize {
+        *self as usize
     }
 }
