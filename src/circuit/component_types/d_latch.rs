@@ -1,8 +1,9 @@
-use std::collections::{BTreeMap, BTreeSet};
-
 use crate::circuit::component_type::ComponentType;
 use crate::circuit::label::{LABEL_COUNT, Label};
 use crate::circuit::signal_state::SignalState;
+
+const SOURCE_LABELS: &'static [Label] = &[Label::new('Q'), Label::new('N')];
+const SINK_LABELS: &'static [Label] = &[Label::new('E'), Label::new('D')];
 
 #[derive(Clone, Debug)]
 pub struct DLatch {
@@ -16,7 +17,12 @@ impl DLatch {
 }
 
 impl ComponentType for DLatch {
-    fn calculate_output_signal_states(&mut self, inputs: &[SignalState; LABEL_COUNT]) -> BTreeMap<Label, SignalState> {
+    fn calculate_output_signal_states(
+        &mut self,
+        inputs: &[SignalState; LABEL_COUNT],
+        outputs: &mut [SignalState; LABEL_COUNT],
+    ) {
+
         use SignalState::*;
         let new_state = match (&inputs[Label::E as usize], &inputs[Label::D as usize]) {
             (Resolved(true) , d      ) => *d,
@@ -28,17 +34,15 @@ impl ComponentType for DLatch {
             self.state = state;
         }
 
-        BTreeMap::from([
-            (Label::Q, new_state),
-            (Label::N, new_state.negate()),
-        ])
+        outputs[Label::Q as usize] = new_state;
+        outputs[Label::N as usize] = new_state.negate();
     }
 
-    fn input_labels(&self) -> BTreeSet<Label> {
-        ['E', 'D'].into_iter().map(Label::new).collect()
+    fn sink_labels(&self) -> &'static [Label] {
+        SINK_LABELS
     }
 
-    fn output_labels(&self) -> BTreeSet<Label> {
-        ['Q', 'N'].into_iter().map(Label::new).collect()
+    fn source_labels(&self) -> &[Label] {
+        SOURCE_LABELS
     }
 }

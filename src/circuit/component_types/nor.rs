@@ -1,14 +1,15 @@
-use std::collections::{BTreeMap, BTreeSet};
-
 use crate::circuit::component_type::ComponentType;
 use crate::circuit::label::{LABEL_COUNT, Label};
 use crate::circuit::signal_state::SignalState;
+
+const INPUT_LABELS: &'static [Label] = &[Label::new('A'), Label::new('B')];
+const OUTPUT_LABELS: &'static [Label] = &[Label::new('Q')];
 
 #[derive(Clone, Debug)]
 pub struct Nor;
 
 impl ComponentType for Nor {
-    fn calculate_output_signal_states(&mut self, inputs: &[SignalState; LABEL_COUNT]) -> BTreeMap<Label, SignalState> {
+    fn calculate_output_signal_states(&mut self, inputs: &[SignalState; LABEL_COUNT], outputs: &mut [SignalState; LABEL_COUNT]) {
         use SignalState::*;
         let q = match (&inputs[Label::A as usize], &inputs[Label::B as usize]) {
             (Resolved(false), Resolved(false)) => Resolved(true),
@@ -18,14 +19,15 @@ impl ComponentType for Nor {
             (_              , Unknown        ) => Unknown,
         };
 
-        BTreeMap::from([(Label::Q, q)])
+
+        outputs[Label::Q as usize] = q;
     }
 
-    fn input_labels(&self) -> BTreeSet<Label> {
-        ['A', 'B'].into_iter().map(Label::new).collect()
+    fn sink_labels(&self) -> &[Label] {
+        INPUT_LABELS
     }
 
-    fn output_labels(&self) -> BTreeSet<Label> {
-        ['Q'].into_iter().map(Label::new).collect()
+    fn source_labels(&self) -> &[Label] {
+        OUTPUT_LABELS
     }
 }

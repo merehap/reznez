@@ -399,9 +399,11 @@ impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + f
                     component.set_input(*label, signal_state);
                 }
 
-                let output_signal_states = component.calculate_output_signal_states();
-                for (source_label, signal_state) in output_signal_states {
-                    let source_terminal = SourceTerminal::<Name>::new(component.name(), source_label);
+                component.calculate_output_signal_states();
+                let output_signal_states = component.output_signal_states();
+                for source_label in component.source_labels() {
+                    let signal_state = output_signal_states[*source_label as usize];
+                    let source_terminal = SourceTerminal::<Name>::new(component.name(), *source_label);
                     let Some(signals) = self.signals_by_source_terminal.get(&source_terminal) else {
                         continue;
                     };

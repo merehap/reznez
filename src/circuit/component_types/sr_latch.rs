@@ -1,8 +1,9 @@
-use std::collections::{BTreeMap, BTreeSet};
-
 use crate::circuit::component_type::ComponentType;
 use crate::circuit::label::{LABEL_COUNT, Label};
 use crate::circuit::signal_state::SignalState;
+
+const INPUT_LABELS: &'static [Label] = &[Label::new('S'), Label::new('R')];
+const OUTPUT_LABELS: &'static [Label] = &[Label::new('Q'), Label::new('N')];
 
 #[derive(Clone, Debug)]
 pub struct SRLatch {
@@ -16,7 +17,7 @@ impl SRLatch {
 }
 
 impl ComponentType for SRLatch {
-    fn calculate_output_signal_states(&mut self, inputs: &[SignalState; LABEL_COUNT]) -> BTreeMap<Label, SignalState> {
+    fn calculate_output_signal_states(&mut self, inputs: &[SignalState; LABEL_COUNT], outputs: &mut [SignalState; LABEL_COUNT]) {
         let mut illegal_state = false;
 
         use SignalState::*;
@@ -48,23 +49,19 @@ impl ComponentType for SRLatch {
         }
 
         if illegal_state {
-            BTreeMap::from([
-                (Label::Q, Resolved(false)),
-                (Label::N, Resolved(false)),
-            ])
+            outputs[Label::Q as usize] = Resolved(false);
+            outputs[Label::N as usize] = Resolved(false);
         } else {
-            BTreeMap::from([
-                (Label::Q, new_state),
-                (Label::N, new_state.negate()),
-            ])
+            outputs[Label::Q as usize] = new_state;
+            outputs[Label::N as usize] = new_state.negate();
         }
     }
 
-    fn input_labels(&self) -> BTreeSet<Label> {
-        ['S', 'R'].into_iter().map(Label::new).collect()
+    fn sink_labels(&self) -> &[Label] {
+        INPUT_LABELS
     }
 
-    fn output_labels(&self) -> BTreeSet<Label> {
-        ['Q', 'N'].into_iter().map(Label::new).collect()
+    fn source_labels(&self) -> &[Label] {
+        OUTPUT_LABELS
     }
 }
