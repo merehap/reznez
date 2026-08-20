@@ -40,10 +40,6 @@ pub struct SourceTerminal<Name: ConstParamTy_> {
 }
 
 impl <Name: ConstParamTy_ + fmt::Debug + fmt::Display> SourceTerminal<Name> {
-    pub fn new(component_name: Name, label: Label) -> Self {
-        Self { component_name, label }
-    }
-
     pub fn from_raw(component_name: Name, label: char) -> Self {
         Self {
             component_name,

@@ -29,103 +29,103 @@ static READ_2007_COMPONENTS: LazyLock<ComponentGraph<Read2007ComponentName, {REA
         .component(Component::new(NorRead, Box::new(Nor)))
         .signal(Signal {
             source: Source::Primary(PrimarySource::PpuClockFirstHalf),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(DLatch0, 'E')),
                 Sink::Internal(SinkTerminal::from_raw(DLatch2, 'E')),
                 Sink::Internal(SinkTerminal::from_raw(DLatch4, 'E')),
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Primary(PrimarySource::PpuClockSecondHalf),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(DLatch1, 'E')),
                 Sink::Internal(SinkTerminal::from_raw(DLatch3, 'E')),
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Primary(PrimarySource::Read2007),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(Nor0, 'A'))
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Primary(PrimarySource::Read2007),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(SRLatch0, 'S'))
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Internal(SourceTerminal::from_raw(SRLatch0, 'Q')),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(Nor0, 'B'))
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Internal(SourceTerminal::from_raw(Nor0, 'Q')),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(DLatch0, 'D'))
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Internal(SourceTerminal::from_raw(DLatch0, 'N')),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(DLatch1, 'D'))
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Internal(SourceTerminal::from_raw(DLatch1, 'N')),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(DLatch2, 'D'))
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Internal(SourceTerminal::from_raw(DLatch2, 'Q')),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(NorRead, 'B')),
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Internal(SourceTerminal::from_raw(DLatch2, 'N')),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(DLatch3, 'D')),
                 Sink::Internal(SinkTerminal::from_raw(NorAle, 'A')),
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Internal(SourceTerminal::from_raw(DLatch3, 'N')),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(DLatch4, 'D'))
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Internal(SourceTerminal::from_raw(DLatch3, 'N')),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(SRLatch0, 'R'))
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Internal(SourceTerminal::from_raw(DLatch4, 'Q')),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(NorAle, 'B')),
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Internal(SourceTerminal::from_raw(DLatch4, 'N')),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(NorRead, 'A')),
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Internal(SourceTerminal::from_raw(NorAle, 'Q')),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Primary(PrimarySink::Ale)
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Internal(SourceTerminal::from_raw(NorRead, 'Q')),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Primary(PrimarySink::Read)
-            ]),
+            ],
         })
         .build();
 
@@ -176,103 +176,103 @@ static WRITE_2007_COMPONENTS: LazyLock<ComponentGraph<Write2007ComponentName, {W
         .component(Component::new(NorWrite, Box::new(Nor)))
         .signal(Signal {
             source: Source::Primary(PrimarySource::PpuClockFirstHalf),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(DLatch0, 'E')),
                 Sink::Internal(SinkTerminal::from_raw(DLatch2, 'E')),
                 Sink::Internal(SinkTerminal::from_raw(DLatch4, 'E')),
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Primary(PrimarySource::PpuClockSecondHalf),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(DLatch1, 'E')),
                 Sink::Internal(SinkTerminal::from_raw(DLatch3, 'E')),
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Primary(PrimarySource::Write2007),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(Nor0, 'A'))
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Primary(PrimarySource::Write2007),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(SRLatch0, 'S'))
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Internal(SourceTerminal::from_raw(SRLatch0, 'Q')),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(Nor0, 'B'))
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Internal(SourceTerminal::from_raw(Nor0, 'Q')),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(DLatch0, 'D'))
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Internal(SourceTerminal::from_raw(DLatch0, 'N')),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(DLatch1, 'D'))
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Internal(SourceTerminal::from_raw(DLatch1, 'N')),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(DLatch2, 'D'))
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Internal(SourceTerminal::from_raw(DLatch1, 'N')),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(NorWrite, 'B')),
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Internal(SourceTerminal::from_raw(DLatch2, 'N')),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(DLatch3, 'D')),
                 Sink::Internal(SinkTerminal::from_raw(NorAle, 'A')),
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Internal(SourceTerminal::from_raw(DLatch3, 'N')),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(DLatch4, 'D'))
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Internal(SourceTerminal::from_raw(DLatch3, 'N')),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(SRLatch0, 'R'))
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Internal(SourceTerminal::from_raw(DLatch4, 'Q')),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(NorAle, 'B')),
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Internal(SourceTerminal::from_raw(DLatch3, 'Q')),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(NorWrite, 'A')),
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Internal(SourceTerminal::from_raw(NorAle, 'Q')),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Primary(PrimarySink::Ale)
-            ]),
+            ],
         })
         .signal(Signal {
             source: Source::Internal(SourceTerminal::from_raw(NorWrite, 'Q')),
-            sinks: BTreeSet::from([
+            sinks: vec![
                 Sink::Primary(PrimarySink::Write)
-            ]),
+            ],
         })
         .build();
 
@@ -389,7 +389,7 @@ impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + f
         }
 
         // TODO: Find a proper way to terminate this rather than just iterating 10 times and hoping for the best.
-        for _ in 0..3 {
+        for _ in 0..2 {
             for (component, labeled_signals) in &mut self.component_sink_info {
                 for (label, signal) in labeled_signals.iter() {
                     let signal_state = match &signal.source {
@@ -400,13 +400,9 @@ impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + f
                 }
 
                 component.calculate_output_signal_states();
-                let output_signal_states = component.output_signal_states();
                 for source_label in component.source_labels() {
-                    let signal_state = output_signal_states[*source_label as usize];
-                    let source_terminal = SourceTerminal::<Name>::new(component.name(), *source_label);
-
-                    let signals = &self.signals_by_source_terminal[source_terminal.component_name.to_index()][source_terminal.label.to_index()];
-                    for signal in signals {
+                    let signal_state = component.output_signal_state(*source_label);
+                    for signal in &self.signals_by_source_terminal[component.name().to_index()][source_label.to_index()] {
                         for sink in &signal.sinks {
                             match sink {
                                 Sink::Primary(primary_sink) => {

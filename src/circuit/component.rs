@@ -36,8 +36,8 @@ impl <Name: ConstParamTy_ + Clone + Copy + ToIndex> Component<Name> {
         self.component_type.sink_labels()
     }
 
-    pub fn output_signal_states(&self) -> [SignalState; LABEL_COUNT] {
-        self.output_signal_states
+    pub fn output_signal_state(&self, label: Label) -> SignalState {
+        self.output_signal_states[label as usize]
     }
 
     pub fn set_input(&mut self, label: Label, signal_state: SignalState) {
