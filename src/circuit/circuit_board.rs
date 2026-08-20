@@ -10,7 +10,7 @@ use crate::circuit::component_types::sr_latch::SRLatch;
 use crate::circuit::label::{LABEL_COUNT, Label};
 use crate::circuit::signal::Signal;
 use crate::circuit::signal_state::SignalState;
-use crate::circuit::sink::{PrimarySink, Sink, SinkTerminal};
+use crate::circuit::sink::{PRIMARY_SINK_COUNT, PrimarySink, Sink, SinkTerminal};
 use crate::circuit::source::{PrimarySource, Source, SourceTerminal};
 use crate::memory::ppu::ppu_pinout::PpuPinout;
 
@@ -344,8 +344,8 @@ impl CircuitBoard {
     pub fn calculate_read_2007_outputs(&mut self, ppu_pinout: &mut PpuPinout) {
         self.read_2007_components.compute_primary_sinks(&self.primary_source_states);
 
-        ppu_pinout.ppu_data_ale = self.read_2007_components.primary_sinks[&PrimarySink::Ale];
-        ppu_pinout.ppu_data_read = self.read_2007_components.primary_sinks[&PrimarySink::Read];
+        ppu_pinout.ppu_data_ale = self.read_2007_components.primary_sinks[PrimarySink::Ale as usize];
+        ppu_pinout.ppu_data_read = self.read_2007_components.primary_sinks[PrimarySink::Read as usize];
     }
 
     pub fn is_read_2007_circuit_in_base_state(&self) -> bool {
@@ -355,8 +355,8 @@ impl CircuitBoard {
     pub fn calculate_write_2007_outputs(&mut self, ppu_pinout: &mut PpuPinout) {
         self.write_2007_components.compute_primary_sinks(&self.primary_source_states);
 
-        ppu_pinout.ppu_data_ale = self.write_2007_components.primary_sinks[&PrimarySink::Ale];
-        ppu_pinout.ppu_data_write = self.write_2007_components.primary_sinks[&PrimarySink::Write];
+        ppu_pinout.ppu_data_ale = self.write_2007_components.primary_sinks[PrimarySink::Ale as usize];
+        ppu_pinout.ppu_data_write = self.write_2007_components.primary_sinks[PrimarySink::Write as usize];
     }
 
     pub fn is_write_2007_circuit_in_base_state(&self) -> bool {
@@ -366,7 +366,7 @@ impl CircuitBoard {
 
 #[derive(Clone)]
 pub struct ComponentGraph<Name: ConstParamTy_, const NAME_COUNT: usize, const LABEL_COUNT: usize> {
-    primary_sinks: BTreeMap<PrimarySink, bool>,
+    primary_sinks: [bool; PRIMARY_SINK_COUNT],
     component_sink_info: Box<[(Component<Name>, Vec<(Label, Signal<Name>)>)]>,
     signals_by_source_terminal: BTreeMap<SourceTerminal<Name>, BTreeSet<Signal<Name>>>,
     primary_signal_states: [bool; std::mem::variant_count::<PrimarySource>()],
@@ -413,7 +413,7 @@ impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + f
                             match sink {
                                 Sink::Primary(primary_sink) => {
                                     if let SignalState::Resolved(resolved_state) = signal_state {
-                                        self.primary_sinks.insert(*primary_sink, resolved_state);
+                                        self.primary_sinks[*primary_sink as usize] = resolved_state;
                                     }
                                 }
                                 Sink::Internal(_) => {
@@ -455,15 +455,6 @@ impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + f
     }
 
     pub fn build(mut self) -> ComponentGraph<Name, {NAME_COUNT}, {LABEL_COUNT}> {
-        let mut primary_sinks: BTreeMap<PrimarySink, bool> = BTreeMap::new();
-        for signal in &self.signals {
-            for sink in &signal.sinks {
-                if let Sink::Primary(primary_sink) = sink {
-                    primary_sinks.insert(primary_sink.clone(), false);
-                }
-            }
-        }
-
         assert_eq!(self.components.len(), std::mem::variant_count::<Name>());
         let mut sink_label_and_signal_by_component_name: Box<[(Component<Name>, Vec<(Label, Signal<Name>)>)]> =
             vec![(self.components.values().next().unwrap().clone(), Vec::new()); std::mem::variant_count::<Name>()].into_boxed_slice();
@@ -494,6 +485,7 @@ impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + f
             }
         }
 
+        let primary_sinks = [false; PRIMARY_SINK_COUNT];
         let primary_signal_states: [bool; std::mem::variant_count::<PrimarySource>()] =
             [false; std::mem::variant_count::<PrimarySource>()];
         let internal_signal_states = Box::new([[SignalState::Unknown ; LABEL_COUNT]; NAME_COUNT]);

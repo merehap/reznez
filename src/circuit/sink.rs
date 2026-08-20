@@ -3,6 +3,8 @@ use std::marker::ConstParamTy_;
 
 use crate::circuit::label::Label;
 
+pub const PRIMARY_SINK_COUNT: usize = std::mem::variant_count::<PrimarySink>();
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
 pub enum Sink<Name: ConstParamTy_> {
     Primary(PrimarySink),
