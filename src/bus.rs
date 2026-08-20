@@ -440,7 +440,8 @@ impl Bus {
                 self.signals.start_write_2007();
                 // FIXME: The ordering of these three statements seems wrong. Surely the address bus should be set first?
                 // This seems likely to be related to how the PPU data bus and address bus have shared bits.
-                self.ppu_write(self.ppu_regs.current_address, self.cpu_pinout.data_bus);
+                self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
+                self.ppu_write();
                 self.ppu_regs.write_ppu_data(self.cpu_pinout.data_bus);
                 self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
             }
@@ -514,7 +515,9 @@ impl Bus {
     }
 
     #[inline]
-    pub fn ppu_write(&mut self, addr: PpuAddress, value: u8) {
+    pub fn ppu_write(&mut self) {
+        let addr = self.ppu_pinout.address();
+        let value = self.cpu_pinout.data_bus;
         match addr.to_section() {
             PpuAddressSection::Chr(_) => self.chr_memory.write(&mut self.ciram, &mut self.mapper_custom_pages, addr, value),
             PpuAddressSection::Palette(palette_ram_index) => self.palette_ram.write(palette_ram_index, value),
