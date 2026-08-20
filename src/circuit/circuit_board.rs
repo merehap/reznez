@@ -368,7 +368,7 @@ impl CircuitBoard {
 pub struct ComponentGraph<Name: ConstParamTy_, const NAME_COUNT: usize, const LABEL_COUNT: usize> {
     primary_sinks: [bool; PRIMARY_SINK_COUNT],
     component_sink_info: Box<[(Component<Name>, Vec<(Label, Signal<Name>)>)]>,
-    signals_by_source_terminal: BTreeMap<SourceTerminal<Name>, Vec<Signal<Name>>>,
+    signals_by_source_terminal: Box<[[Vec<Signal<Name>>; LABEL_COUNT]; NAME_COUNT]>,
     primary_signal_states: [bool; std::mem::variant_count::<PrimarySource>()],
     internal_signal_states: Box<[[SignalState; LABEL_COUNT]; NAME_COUNT]>,
 }
@@ -404,10 +404,8 @@ impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + f
                 for source_label in component.source_labels() {
                     let signal_state = output_signal_states[*source_label as usize];
                     let source_terminal = SourceTerminal::<Name>::new(component.name(), *source_label);
-                    let Some(signals) = self.signals_by_source_terminal.get(&source_terminal) else {
-                        continue;
-                    };
 
+                    let signals = &self.signals_by_source_terminal[source_terminal.component_name.to_index()][source_terminal.label.to_index()];
                     for signal in signals {
                         for sink in &signal.sinks {
                             match sink {
@@ -471,16 +469,18 @@ impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + f
             }
         }
 
-        let mut signals_by_source_terminal: BTreeMap<SourceTerminal<Name>, Vec<Signal<Name>>> = BTreeMap::new();
+        let mut signals_by_source_terminal: Vec<[Vec<Signal<Name>>; LABEL_COUNT]> = Vec::new();
+        for _ in 0..NAME_COUNT {
+            let labels: Vec<_> = (0..LABEL_COUNT).map(|_| Vec::new()).collect();
+            signals_by_source_terminal.push(labels.try_into().unwrap());
+        }
+
+        let mut signals_by_source_terminal: Box<[[Vec<Signal<Name>>; LABEL_COUNT]; NAME_COUNT]> = Box::new(signals_by_source_terminal.try_into().unwrap());
         for signal in self.signals {
             match signal.source {
                 Source::Primary(_) => {}
                 Source::Internal(ref terminal) => {
-                    if let Some(signals) = signals_by_source_terminal.get_mut(terminal) {
-                        signals.push(signal.clone());
-                    } else {
-                        signals_by_source_terminal.insert(terminal.clone(), vec![signal]);
-                    }
+                    signals_by_source_terminal[terminal.component_name.to_index()][terminal.label.to_index()].push(signal);
                 }
             }
         }
