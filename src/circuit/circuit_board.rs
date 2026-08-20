@@ -368,7 +368,7 @@ impl CircuitBoard {
 pub struct ComponentGraph<Name: ConstParamTy_, const NAME_COUNT: usize, const LABEL_COUNT: usize> {
     primary_sinks: [bool; PRIMARY_SINK_COUNT],
     component_sink_info: Box<[(Component<Name>, Vec<(Label, Signal<Name>)>)]>,
-    signals_by_source_terminal: BTreeMap<SourceTerminal<Name>, BTreeSet<Signal<Name>>>,
+    signals_by_source_terminal: BTreeMap<SourceTerminal<Name>, Vec<Signal<Name>>>,
     primary_signal_states: [bool; std::mem::variant_count::<PrimarySource>()],
     internal_signal_states: Box<[[SignalState; LABEL_COUNT]; NAME_COUNT]>,
 }
@@ -471,15 +471,15 @@ impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + f
             }
         }
 
-        let mut signals_by_source_terminal: BTreeMap<SourceTerminal<Name>, BTreeSet<Signal<Name>>> = BTreeMap::new();
+        let mut signals_by_source_terminal: BTreeMap<SourceTerminal<Name>, Vec<Signal<Name>>> = BTreeMap::new();
         for signal in self.signals {
             match signal.source {
                 Source::Primary(_) => {}
                 Source::Internal(ref terminal) => {
                     if let Some(signals) = signals_by_source_terminal.get_mut(terminal) {
-                        signals.insert(signal.clone());
+                        signals.push(signal.clone());
                     } else {
-                        signals_by_source_terminal.insert(terminal.clone(), BTreeSet::from([signal]));
+                        signals_by_source_terminal.insert(terminal.clone(), vec![signal]);
                     }
                 }
             }
