@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::circuit::component_type::ComponentType;
-use crate::circuit::label::Label;
+use crate::circuit::label::{LABEL_COUNT, Label};
 use crate::circuit::signal_state::SignalState;
 
 #[derive(Clone, Debug)]
@@ -16,9 +16,9 @@ impl DLatch {
 }
 
 impl ComponentType for DLatch {
-    fn calculate_output_signal_states(&mut self, inputs: BTreeMap<Label, SignalState>) -> BTreeMap<Label, SignalState> {
+    fn calculate_output_signal_states(&mut self, inputs: &[SignalState; LABEL_COUNT]) -> BTreeMap<Label, SignalState> {
         use SignalState::*;
-        let new_state = match (&inputs[&Label::E], &inputs[&Label::D]) {
+        let new_state = match (&inputs[Label::E as usize], &inputs[Label::D as usize]) {
             (Resolved(true) , d      ) => *d,
             (Resolved(false), _      ) => Resolved(self.state),
             (Unknown        , _      ) => panic!("Don't know what to do if DLatch is neither enabled nor disabled."),

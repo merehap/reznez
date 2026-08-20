@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::circuit::component_type::ComponentType;
-use crate::circuit::label::Label;
+use crate::circuit::label::{LABEL_COUNT, Label};
 use crate::circuit::signal_state::SignalState;
 
 #[derive(Clone, Debug)]
@@ -16,11 +16,11 @@ impl SRLatch {
 }
 
 impl ComponentType for SRLatch {
-    fn calculate_output_signal_states(&mut self, inputs: BTreeMap<Label, SignalState>) -> BTreeMap<Label, SignalState> {
+    fn calculate_output_signal_states(&mut self, inputs: &[SignalState; LABEL_COUNT]) -> BTreeMap<Label, SignalState> {
         let mut illegal_state = false;
 
         use SignalState::*;
-        let new_state = match (&inputs[&Label::S], &inputs[&Label::R], self.state) {
+        let new_state = match (&inputs[Label::S as usize], &inputs[Label::R as usize], self.state) {
             (Resolved(true) , Resolved(true) , _              ) => {
                 log::info!("Simultaneous set and reset of an SR latch! Both outputs set to false.");
                 illegal_state = true;

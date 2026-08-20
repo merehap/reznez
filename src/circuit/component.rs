@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::marker::ConstParamTy_;
 
-use crate::circuit::label::Label;
+use crate::circuit::label::{LABEL_COUNT, Label};
 use crate::circuit::signal_state::SignalState;
 use crate::circuit::component_type::ComponentType;
 
@@ -10,6 +10,7 @@ use crate::circuit::component_type::ComponentType;
 pub struct Component<Name: ConstParamTy_> {
     name: Name,
     component_type: Box<dyn ComponentType + Send + Sync>,
+    input_signal_states: [SignalState; LABEL_COUNT],
 }
 
 impl <Name: ConstParamTy_ + Clone + Copy + ToIndex> Component<Name> {
@@ -17,15 +18,20 @@ impl <Name: ConstParamTy_ + Clone + Copy + ToIndex> Component<Name> {
         Self {
             name,
             component_type,
+            input_signal_states: [SignalState::Unknown; LABEL_COUNT],
         }
-    }
-
-    pub fn calculate_output_signal_states(&mut self, input_signal_states: BTreeMap<Label, SignalState>) -> BTreeMap<Label, SignalState> {
-        self.component_type.calculate_output_signal_states(input_signal_states)
     }
 
     pub fn name(&self) -> Name {
         self.name
+    }
+
+    pub fn set_input(&mut self, label: Label, signal_state: SignalState) {
+        self.input_signal_states[label as usize] = signal_state;
+    }
+
+    pub fn calculate_output_signal_states(&mut self) -> BTreeMap<Label, SignalState> {
+        self.component_type.calculate_output_signal_states(&self.input_signal_states)
     }
 }
 

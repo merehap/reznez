@@ -391,16 +391,15 @@ impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + f
         // TODO: Find a proper way to terminate this rather than just iterating 10 times and hoping for the best.
         for _ in 0..3 {
             for (component, labeled_signals) in &mut self.component_sink_info {
-                let mut input_signal_states = BTreeMap::new();
                 for (label, signal) in labeled_signals.iter() {
                     let signal_state = match &signal.source {
                         Source::Primary(primary_source) => SignalState::Resolved(self.primary_signal_states[*primary_source as usize]),
                         Source::Internal(terminal) => self.internal_signal_states[terminal.component_name.to_index()][terminal.label.to_index()],
                     };
-                    input_signal_states.insert(*label, signal_state);
+                    component.set_input(*label, signal_state);
                 }
 
-                let output_signal_states = component.calculate_output_signal_states(input_signal_states);
+                let output_signal_states = component.calculate_output_signal_states();
                 for (source_label, signal_state) in output_signal_states {
                     let source_terminal = SourceTerminal::<Name>::new(component.name(), source_label);
                     let Some(signals) = self.signals_by_source_terminal.get(&source_terminal) else {

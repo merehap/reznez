@@ -1,16 +1,16 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::circuit::component_type::ComponentType;
-use crate::circuit::label::Label;
+use crate::circuit::label::{LABEL_COUNT, Label};
 use crate::circuit::signal_state::SignalState;
 
 #[derive(Clone, Debug)]
 pub struct Nor;
 
 impl ComponentType for Nor {
-    fn calculate_output_signal_states(&mut self, inputs: BTreeMap<Label, SignalState>) -> BTreeMap<Label, SignalState> {
+    fn calculate_output_signal_states(&mut self, inputs: &[SignalState; LABEL_COUNT]) -> BTreeMap<Label, SignalState> {
         use SignalState::*;
-        let q = match (&inputs[&Label::A], &inputs[&Label::B]) {
+        let q = match (&inputs[Label::A as usize], &inputs[Label::B as usize]) {
             (Resolved(false), Resolved(false)) => Resolved(true),
             (Resolved(true) , _              ) => Resolved(false),
             (_              , Resolved(true) ) => Resolved(false),
