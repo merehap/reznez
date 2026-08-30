@@ -1,9 +1,15 @@
-use crate::circuit::component_type::ComponentType;
-use crate::circuit::label::{LABEL_COUNT, Label};
-use crate::circuit::signal_state::SignalState;
+use std::collections::BTreeMap;
 
-const SOURCE_LABELS: &'static [Label] = &[Label::new('Q'), Label::new('N')];
-const SINK_LABELS: &'static [Label] = &[Label::new('E'), Label::new('D')];
+use crate::circuit::component_type::{CofactorId, ComponentType};
+use crate::circuit::label::{LABEL_COUNT, Label};
+use crate::circuit::label::Label::*;
+use crate::circuit::node::ComponentTypeName;
+use crate::circuit::signal_state::SignalState;
+use crate::circuit::gate::LabeledGate;
+use crate::circuit::gate::UnaryGateType::*;
+
+const SINK_LABELS: &'static [Label] = &[E, D];
+const SOURCE_LABELS: &'static [Label] = &[Q, N];
 
 #[derive(Clone, Debug)]
 pub struct DLatch {
@@ -24,7 +30,7 @@ impl ComponentType for DLatch {
     ) {
 
         use SignalState::*;
-        let new_state = match (&inputs[Label::E as usize], &inputs[Label::D as usize]) {
+        let new_state = match (&inputs[E as usize], &inputs[D as usize]) {
             (Resolved(true) , d      ) => *d,
             (Resolved(false), _      ) => Resolved(self.state),
             (Unknown        , _      ) => panic!("Don't know what to do if DLatch is neither enabled nor disabled."),
@@ -34,8 +40,25 @@ impl ComponentType for DLatch {
             self.state = state;
         }
 
-        outputs[Label::Q as usize] = new_state;
-        outputs[Label::N as usize] = new_state.negate();
+        outputs[Q as usize] = new_state;
+        outputs[N as usize] = new_state.negate();
+    }
+
+    fn cofactors(&self) -> BTreeMap<CofactorId, LabeledGate> {
+        BTreeMap::from([
+            (CofactorId::new((E, false), Q), LabeledGate::State),
+            (CofactorId::new((E, false), N), LabeledGate::State),
+            (CofactorId::new((E, true ), Q), LabeledGate::Unary(Identity, D)),
+            (CofactorId::new((E, true ), N), LabeledGate::Unary(Not, D)),
+            (CofactorId::new((D, false), Q), LabeledGate::Unary(StateAndNot, E)),
+            (CofactorId::new((D, false), N), LabeledGate::Unary(NotStateOr, E)),
+            (CofactorId::new((D, true ), Q), LabeledGate::Unary(StateOr, E)),
+            (CofactorId::new((D, true ), N), LabeledGate::Unary(StateNor, E)),
+        ])
+    }
+
+    fn component_type_name(&self) -> ComponentTypeName {
+        ComponentTypeName::DLatch
     }
 
     fn sink_labels(&self) -> &'static [Label] {

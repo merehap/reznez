@@ -25,6 +25,10 @@ pub struct SinkTerminal<Name: ConstParamTy_> {
 }
 
 impl <Name: ConstParamTy_ + Clone + Copy> SinkTerminal<Name> {
+    pub fn new(component_name: Name, label: Label) -> Self {
+        SinkTerminal { component_name, label }
+    }
+
     pub fn from_raw(component_name: Name, label: char) -> Self {
         Self {
             component_name,

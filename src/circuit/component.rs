@@ -1,9 +1,15 @@
+use std::collections::BTreeMap;
 use std::fmt;
 use std::marker::ConstParamTy_;
 
+use crate::circuit::gate::LabeledGate;
 use crate::circuit::label::{LABEL_COUNT, Label};
+use crate::circuit::node::{ComponentTypeName, Factor};
+use crate::circuit::signal::Signal;
 use crate::circuit::signal_state::SignalState;
-use crate::circuit::component_type::ComponentType;
+use crate::circuit::component_type::{CofactorId, ComponentType};
+use crate::circuit::sink::{Sink, SinkTerminal};
+use crate::circuit::source::{Source, SourceTerminal};
 
 #[derive(Clone)]
 pub struct Component<Name: ConstParamTy_> {
@@ -25,6 +31,50 @@ impl <Name: ConstParamTy_ + Clone + Copy + ToIndex> Component<Name> {
 
     pub fn name(&self) -> Name {
         self.name
+    }
+
+    pub fn cofactors(&self) -> BTreeMap<CofactorId, LabeledGate> {
+        self.component_type.cofactors()
+    }
+
+    pub fn factors(&self, signals: &[Signal<Name>]) -> Vec<(Factor<Name>, Source<Name>)> {
+        let find_signal = |sink_terminal: SinkTerminal<Name>| -> Signal<Name> {
+            for signal in signals {
+                for sink in &signal.sinks {
+                    if *sink == Sink::Internal(sink_terminal) {
+                        return signal.clone();
+                    }
+                }
+            }
+
+            panic!();
+        };
+
+        match self.component_type.component_type_name() {
+            ComponentTypeName::Nor => {
+                let a = find_signal(SinkTerminal::new(self.name, Label::A));
+                let b = find_signal(SinkTerminal::new(self.name, Label::B));
+                vec![
+                    (Factor::Nor { a, b }, Source::Internal(SourceTerminal { component_name: self.name, label: Label::Q })),
+                ]
+            }
+            ComponentTypeName::DLatch => {
+                let e = find_signal(SinkTerminal::new(self.name, Label::E));
+                let d = find_signal(SinkTerminal::new(self.name, Label::D));
+                vec![
+                    (Factor::DLatchQ { e: e.clone(), d: d.clone() }, Source::Internal(SourceTerminal { component_name: self.name, label: Label::Q })),
+                    (Factor::DLatchN { e, d }, Source::Internal(SourceTerminal { component_name: self.name, label: Label::N })),
+                ]
+            }
+            ComponentTypeName::SRLatch => {
+                let s = find_signal(SinkTerminal::new(self.name, Label::S));
+                let r = find_signal(SinkTerminal::new(self.name, Label::R));
+                vec![
+                    (Factor::SRLatchQ { s: s.clone(), r: r.clone() }, Source::Internal(SourceTerminal { component_name: self.name, label: Label::Q })),
+                    (Factor::SRLatchN { s, r }, Source::Internal(SourceTerminal { component_name: self.name, label: Label::N })),
+                ]
+            }
+        }
     }
 
     pub fn source_labels(&self) -> &[Label] {

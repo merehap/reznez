@@ -8,6 +8,7 @@ use crate::circuit::component_types::d_latch::DLatch;
 use crate::circuit::component_types::nor::Nor;
 use crate::circuit::component_types::sr_latch::SRLatch;
 use crate::circuit::label::{LABEL_COUNT, Label};
+use crate::circuit::node::{FactorGraph, NodeGraph};
 use crate::circuit::signal::Signal;
 use crate::circuit::signal_state::SignalState;
 use crate::circuit::sink::{PRIMARY_SINK_COUNT, PrimarySink, Sink, SinkTerminal};
@@ -371,9 +372,99 @@ pub struct ComponentGraph<Name: ConstParamTy_, const NAME_COUNT: usize, const LA
     signals_by_source_terminal: Box<[[Vec<Signal<Name>>; LABEL_COUNT]; NAME_COUNT]>,
     primary_signal_states: [bool; std::mem::variant_count::<PrimarySource>()],
     internal_signal_states: Box<[[SignalState; LABEL_COUNT]; NAME_COUNT]>,
+
+    components: Vec<Component<Name>>,
+    signals: Vec<Signal<Name>>,
 }
 
 impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + fmt::Debug + fmt::Display + ToIndex, const NAME_COUNT: usize, const LABEL_COUNT: usize> ComponentGraph<Name, NAME_COUNT, LABEL_COUNT> {
+    pub fn to_node_graph(&self, primary_sources: &[PrimarySource]) -> NodeGraph {
+        let mut factor_graph: FactorGraph<Name> = FactorGraph::new(primary_sources);
+        for component in &self.components {
+            factor_graph.push_component(&self.signals, component);
+        }
+
+        factor_graph.to_node_graph()
+    }
+    /*
+    pub fn to_netlist(&self, primary_signal_states: &[bool]) -> Netlist {
+        let mut components_by_source_terminal: Vec<(SourceTerminal<Name>, Component<Name>, Option<IndexedGate>)> = self.components.iter()
+            .flat_map(|component| {
+                component.source_labels().iter().flat_map(|source_label| {
+                    self.signals_by_source_terminal[component.name().to_index()][source_label.to_index()].iter()
+                        .filter_map(|signal| {
+                            match &signal.source {
+                                Source::Primary(_) => None,
+                                Source::Internal(terminal) => Some((terminal.clone(), component.clone(), None)),
+                            }
+                        })
+                })
+            })
+            .collect();
+
+
+        for i in 0..components_by_source_terminal.len() {
+            let source_terminal = components_by_source_terminal[i].0.clone();
+            let component = components_by_source_terminal[i].1.clone();
+
+            let labeled_signals = self.component_sink_info.iter()
+                .find(|(comp, _)| comp.name() == component.name())
+                .unwrap()
+                .1
+                .clone();
+
+            for (sink_label, signal) in labeled_signals {
+                match signal.source {
+                    Source::Primary(primary_source) => {
+                        let signal_state = primary_signal_states[primary_source as usize];
+                        let cofactor_id = CofactorId::new((sink_label, signal_state), source_terminal.label);
+                        let sink_labeled_gate = component.cofactors()[&cofactor_id].clone();
+                        components_by_source_terminal[i].2 = Some(sink_labeled_gate.to_indexed(i, |label| {
+                            let sink_terminal = SinkTerminal::new(component.name(), label);
+                            let Source::Internal(remaining_source_terminal) = self.signals_by_sink_terminal.get(&sink_terminal)
+                                    .expect("terminal, not primary source").source.clone() else {
+                                panic!("Expected terminal, not primary source");
+                            };
+
+                            for j in 0..components_by_source_terminal.len() {
+                                let (s_term, _, _) = &components_by_source_terminal[j];
+                                if remaining_source_terminal == *s_term {
+                                    return j;
+                                }
+                            }
+
+                            panic!();
+                        }));
+                    }
+                    Source::Internal(_) => {}
+                }
+            }
+        }
+
+        for i in 0..components_by_source_terminal.len() {
+            let source_terminal = components_by_source_terminal[i].0.clone();
+            let component = components_by_source_terminal[i].1.clone();
+
+            let labeled_signals = self.component_sink_info.iter()
+                .find(|(comp, _)| comp.name() == component.name())
+                .unwrap()
+                .1
+                .clone();
+
+            for (sink_label, signal) in labeled_signals {
+                match signal.source {
+                    Source::Primary(_) => panic!("Primaries should have already been processed."),
+                    Source::Internal(upstream_source_terminal) => {
+
+                    }
+                }
+            }
+        }
+
+        todo!()
+    }
+    */
+
     pub fn signal_states_equal(&self, other: &ComponentGraph<Name, NAME_COUNT, LABEL_COUNT>) -> bool {
         self.internal_signal_states == other.internal_signal_states
     }
@@ -450,6 +541,10 @@ impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + f
 
     pub fn build(mut self) -> ComponentGraph<Name, {NAME_COUNT}, {LABEL_COUNT}> {
         assert_eq!(self.components.len(), std::mem::variant_count::<Name>());
+        let components = self.components.clone().into_iter()
+            .map(|(_, component)| component)
+            .collect();
+
         let mut sink_label_and_signal_by_component_name: Box<[(Component<Name>, Vec<(Label, Signal<Name>)>)]> =
             vec![(self.components.values().next().unwrap().clone(), Vec::new()); std::mem::variant_count::<Name>()].into_boxed_slice();
         for (signal, sink_terminal) in self.signals.iter().flat_map(|signal| signal.clone().sink_terminals().into_iter().map(|sink_terminal| (signal.clone(), sink_terminal))) {
@@ -472,11 +567,11 @@ impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + f
         }
 
         let mut signals_by_source_terminal: Box<[[Vec<Signal<Name>>; LABEL_COUNT]; NAME_COUNT]> = Box::new(signals_by_source_terminal.try_into().unwrap());
-        for signal in self.signals {
+        for signal in &self.signals {
             match signal.source {
                 Source::Primary(_) => {}
                 Source::Internal(ref terminal) => {
-                    signals_by_source_terminal[terminal.component_name.to_index()][terminal.label.to_index()].push(signal);
+                    signals_by_source_terminal[terminal.component_name.to_index()][terminal.label.to_index()].push(signal.clone());
                 }
             }
         }
@@ -484,13 +579,15 @@ impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + f
         let primary_sinks = [false; PRIMARY_SINK_COUNT];
         let primary_signal_states: [bool; std::mem::variant_count::<PrimarySource>()] =
             [false; std::mem::variant_count::<PrimarySource>()];
-        let internal_signal_states = Box::new([[SignalState::Unknown ; LABEL_COUNT]; NAME_COUNT]);
+        let internal_signal_states = Box::new([[SignalState::Unknown; LABEL_COUNT]; NAME_COUNT]);
         ComponentGraph {
             primary_sinks,
             component_sink_info: sink_label_and_signal_by_component_name,
             signals_by_source_terminal,
             primary_signal_states,
             internal_signal_states,
+            components,
+            signals: self.signals.into_iter().collect(),
         }
     }
 }

@@ -27,6 +27,10 @@ pub enum PrimarySource {
     Write2007,
 }
 
+impl PrimarySource {
+    pub const COUNT: usize = std::mem::variant_count::<PrimarySource>();
+}
+
 impl fmt::Display for PrimarySource {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{self:?}")

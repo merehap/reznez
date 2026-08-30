@@ -1,9 +1,15 @@
-use crate::circuit::component_type::ComponentType;
+use std::collections::BTreeMap;
+
+use crate::circuit::component_type::{CofactorId, ComponentType};
+use crate::circuit::gate::LabeledGate;
+use crate::circuit::gate::UnaryGateType::*;
 use crate::circuit::label::{LABEL_COUNT, Label};
+use crate::circuit::label::Label::*;
+use crate::circuit::node::ComponentTypeName;
 use crate::circuit::signal_state::SignalState;
 
-const INPUT_LABELS: &'static [Label] = &[Label::new('S'), Label::new('R')];
-const OUTPUT_LABELS: &'static [Label] = &[Label::new('Q'), Label::new('N')];
+const SINK_LABELS: &'static [Label] = &[Label::S, Label::R];
+const SOURCE_LABELS: &'static [Label] = &[Label::Q, Label::N];
 
 #[derive(Clone, Debug)]
 pub struct SRLatch {
@@ -21,7 +27,7 @@ impl ComponentType for SRLatch {
         let mut illegal_state = false;
 
         use SignalState::*;
-        let new_state = match (&inputs[Label::S as usize], &inputs[Label::R as usize], self.state) {
+        let new_state = match (&inputs[S as usize], &inputs[R as usize], self.state) {
             (Resolved(true) , Resolved(true) , _              ) => {
                 log::info!("Simultaneous set and reset of an SR latch! Both outputs set to false.");
                 illegal_state = true;
@@ -49,19 +55,36 @@ impl ComponentType for SRLatch {
         }
 
         if illegal_state {
-            outputs[Label::Q as usize] = Resolved(false);
-            outputs[Label::N as usize] = Resolved(false);
+            outputs[Q as usize] = Resolved(false);
+            outputs[N as usize] = Resolved(false);
         } else {
-            outputs[Label::Q as usize] = new_state;
-            outputs[Label::N as usize] = new_state.negate();
+            outputs[Q as usize] = new_state;
+            outputs[N as usize] = new_state.negate();
         }
     }
 
+    fn cofactors(&self) -> BTreeMap<CofactorId, LabeledGate> {
+        BTreeMap::from([
+            (CofactorId::new((S, false), Q), LabeledGate::Unary(StateAndNot, R)),
+            (CofactorId::new((S, false), N), LabeledGate::Unary(NotStateOr, R)),
+            (CofactorId::new((S, true ), Q), LabeledGate::Unary(Not, R)),
+            (CofactorId::new((S, true ), N), LabeledGate::Constant(false)),
+            (CofactorId::new((R, false), Q), LabeledGate::Unary(StateOr, S)),
+            (CofactorId::new((R, false), N), LabeledGate::Unary(StateNor, S)),
+            (CofactorId::new((R, true ), Q), LabeledGate::Constant(false)),
+            (CofactorId::new((R, true ), N), LabeledGate::Unary(Not, S)),
+        ])
+    }
+
+    fn component_type_name(&self) -> ComponentTypeName {
+        ComponentTypeName::SRLatch
+    }
+
     fn sink_labels(&self) -> &[Label] {
-        INPUT_LABELS
+        SINK_LABELS
     }
 
     fn source_labels(&self) -> &[Label] {
-        OUTPUT_LABELS
+        SOURCE_LABELS
     }
 }
