@@ -14,11 +14,12 @@ const SOURCE_LABELS: &'static [Label] = &[Label::Q, Label::N];
 #[derive(Clone, Debug)]
 pub struct SRLatch {
     state: bool,
+    default_state: bool,
 }
 
 impl SRLatch {
-    pub fn new(initial_state: bool) -> Self {
-        Self { state: initial_state }
+    pub fn new(default_state: bool) -> Self {
+        Self { state: default_state, default_state }
     }
 }
 
@@ -77,7 +78,7 @@ impl ComponentType for SRLatch {
     }
 
     fn component_type_name(&self) -> ComponentTypeName {
-        ComponentTypeName::SRLatch
+        ComponentTypeName::SRLatch(self.default_state)
     }
 
     fn sink_labels(&self) -> &[Label] {

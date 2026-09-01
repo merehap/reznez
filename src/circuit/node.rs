@@ -1,3 +1,4 @@
+use std::fmt;
 use std::marker::ConstParamTy_;
 
 use crate::circuit::component::{Component, ToIndex};
@@ -6,25 +7,25 @@ use crate::circuit::source::{PrimarySource, Source};
 
 pub enum ComponentTypeName {
     Nor,
-    DLatch,
-    SRLatch,
+    DLatch(bool),
+    SRLatch(bool),
 }
 
 #[derive(Clone)]
 pub enum Factor<ComponentName: ConstParamTy_> {
     PrimarySource(PrimarySource),
     Nor { a: Signal<ComponentName>, b: Signal<ComponentName> },
-    DLatchQ { e: Signal<ComponentName>, d: Signal<ComponentName> },
-    DLatchN { e: Signal<ComponentName>, d: Signal<ComponentName> },
-    SRLatchQ { s: Signal<ComponentName>, r: Signal<ComponentName> },
-    SRLatchN { s: Signal<ComponentName>, r: Signal<ComponentName> },
+    DLatchQ { e: Signal<ComponentName>, d: Signal<ComponentName>, default_state: bool },
+    DLatchN { e: Signal<ComponentName>, d: Signal<ComponentName>, default_state: bool },
+    SRLatchQ { s: Signal<ComponentName>, r: Signal<ComponentName>, default_state: bool },
+    SRLatchN { s: Signal<ComponentName>, r: Signal<ComponentName>, default_state: bool },
 }
 
 pub struct FactorGraph<ComponentName: ConstParamTy_> {
     factors_with_source: Vec<(Factor<ComponentName>, Source<ComponentName>)>,
 }
 
-impl <ComponentName: ConstParamTy_ + Clone + Copy + ToIndex> FactorGraph<ComponentName> {
+impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + ToIndex> FactorGraph<ComponentName> {
     pub fn new(primary_sources: &[PrimarySource]) -> Self {
         Self {
             factors_with_source: primary_sources.iter()
@@ -34,9 +35,13 @@ impl <ComponentName: ConstParamTy_ + Clone + Copy + ToIndex> FactorGraph<Compone
     }
 
     pub fn push_component(&mut self, signals: &[Signal<ComponentName>], component: &Component<ComponentName>) {
-        self.factors_with_source.append(&mut component.factors(signals));
+        println!("Pushing component: {:?}", component.name());
+        for factor in component.factors(signals) {
+            self.factors_with_source.insert(0, factor);
+        }
     }
 
+    /*
     pub fn to_node_graph(self) -> NodeGraph {
         let signal_to_source_index = |signal: Signal<ComponentName>| -> Index {
             for (i, (_, source)) in self.factors_with_source.iter().enumerate() {
@@ -52,10 +57,10 @@ impl <ComponentName: ConstParamTy_ + Clone + Copy + ToIndex> FactorGraph<Compone
             match factor {
                 Factor::PrimarySource(primary_source) => Node::PrimarySource(primary_source),
                 Factor::Nor { a, b } => Node::Nor(signal_to_source_index(a), signal_to_source_index(b)),
-                Factor::DLatchQ { e, d } => Node::DLatchQ { e: signal_to_source_index(e), d: signal_to_source_index(d) },
-                Factor::DLatchN { e, d } => Node::DLatchN { e: signal_to_source_index(e), d: signal_to_source_index(d) },
-                Factor::SRLatchQ { s, r } => Node::SRLatchQ { s: signal_to_source_index(s), r: signal_to_source_index(r) },
-                Factor::SRLatchN { s, r } => Node::SRLatchN { s: signal_to_source_index(s), r: signal_to_source_index(r) },
+                Factor::DLatchQ { e, d, default_state } => Node::DLatchQ { e: signal_to_source_index(e), d: signal_to_source_index(d), default_state },
+                Factor::DLatchN { e, d, default_state } => Node::DLatchN { e: signal_to_source_index(e), d: signal_to_source_index(d), default_state },
+                Factor::SRLatchQ { s, r, default_state } => Node::SRLatchQ { s: signal_to_source_index(s), r: signal_to_source_index(r), default_state },
+                Factor::SRLatchN { s, r, default_state } => Node::SRLatchN { s: signal_to_source_index(s), r: signal_to_source_index(r), default_state },
             }
         };
 
@@ -65,21 +70,28 @@ impl <ComponentName: ConstParamTy_ + Clone + Copy + ToIndex> FactorGraph<Compone
                 .collect(),
         }
     }
+    */
 }
 
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum Node {
-    Constant,
+    Constant(bool),
+    State(Index),
+    NotState(Index),
 
     PrimarySource(PrimarySource),
-    Identity(Index),
 
+    Identity(Index),
     Not(Index),
 
-    Or(Index, Index),
+    StateOrState { state_a: Index, state_b: Index },
+    StateAndNotState { state_a: Index, state_b: Index },
+
+    StateOr { state: Index, other: Index },
+    StateAndNot { state: Index, other: Index },
+    StateOrNot { state: Index, other: Index },
+
     Nor(Index, Index),
-    NotFirstOr(Index, Index),
-    NotFirstAnd(Index, Index),
     DLatchQ { e: Index, d: Index },
     DLatchN { e: Index, d: Index },
     SRLatchQ { s: Index, r: Index },
@@ -88,246 +100,244 @@ pub enum Node {
 
 pub type Index = usize;
 
-#[derive(PartialEq, Eq, Clone)]
-pub struct NodeGraph {
-    nodes: Vec<Node>,
+#[derive(PartialEq, Eq, Clone, Debug)]
+pub struct NodeGraph<ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + ToIndex> {
+    states: Vec<bool>,
+    cofactors: Vec<Cofactor<ComponentName>>,
 }
 
-impl NodeGraph {
-    pub fn propagate_constants(&mut self, states: &mut [bool]) {
-        assert_eq!(states.len(), self.nodes.len());
+impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + ToIndex> NodeGraph<ComponentName> {
+    pub fn new(factor_graph: FactorGraph<ComponentName>) -> Self {
+        let factors_with_source = factor_graph.factors_with_source.clone();
+        let signal_to_source_index = |signal: Signal<ComponentName>| -> Index {
+            for (i, (_, source)) in factors_with_source.iter().enumerate() {
+                if signal.source == source.clone() {
+                    return i;
+                }
+            }
+
+            panic!();
+        };
+
+        let factor_to_node = |factor: Factor<ComponentName>| -> (Node, bool) {
+            match factor {
+                Factor::PrimarySource(primary_source) => (Node::PrimarySource(primary_source), false),
+                Factor::Nor { a, b } => (Node::Nor(signal_to_source_index(a), signal_to_source_index(b)), false),
+                Factor::DLatchQ { e, d, default_state } => (Node::DLatchQ { e: signal_to_source_index(e), d: signal_to_source_index(d) }, default_state),
+                Factor::DLatchN { e, d, default_state } => (Node::DLatchN { e: signal_to_source_index(e), d: signal_to_source_index(d) }, default_state),
+                Factor::SRLatchQ { s, r, default_state } => (Node::SRLatchQ { s: signal_to_source_index(s), r: signal_to_source_index(r) }, default_state),
+                Factor::SRLatchN { s, r, default_state } => (Node::SRLatchN { s: signal_to_source_index(s), r: signal_to_source_index(r) }, default_state),
+            }
+        };
+
+        //let mut states = vec![false; primary_sources.len() + factor_graph.factors_with_source.len()];
+        let mut nodes = Vec::new();
+        let mut states = Vec::new();
+        for (i, (factor, source)) in factor_graph.factors_with_source.into_iter().enumerate() {
+            let (node, default_state) = factor_to_node(factor.clone());
+            nodes.push((source.clone(), node, i));
+            states.push(default_state);
+        }
+
+        let primary_sources = [PrimarySource::PpuClockFirstHalf, PrimarySource::PpuClockSecondHalf, PrimarySource::Read2007, PrimarySource::Write2007];
+
+        let state_count = states.len();
+        let mut cofactors = Vec::new();
+        for mut i in 0..2u8.pow(primary_sources.len() as u32) {
+            for j in 0..primary_sources.len() {
+                let constant = i & 1 == 1;
+                print!("{}={constant} ", primary_sources[j]);
+                let node_index = state_count - primary_sources.len() + j;
+                nodes[node_index] = (Source::Primary(primary_sources[j]), Node::Constant(constant), node_index);
+                i >>= 1;
+            }
+
+            println!();
+
+            let mut cofactor = Cofactor { nodes: nodes.clone() };
+            cofactor.propagate_constants();
+            cofactor.nodes.truncate(cofactor.nodes.len() - primary_sources.len());
+            cofactor.sort();
+            println!("{:?}", cofactor.nodes);
+            println!();
+            println!();
+
+            cofactors.push(cofactor);
+        }
+
+        Self { states, cofactors }
+    }
+
+    pub fn evaluate(&mut self, primary_sources: [bool; PrimarySource::COUNT]) {
+        let cofactor_index: usize = primary_sources.iter().enumerate()
+            .map(|(i, value)| (*value as usize) << (PrimarySource::COUNT - i - 1))
+            .sum();
+        println!("Cofactor index: {cofactor_index}");
+        self.cofactors[cofactor_index].evaluate(&mut self.states);
+
+        println!("{:?}", self.states);
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Debug)]
+pub struct Cofactor<ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + ToIndex> {
+    nodes: Vec<(Source<ComponentName>, Node, usize)>,
+}
+
+impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + ToIndex> Cofactor<ComponentName> {
+    fn evaluate(&self, states: &mut [bool]) {
+        for (_source, node, target_index) in &self.nodes {
+            let value = match node {
+                Node::PrimarySource(_) => panic!("PrimarySources should have been removed by now."),
+                Node::Constant(value) => *value,
+                Node::Identity(index) | Node::State(index) => states[*index],
+                Node::Not(index) | Node::NotState(index) => !states[*index],
+                Node::StateOrState { state_a, state_b } => states[*state_a] || states[*state_b],
+                Node::StateOr { state, other } => states[*state] || states[*other],
+                Node::StateOrNot { state, other } => states[*state] || !states[*other],
+                Node::StateAndNotState { state_a, state_b } => states[*state_a] && !states[*state_b],
+                Node::StateAndNot { state, other } => states[*state] && !states[*other],
+                Node::Nor(a, b) => !states[*a] && !states[*b],
+                Node::DLatchQ {..} | Node::DLatchN {..} | Node::SRLatchQ {..} | Node::SRLatchN {..} => todo!("How was this not reduced?"),
+            };
+
+            println!("Setting state [{target_index}]={value}");
+            states[*target_index] = value;
+        }
+    }
+
+    fn sort(&mut self) {
+        let mut sorted_nodes = Vec::new();
+
+        let mut unsorted_nodes: Vec<_> = self.nodes.clone().into_iter()
+            .map(Some)
+            .collect();
 
         loop {
-            let reduced = self.reduce(states);
-            if !reduced {
+            let mut node_pushed = false;
+            for i in 0..unsorted_nodes.len() {
+                if let Some(source_node) = unsorted_nodes[i].clone() {
+                    use Node::*;
+                    match source_node.1 {
+                        PrimarySource(_) => panic!("PrimarySources should have been eliminated by now."),
+                        Constant(..) => {
+                            sorted_nodes.push(source_node);
+                            unsorted_nodes[i] = None;
+                        }
+                        State(_) | NotState(_) | StateOrState {..} | StateAndNotState {..} => {
+                            sorted_nodes.push(source_node);
+                            unsorted_nodes[i] = None;
+                        }
+                        Identity(index) | Not(index) | StateOr { other: index, .. } | StateOrNot { other: index, .. } | StateAndNot { other: index, .. } => {
+                            if unsorted_nodes[index].is_none() {
+                                sorted_nodes.push(source_node);
+                                unsorted_nodes[i] = None;
+                            }
+                        }
+                        Nor(a, b) | DLatchQ { e: a, d: b } | DLatchN { e: a, d: b } | SRLatchQ { s: a, r: b } | SRLatchN { s: a, r: b } => {
+                            if unsorted_nodes[a].is_none() && unsorted_nodes[b].is_none() {
+                                sorted_nodes.push(source_node);
+                                unsorted_nodes[i] = None;
+                            }
+                        }
+                    }
+
+                    if unsorted_nodes[i].is_none() {
+                        node_pushed = true;
+                    }
+                }
+            }
+
+            if !node_pushed {
+                break;
+            }
+        }
+
+        self.nodes = sorted_nodes;
+    }
+
+    fn propagate_constants(&mut self) {
+        println!("{:?}", self.nodes);
+
+        loop {
+            let reduced = self.reduce();
+            if reduced {
+                println!("{:?}", self.nodes);
+            } else {
                 return;
             }
         }
     }
 
-    fn reduce(&mut self, states: &mut [bool]) -> bool {
+    fn reduce(&mut self) -> bool {
         let original = self.clone();
 
         use Node::*;
         for i in 0..self.nodes.len() {
-            match self.nodes[i].clone() {
-                Constant => {}
-                PrimarySource(_) => {}
-                Identity(index) => {
-                    if self.nodes[index] == Constant {
-                        states[i] = states[index];
-                        self.nodes[i] = Constant;
-                    }
+            let (source_terminal, node, _i) = self.nodes[i].clone();
+            let new_node = match node {
+                Identity(index) if let Constant(constant) = self.nodes[index].1 => Some(Constant(constant)),
+                Identity(index) if let State(target) = self.nodes[index].1 => Some(State(target)),
+                Not(index) if let Constant(constant) = self.nodes[index].1 => Some(Constant(!constant)),
+                Not(index) if let State(index) = self.nodes[index].1 => Some(NotState(index)),
+                StateOr { state, other } if let State(state_b) = self.nodes[other].1 => Some(StateOrState { state_a: state, state_b }),
+                StateOr { other, .. } if let Constant(true) = self.nodes[other].1 => Some(Constant(true)),
+                StateOr { state, other, .. } if let Constant(false) = self.nodes[other].1 => Some(State(state)),
+                StateOrNot { state, other } if let Constant(true) = self.nodes[other].1 => Some(State(state)),
+                StateOrNot { other, .. } if let Constant(false) = self.nodes[other].1 => Some(Constant(true)),
+                StateAndNot { state, other } if let State(state_b) = self.nodes[other].1 => Some(StateAndNotState { state_a: state, state_b }),
+                StateAndNot { state, other } if let Constant(true) = self.nodes[other].1 => Some(State(state)),
+                StateAndNot { other, .. } if let Constant(false) = self.nodes[other].1 => Some(Constant(false)),
+                Identity(_) | Not(_) | StateOrState {..} | StateAndNotState {..} | StateOr {..} | StateOrNot {..} | StateAndNot {..} => None,
+                Constant(..) | PrimarySource(_) | State(_) | NotState(_) => None,
+                Nor(a, b) => match (self.nodes[a].1, self.nodes[b].1) {
+                    (Constant(constant_a), Constant(constant_b)) => Some(Constant(!constant_a && !constant_b)),
+                    (Constant(true), _) => Some(Constant(false)),
+                    (_, Constant(true)) => Some(Constant(false)),
+                    (Constant(false), _) => Some(Not(b)),
+                    (_, Constant(false)) => Some(Not(a)),
+                    (_, _) => None,
                 }
-                Not(index) => {
-                    if self.nodes[index] == Constant {
-                        states[i] = !states[index];
-                        self.nodes[i] = Constant;
-                    }
+                DLatchQ { e, d } => match (self.nodes[e].1, self.nodes[d].1) {
+                    (Constant(false), _) => Some(State(i)),
+                    (Constant(true), Constant(constant_d)) => Some(Constant(constant_d)),
+                    (Constant(true), _) => Some(Identity(d)),
+                    (_, Constant(true)) => Some(StateOr { state: i, other: e }),
+                    (_, Constant(false)) => Some(StateAndNot { state: i, other: e }),
+                    (_, _) => None,
                 }
-                Or(a, b) => {
-                    match (&self.nodes[a], &self.nodes[b]) {
-                        (Constant, Constant) => {
-                            states[i] = states[a] || states[b];
-                            self.nodes[i] = Constant;
-                        }
-                        (Constant, _) => {
-                            if states[a] {
-                                states[i] = true;
-                                self.nodes[i] = Constant;
-                            } else {
-                                self.nodes[i] = Identity(b);
-                            }
-                        }
-                        (_, Constant) => {
-                            if states[b] {
-                               states[i] = true;
-                                self.nodes[i] = Constant;
-                            } else {
-                                self.nodes[i] = Identity(a);
-                            }
-                        }
-                        (_, _) => {}
-                    }
+                DLatchN { e, d } => match (self.nodes[e].1, self.nodes[d].1) {
+                    (Constant(false), _) => Some(State(i)),
+                    (Constant(true), Constant(constant_d)) => Some(Constant(!constant_d)),
+                    (Constant(true), _) => Some(Not(d)),
+                    (_, Constant(true)) => Some(Nor(e, i)),
+                    (_, Constant(false)) => Some(StateOr { state: i, other: e }),
+                    (_, _) => None,
                 }
-                Nor(a, b) => {
-                    match (&self.nodes[a], &self.nodes[b]) {
-                        (Constant, Constant) => {
-                            states[i] = !states[a] && !states[b];
-                            self.nodes[i] = Identity(i);
-                        }
-                        (Constant, _) => {
-                            if states[a] {
-                                states[i] = false;
-                                self.nodes[i] = Constant;
-                            } else {
-                                self.nodes[i] = Not(b);
-                            }
-                        }
-                        (_, Constant) => {
-                            if states[b] {
-                                states[i] = false;
-                                self.nodes[i] = Constant;
-                            } else {
-                                self.nodes[i] = Not(a);
-                            }
-                        }
-                        (_, _) => {}
-                    }
+                SRLatchQ { s, r } => match (self.nodes[s].1, self.nodes[r].1) {
+                    (Constant(false), Constant(false)) => Some(State(i)),
+                    (Constant(true) , Constant(false)) => Some(Constant(true)),
+                    (Constant(_)    , Constant(true) ) => Some(Constant(false)),
+                    (Constant(true), _) => Some(Not(r)),
+                    (Constant(false), _) => Some(StateAndNot { state: i, other: r }),
+                    (_, Constant(true)) => Some(Constant(false)),
+                    (_, Constant(false)) => Some(StateOr { state: i, other: s }),
+                    (_, _) => None,
                 }
-                NotFirstOr(a, b) => {
-                    match (&self.nodes[a], &self.nodes[b]) {
-                        (Constant, Constant) => {
-                            states[i] = !states[a] || states[b];
-                            self.nodes[i] = Identity(i);
-                        }
-                        (Constant, _) => {
-                            if states[a] {
-                                self.nodes[i] = Identity(b);
-                            } else {
-                                states[i] = true;
-                                self.nodes[i] = Constant;
-                            }
-                        }
-                        (_, Constant) => {
-                            if states[b] {
-                                states[i] = true;
-                                self.nodes[i] = Constant;
-                            } else {
-                                self.nodes[i] = Not(a);
-                            }
-                        }
-                        (_, _) => {}
-                    }
+                SRLatchN { s, r } => match (self.nodes[s].1, self.nodes[r].1) {
+                    (Constant(false), Constant(false)) => Some(State(i)),
+                    (Constant(false), Constant(true) ) => Some(Constant(true)),
+                    (Constant(true) , Constant(_)    ) => Some(Constant(false)),
+                    (Constant(true), _) => Some(Identity(r)),
+                    (Constant(false), _) => Some(StateOr { state: i, other: r }),
+                    (_, Constant(true)) => Some(Not(s)),
+                    (_, Constant(false)) => Some(StateOrNot { state: i, other: s }),
+                    (_, _) => None,
                 }
-                NotFirstAnd(a, b) => {
-                    match (&self.nodes[a], &self.nodes[b]) {
-                        (Constant, Constant) => {
-                            states[i] = !states[a] && states[b];
-                            self.nodes[i] = Identity(i);
-                        }
-                        (Constant, _) => {
-                            if states[a] {
-                                states[i] = false;
-                                self.nodes[i] = Constant;
-                            } else {
-                                self.nodes[i] = Identity(b);
-                            }
-                        }
-                        (_, Constant) => {
-                            if states[b] {
-                                self.nodes[i] = Not(a);
-                            } else {
-                                states[i] = false;
-                                self.nodes[i] = Constant;
-                            }
-                        }
-                        (_, _) => {}
-                    }
-                }
-                DLatchQ { e, d } => {
-                    match (&self.nodes[e], &self.nodes[d]) {
-                        (Constant, Constant) => {
-                            states[i] = states[d];
-                            self.nodes[i] = Constant;
-                        }
-                        (Constant, _) => {
-                            if states[e] {
-                                self.nodes[i] = Identity(d);
-                            } else {
-                                states[i] = states[d];
-                                self.nodes[i] = Constant;
-                            }
-                        }
-                        (_, Constant) => {
-                            if states[d] {
-                                self.nodes[i] = Or(e, i);
-                            } else {
-                                self.nodes[i] = NotFirstAnd(e, i);
-                            }
-                        }
-                        (_, _) => {}
-                    }
-                }
-                DLatchN { e, d } => {
-                    match (&self.nodes[e], &self.nodes[d]) {
-                        (Constant, Constant) => {
-                            states[i] = !states[d];
-                            self.nodes[i] = Constant;
-                        }
-                        (Constant, _) => {
-                            if states[e] {
-                                self.nodes[i] = Not(d);
-                            } else {
-                                states[i] = !states[d];
-                                self.nodes[i] = Constant;
-                            }
-                        }
-                        (_, Constant) => {
-                            if states[d] {
-                                self.nodes[i] = Nor(e, i);
-                            } else {
-                                self.nodes[i] = NotFirstOr(i, e);
-                            }
-                        }
-                        (_, _) => {}
-                    }
-                }
-                SRLatchQ { s, r } => {
-                    match (&self.nodes[s], &self.nodes[r]) {
-                        (Constant, Constant) => {
-                            self.nodes[i] == Constant;
-                            match (states[s], states[r]) {
-                                (false, false) => { /* Keep the current state. */ }
-                                (true , false) => states[i] = true,
-                                (_    , true ) => states[i] = false,
-                            }
-                        }
-                        (Constant, _) => {
-                            if states[s] {
-                                self.nodes[i] = Not(r);
-                            } else {
-                                self.nodes[i] = NotFirstAnd(r, i);
-                            }
-                        }
-                        (_, Constant) => {
-                            if states[r] {
-                                self.nodes[i] = Constant;
-                                states[i] = false;
-                            } else {
-                                self.nodes[i] = Or(s, i);
-                            }
-                        }
-                        (_, _) => {}
-                    }
-                }
-                SRLatchN { s, r } => {
-                    match (&self.nodes[s], &self.nodes[r]) {
-                        (Constant, Constant) => {
-                            self.nodes[i] == Constant;
-                            match (states[s], states[r]) {
-                                (false, false) => { /* Keep the current state. */ }
-                                (false, true ) => states[i] = true,
-                                (true , _    ) => states[i] = false,
-                            }
-                        }
-                        (Constant, _) => {
-                            if states[s] {
-                                self.nodes[i] = Identity(r);
-                            } else {
-                                self.nodes[i] = Or(r, i);
-                            }
-                        }
-                        (_, Constant) => {
-                            if states[r] {
-                                self.nodes[i] = Not(s);
-                            } else {
-                                self.nodes[i] = NotFirstOr(s, i);
-                            }
-                        }
-                        (_, _) => {}
-                    }
-                }
+            };
+
+            if let Some(new_node) = new_node {
+                self.nodes[i] = (source_terminal, new_node, i);
             }
         }
 

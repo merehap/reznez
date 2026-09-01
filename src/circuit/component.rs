@@ -1,13 +1,11 @@
-use std::collections::BTreeMap;
 use std::fmt;
 use std::marker::ConstParamTy_;
 
-use crate::circuit::gate::LabeledGate;
 use crate::circuit::label::{LABEL_COUNT, Label};
 use crate::circuit::node::{ComponentTypeName, Factor};
 use crate::circuit::signal::Signal;
 use crate::circuit::signal_state::SignalState;
-use crate::circuit::component_type::{CofactorId, ComponentType};
+use crate::circuit::component_type::ComponentType;
 use crate::circuit::sink::{Sink, SinkTerminal};
 use crate::circuit::source::{Source, SourceTerminal};
 
@@ -19,7 +17,7 @@ pub struct Component<Name: ConstParamTy_> {
     output_signal_states: [SignalState; LABEL_COUNT],
 }
 
-impl <Name: ConstParamTy_ + Clone + Copy + ToIndex> Component<Name> {
+impl <Name: ConstParamTy_ + Clone + Copy + fmt::Debug + ToIndex> Component<Name> {
     pub fn new(name: Name, component_type: Box<dyn ComponentType + Send + Sync>) -> Self {
         Self {
             name,
@@ -31,10 +29,6 @@ impl <Name: ConstParamTy_ + Clone + Copy + ToIndex> Component<Name> {
 
     pub fn name(&self) -> Name {
         self.name
-    }
-
-    pub fn cofactors(&self) -> BTreeMap<CofactorId, LabeledGate> {
-        self.component_type.cofactors()
     }
 
     pub fn factors(&self, signals: &[Signal<Name>]) -> Vec<(Factor<Name>, Source<Name>)> {
@@ -55,23 +49,38 @@ impl <Name: ConstParamTy_ + Clone + Copy + ToIndex> Component<Name> {
                 let a = find_signal(SinkTerminal::new(self.name, Label::A));
                 let b = find_signal(SinkTerminal::new(self.name, Label::B));
                 vec![
-                    (Factor::Nor { a, b }, Source::Internal(SourceTerminal { component_name: self.name, label: Label::Q })),
+                    (
+                        Factor::Nor { a, b },
+                        Source::Internal(SourceTerminal { component_name: self.name, label: Label::Q })
+                    ),
                 ]
             }
-            ComponentTypeName::DLatch => {
+            ComponentTypeName::DLatch(default_state) => {
                 let e = find_signal(SinkTerminal::new(self.name, Label::E));
                 let d = find_signal(SinkTerminal::new(self.name, Label::D));
                 vec![
-                    (Factor::DLatchQ { e: e.clone(), d: d.clone() }, Source::Internal(SourceTerminal { component_name: self.name, label: Label::Q })),
-                    (Factor::DLatchN { e, d }, Source::Internal(SourceTerminal { component_name: self.name, label: Label::N })),
+                    (
+                        Factor::DLatchQ { e: e.clone(), d: d.clone(), default_state },
+                        Source::Internal(SourceTerminal { component_name: self.name, label: Label::Q }),
+                    ),
+                    (
+                        Factor::DLatchN { e, d, default_state: !default_state },
+                        Source::Internal(SourceTerminal { component_name: self.name, label: Label::N }),
+                    ),
                 ]
             }
-            ComponentTypeName::SRLatch => {
+            ComponentTypeName::SRLatch(default_state) => {
                 let s = find_signal(SinkTerminal::new(self.name, Label::S));
                 let r = find_signal(SinkTerminal::new(self.name, Label::R));
                 vec![
-                    (Factor::SRLatchQ { s: s.clone(), r: r.clone() }, Source::Internal(SourceTerminal { component_name: self.name, label: Label::Q })),
-                    (Factor::SRLatchN { s, r }, Source::Internal(SourceTerminal { component_name: self.name, label: Label::N })),
+                    (
+                        Factor::SRLatchQ { s: s.clone(), r: r.clone(), default_state },
+                        Source::Internal(SourceTerminal { component_name: self.name, label: Label::Q }),
+                    ),
+                    (
+                        Factor::SRLatchN { s, r, default_state: !default_state },
+                        Source::Internal(SourceTerminal { component_name: self.name, label: Label::N }),
+                    ),
                 ]
             }
         }

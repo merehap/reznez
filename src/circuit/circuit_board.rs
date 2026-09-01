@@ -15,7 +15,7 @@ use crate::circuit::sink::{PRIMARY_SINK_COUNT, PrimarySink, Sink, SinkTerminal};
 use crate::circuit::source::{PrimarySource, Source, SourceTerminal};
 use crate::memory::ppu::ppu_pinout::PpuPinout;
 
-static READ_2007_COMPONENTS: LazyLock<ComponentGraph<Read2007ComponentName, {READ_2007_COMPONENT_NAME_COUNT}, {LABEL_COUNT}>> = LazyLock::new(|| {
+pub static READ_2007_COMPONENTS: LazyLock<ComponentGraph<Read2007ComponentName, {READ_2007_COMPONENT_NAME_COUNT}, {LABEL_COUNT}>> = LazyLock::new(|| {
     use Read2007ComponentName::*;
     let mut graph = ComponentGraphBuilder::new()
         .component(Component::new(DLatch0, Box::new(DLatch::new(false))))
@@ -138,7 +138,7 @@ static READ_2007_COMPONENTS: LazyLock<ComponentGraph<Read2007ComponentName, {REA
 const READ_2007_COMPONENT_NAME_COUNT: usize = std::mem::variant_count::<Read2007ComponentName>();
 
 #[derive(ConstParamTy, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
-enum Read2007ComponentName {
+pub enum Read2007ComponentName {
     DLatch0,
     DLatch1,
     DLatch2,
@@ -378,13 +378,13 @@ pub struct ComponentGraph<Name: ConstParamTy_, const NAME_COUNT: usize, const LA
 }
 
 impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + fmt::Debug + fmt::Display + ToIndex, const NAME_COUNT: usize, const LABEL_COUNT: usize> ComponentGraph<Name, NAME_COUNT, LABEL_COUNT> {
-    pub fn to_node_graph(&self, primary_sources: &[PrimarySource]) -> NodeGraph {
+    pub fn to_node_graph(&self, primary_sources: &[PrimarySource]) -> NodeGraph<Name> {
         let mut factor_graph: FactorGraph<Name> = FactorGraph::new(primary_sources);
         for component in &self.components {
             factor_graph.push_component(&self.signals, component);
         }
 
-        factor_graph.to_node_graph()
+        NodeGraph::new(factor_graph)
     }
     /*
     pub fn to_netlist(&self, primary_signal_states: &[bool]) -> Netlist {

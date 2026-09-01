@@ -14,11 +14,12 @@ const SOURCE_LABELS: &'static [Label] = &[Q, N];
 #[derive(Clone, Debug)]
 pub struct DLatch {
     state: bool,
+    default_state: bool,
 }
 
 impl DLatch {
-    pub fn new(initial_state: bool) -> Self {
-        Self { state: initial_state }
+    pub fn new(default_state: bool) -> Self {
+        Self { state: default_state, default_state }
     }
 }
 
@@ -58,7 +59,7 @@ impl ComponentType for DLatch {
     }
 
     fn component_type_name(&self) -> ComponentTypeName {
-        ComponentTypeName::DLatch
+        ComponentTypeName::DLatch(self.default_state)
     }
 
     fn sink_labels(&self) -> &'static [Label] {
