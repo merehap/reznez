@@ -379,9 +379,9 @@ pub struct ComponentGraph<Name: ConstParamTy_, const NAME_COUNT: usize, const LA
 
 impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + fmt::Debug + fmt::Display + ToIndex, const NAME_COUNT: usize, const LABEL_COUNT: usize> ComponentGraph<Name, NAME_COUNT, LABEL_COUNT> {
     pub fn to_node_graph(&self, primary_sources: &[PrimarySource]) -> NodeGraph<Name> {
-        let mut factor_graph: FactorGraph<Name> = FactorGraph::new(primary_sources);
+        let mut factor_graph: FactorGraph<Name> = FactorGraph::new(self.signals.clone(), primary_sources);
         for component in &self.components {
-            factor_graph.push_component(&self.signals, component);
+            factor_graph.push_component(component);
         }
 
         NodeGraph::new(factor_graph)

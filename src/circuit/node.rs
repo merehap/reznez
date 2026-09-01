@@ -23,54 +23,25 @@ pub enum Factor<ComponentName: ConstParamTy_> {
 
 pub struct FactorGraph<ComponentName: ConstParamTy_> {
     factors_with_source: Vec<(Factor<ComponentName>, Source<ComponentName>)>,
+    signals: Vec<Signal<ComponentName>>,
 }
 
 impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + ToIndex> FactorGraph<ComponentName> {
-    pub fn new(primary_sources: &[PrimarySource]) -> Self {
+    pub fn new(signals: Vec<Signal<ComponentName>>, primary_sources: &[PrimarySource]) -> Self {
         Self {
             factors_with_source: primary_sources.iter()
                 .map(|primary_source| (Factor::PrimarySource(*primary_source), Source::Primary(*primary_source)))
-                .collect()
+                .collect(),
+            signals,
         }
     }
 
-    pub fn push_component(&mut self, signals: &[Signal<ComponentName>], component: &Component<ComponentName>) {
+    pub fn push_component(&mut self, component: &Component<ComponentName>) {
         println!("Pushing component: {:?}", component.name());
-        for factor in component.factors(signals) {
+        for factor in component.factors(&self.signals) {
             self.factors_with_source.insert(0, factor);
         }
     }
-
-    /*
-    pub fn to_node_graph(self) -> NodeGraph {
-        let signal_to_source_index = |signal: Signal<ComponentName>| -> Index {
-            for (i, (_, source)) in self.factors_with_source.iter().enumerate() {
-                if signal.source == source.clone() {
-                    return i;
-                }
-            }
-
-            panic!();
-        };
-
-        let factor_to_node = |factor: Factor<ComponentName>| -> Node {
-            match factor {
-                Factor::PrimarySource(primary_source) => Node::PrimarySource(primary_source),
-                Factor::Nor { a, b } => Node::Nor(signal_to_source_index(a), signal_to_source_index(b)),
-                Factor::DLatchQ { e, d, default_state } => Node::DLatchQ { e: signal_to_source_index(e), d: signal_to_source_index(d), default_state },
-                Factor::DLatchN { e, d, default_state } => Node::DLatchN { e: signal_to_source_index(e), d: signal_to_source_index(d), default_state },
-                Factor::SRLatchQ { s, r, default_state } => Node::SRLatchQ { s: signal_to_source_index(s), r: signal_to_source_index(r), default_state },
-                Factor::SRLatchN { s, r, default_state } => Node::SRLatchN { s: signal_to_source_index(s), r: signal_to_source_index(r), default_state },
-            }
-        };
-
-        NodeGraph {
-            nodes: self.factors_with_source.iter()
-                .map(|(factor, _)| factor_to_node(factor.clone()))
-                .collect(),
-        }
-    }
-    */
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -108,7 +79,21 @@ pub struct NodeGraph<ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + 
 
 impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + ToIndex> NodeGraph<ComponentName> {
     pub fn new(factor_graph: FactorGraph<ComponentName>) -> Self {
-        let factors_with_source = factor_graph.factors_with_source.clone();
+        let mut factors_with_source = factor_graph.factors_with_source.clone();
+        for i in (0..factors_with_source.len()).rev() {
+            let source = &factors_with_source[i].1;
+            if matches!(source, Source::Internal(_)) {
+                let found = factor_graph.signals.iter()
+                    .find(|signal| signal.source == *source)
+                    .is_some();
+                if !found {
+                    // Nothing is hooked up to this source.
+                    println!("Removing source {source:?}");
+                    factors_with_source.remove(i);
+                }
+            }
+        }
+
         let signal_to_source_index = |signal: Signal<ComponentName>| -> Index {
             for (i, (_, source)) in factors_with_source.iter().enumerate() {
                 if signal.source == source.clone() {
@@ -164,6 +149,8 @@ impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + ToIndex> NodeGr
 
             cofactors.push(cofactor);
         }
+
+        states.truncate(states.len() - primary_sources.len());
 
         Self { states, cofactors }
     }
