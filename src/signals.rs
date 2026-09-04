@@ -45,8 +45,10 @@ impl Signals {
         assert!(self.circuit_board.source(PrimarySource::PpuClockSecondHalf));
         self.circuit_board.set_source(PrimarySource::PpuClockFirstHalf, true);
         self.circuit_board.set_source(PrimarySource::PpuClockSecondHalf, false);
-        self.read_2007_nodes.evaluate([true, false, self.read_2007, false]);
-        self.write_2007_nodes.evaluate([true, false, false, self.write_2007]);
+        let read_sources = [true, false, self.read_2007, false];
+        self.read_2007_nodes.evaluate(read_sources);
+        let write_sources = [true, false, false, self.write_2007];
+        self.write_2007_nodes.evaluate(write_sources);
 
         if self.read_2007_active {
             self.circuit_board.calculate_read_2007_outputs(ppu_pinout);
@@ -61,14 +63,21 @@ impl Signals {
                 self.write_2007_active = false;
             }
         }
+
+        assert_eq!(self.read_2007_nodes.state_at(0), ppu_pinout.ppu_data_read, "Read didn't match. {}", self.read_2007_nodes.format_states(read_sources));
+        assert_eq!(self.read_2007_nodes.state_at(1), ppu_pinout.ppu_data_read_ale, "Read ALE didn't match. {}.", self.read_2007_nodes.format_states(read_sources));
+        assert_eq!(self.write_2007_nodes.state_at(0), ppu_pinout.ppu_data_write, "Write didn't match. {}", self.write_2007_nodes.format_states(write_sources));
+        assert_eq!(self.write_2007_nodes.state_at(1), ppu_pinout.ppu_data_write_ale, "Write ALE didn't match. {}.", self.write_2007_nodes.format_states(write_sources));
     }
 
     pub fn start_ppu_clock_second_half(&mut self, ppu_pinout: &mut PpuPinout) {
         assert!(self.circuit_board.source(PrimarySource::PpuClockFirstHalf));
         self.circuit_board.set_source(PrimarySource::PpuClockFirstHalf, false);
         self.circuit_board.set_source(PrimarySource::PpuClockSecondHalf, true);
-        self.read_2007_nodes.evaluate([false, true, self.read_2007, false]);
-        self.write_2007_nodes.evaluate([false, true, false, self.write_2007]);
+        let read_sources = [false, true, self.read_2007, false];
+        self.read_2007_nodes.evaluate(read_sources);
+        let write_sources = [false, true, false, self.write_2007];
+        self.write_2007_nodes.evaluate(write_sources);
 
         if self.read_2007_active {
             self.circuit_board.calculate_read_2007_outputs(ppu_pinout);
@@ -83,6 +92,11 @@ impl Signals {
                 self.write_2007_active = false;
             }
         }
+
+        assert_eq!(self.read_2007_nodes.state_at(0), ppu_pinout.ppu_data_read, "Read didn't match. {}", self.read_2007_nodes.format_states(read_sources));
+        assert_eq!(self.read_2007_nodes.state_at(1), ppu_pinout.ppu_data_read_ale, "ALE didn't match. {}", self.read_2007_nodes.format_states(read_sources));
+        assert_eq!(self.write_2007_nodes.state_at(0), ppu_pinout.ppu_data_write, "Write didn't match. {}", self.write_2007_nodes.format_states(write_sources));
+        assert_eq!(self.write_2007_nodes.state_at(1), ppu_pinout.ppu_data_write_ale, "Write ALE didn't match. {}.", self.write_2007_nodes.format_states(write_sources));
     }
 
     pub fn start_read_2007(&mut self) {

@@ -345,7 +345,7 @@ impl CircuitBoard {
     pub fn calculate_read_2007_outputs(&mut self, ppu_pinout: &mut PpuPinout) {
         self.read_2007_components.compute_primary_sinks(&self.primary_source_states);
 
-        ppu_pinout.ppu_data_ale = self.read_2007_components.primary_sinks[PrimarySink::Ale as usize];
+        ppu_pinout.ppu_data_read_ale = self.read_2007_components.primary_sinks[PrimarySink::Ale as usize];
         ppu_pinout.ppu_data_read = self.read_2007_components.primary_sinks[PrimarySink::Read as usize];
     }
 
@@ -356,7 +356,7 @@ impl CircuitBoard {
     pub fn calculate_write_2007_outputs(&mut self, ppu_pinout: &mut PpuPinout) {
         self.write_2007_components.compute_primary_sinks(&self.primary_source_states);
 
-        ppu_pinout.ppu_data_ale = self.write_2007_components.primary_sinks[PrimarySink::Ale as usize];
+        ppu_pinout.ppu_data_write_ale = self.write_2007_components.primary_sinks[PrimarySink::Ale as usize];
         ppu_pinout.ppu_data_write = self.write_2007_components.primary_sinks[PrimarySink::Write as usize];
     }
 

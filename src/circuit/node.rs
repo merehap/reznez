@@ -166,6 +166,14 @@ impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + fmt::Display + 
     pub fn state_at(&self, index: Index) -> bool {
         self.states[index]
     }
+
+    pub fn format_states(&self, primary_sources: [bool; PrimarySource::COUNT]) -> String {
+        let cofactor_index: usize = primary_sources.iter().rev().enumerate()
+            .map(|(i, value)| (*value as usize) << (PrimarySource::COUNT - i - 1))
+            .sum();
+        //println!("Cofactor index: {cofactor_index:04b}");
+        self.cofactors[cofactor_index].format_states(&self.states)
+    }
 }
 
 #[derive(PartialEq, Eq, Clone, Debug)]
@@ -174,18 +182,18 @@ pub struct Cofactor<ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + T
 }
 
 impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + fmt::Display + ToIndex> Cofactor<ComponentName> {
-    fn print_states(&self, states: &[bool]) {
+    fn format_states(&self, states: &[bool]) -> String {
+        let mut result = String::new();
         assert_eq!(states.len(), self.nodes.len());
         for i in 0..states.len() {
             for (source, _node, state_index) in &self.nodes {
                 if *state_index == i {
-                    print!("{}:{} ", source, states[i] as u8);
+                    result.push_str(&format!("{}:{} ", source, states[i] as u8));
                 }
             }
         }
 
-        println!();
-        println!();
+        result
     }
 
     fn evaluate(&self, states: &mut [bool]) {
