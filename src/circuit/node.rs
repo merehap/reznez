@@ -78,7 +78,7 @@ pub struct NodeGraph<ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + 
 
 impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + fmt::Display + ToIndex> NodeGraph<ComponentName> {
     pub fn new(factor_graph: FactorGraph<ComponentName>) -> Self {
-        let factors_with_source = factor_graph.factors_with_source.clone();
+        let mut factors_with_source = factor_graph.factors_with_source.clone();
         for i in (0..factors_with_source.len()).rev() {
             let source = &factors_with_source[i].1;
             if matches!(source, Source::Internal(_)) {
@@ -88,13 +88,14 @@ impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + fmt::Display + 
                 if !found {
                     // Nothing is hooked up to this source.
                     //println!("Removing source {source:?}");
-                    //factors_with_source.remove(i);
+                    factors_with_source.remove(i);
                 }
             }
         }
 
+        let cloned_factors_with_source = factors_with_source.clone();
         let signal_to_source_index = |signal: Signal<ComponentName>| -> Index {
-            for (i, (_factor, source)) in factors_with_source.iter().enumerate() {
+            for (i, (_factor, source)) in cloned_factors_with_source.iter().enumerate() {
                 if signal.source == source.clone() {
                     return i;
                 }
@@ -117,7 +118,7 @@ impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + fmt::Display + 
         //let mut states = vec![false; primary_sources.len() + factor_graph.factors_with_source.len()];
         let mut nodes = Vec::new();
         let mut states = Vec::new();
-        for (i, (factor, source)) in factor_graph.factors_with_source.into_iter().enumerate() {
+        for (i, (factor, source)) in factors_with_source.into_iter().enumerate() {
             let (node, default_state) = factor_to_node(factor.clone());
             nodes.push((source.clone(), node, i));
             states.push(default_state);
