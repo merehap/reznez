@@ -78,7 +78,7 @@ pub struct NodeGraph<ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + 
 
 impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + fmt::Display + ToIndex> NodeGraph<ComponentName> {
     pub fn new(factor_graph: FactorGraph<ComponentName>) -> Self {
-        let mut factors_with_source = factor_graph.factors_with_source.clone();
+        let factors_with_source = factor_graph.factors_with_source.clone();
         for i in (0..factors_with_source.len()).rev() {
             let source = &factors_with_source[i].1;
             if matches!(source, Source::Internal(_)) {
@@ -315,22 +315,22 @@ impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + fmt::Display + 
                 }
                 SRLatchQ { s, r } => match (self.nodes[s].1, self.nodes[r].1) {
                     (Constant(false), Constant(false)) => Some(State(i)),
-                    (Constant(true) , Constant(false)) => Some(Constant(true)),
-                    (Constant(_)    , Constant(true) ) => Some(Constant(false)),
-                    (Constant(true), _) => Some(Not(r)),
-                    (Constant(false), _) => Some(StateAndNot { state: i, other: r }),
-                    (_, Constant(true)) => Some(Constant(false)),
-                    (_, Constant(false)) => Some(StateOr { state: i, other: s }),
+                    (Constant(true) , Constant(false)) => Some(Constant(false)),
+                    (Constant(_)    , Constant(true) ) => Some(Constant(true)),
+                    (Constant(true), _) => Some(Constant(false)),
+                    (Constant(false), _) => Some(StateOr { state: i, other: r }),
+                    (_, Constant(true)) => Some(Not(r)),
+                    (_, Constant(false)) => Some(StateAndNot { state: i, other: s }),
                     (_, _) => None,
                 }
                 SRLatchN { s, r } => match (self.nodes[s].1, self.nodes[r].1) {
                     (Constant(false), Constant(false)) => Some(State(i)),
-                    (Constant(false), Constant(true) ) => Some(Constant(true)),
-                    (Constant(true) , Constant(_)    ) => Some(Constant(false)),
-                    (Constant(true), _) => Some(Identity(r)),
-                    (Constant(false), _) => Some(StateOr { state: i, other: r }),
-                    (_, Constant(true)) => Some(Not(s)),
-                    (_, Constant(false)) => Some(StateOrNot { state: i, other: s }),
+                    (Constant(false), Constant(true) ) => Some(Constant(false)),
+                    (Constant(true) , Constant(_)    ) => Some(Constant(true)),
+                    (Constant(true), _) => Some(Not(s)),
+                    (Constant(false), _) => Some(StateOrNot { state: i, other: r }),
+                    (_, Constant(true)) => Some(Identity(r)),
+                    (_, Constant(false)) => Some(StateOr { state: i, other: s }),
                     (_, _) => None,
                 }
             };

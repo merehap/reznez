@@ -67,6 +67,12 @@ fn main() {
     node_graph.evaluate([true, false, false, false]);
     node_graph.evaluate([false, true, false, false]);
     node_graph.evaluate([true, false, false, false]);
+    node_graph.evaluate([false, true, false, false]);
+    node_graph.evaluate([true, false, false, false]);
+    node_graph.evaluate([false, true, false, false]);
+    node_graph.evaluate([true, false, false, false]);
+    node_graph.evaluate([false, true, false, false]);
+    node_graph.evaluate([true, false, false, false]);
     println!("DONE");
     return;
 
