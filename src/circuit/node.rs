@@ -11,7 +11,7 @@ pub enum ComponentTypeName {
     SRLatch(bool),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Factor<ComponentName: ConstParamTy_> {
     PrimarySource(PrimarySource),
     Nor { a: Signal<ComponentName>, b: Signal<ComponentName> },
@@ -37,7 +37,6 @@ impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + ToIndex> Factor
     }
 
     pub fn push_component(&mut self, component: &Component<ComponentName>) {
-        println!("Pushing component: {:?}", component.name());
         for factor in component.factors(&self.signals) {
             self.factors_with_source.insert(0, factor);
         }
@@ -77,7 +76,7 @@ pub struct NodeGraph<ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + 
     cofactors: Vec<Cofactor<ComponentName>>,
 }
 
-impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + ToIndex> NodeGraph<ComponentName> {
+impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + fmt::Display + ToIndex> NodeGraph<ComponentName> {
     pub fn new(factor_graph: FactorGraph<ComponentName>) -> Self {
         let mut factors_with_source = factor_graph.factors_with_source.clone();
         for i in (0..factors_with_source.len()).rev() {
@@ -89,13 +88,13 @@ impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + ToIndex> NodeGr
                 if !found {
                     // Nothing is hooked up to this source.
                     println!("Removing source {source:?}");
-                    factors_with_source.remove(i);
+                    //factors_with_source.remove(i);
                 }
             }
         }
 
         let signal_to_source_index = |signal: Signal<ComponentName>| -> Index {
-            for (i, (_, source)) in factors_with_source.iter().enumerate() {
+            for (i, (_factor, source)) in factors_with_source.iter().enumerate() {
                 if signal.source == source.clone() {
                     return i;
                 }
@@ -141,28 +140,27 @@ impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + ToIndex> NodeGr
 
             let mut cofactor = Cofactor { nodes: nodes.clone() };
             cofactor.propagate_constants();
-            cofactor.nodes.truncate(cofactor.nodes.len() - primary_sources.len());
+            //cofactor.nodes.truncate(cofactor.nodes.len() - primary_sources.len());
             cofactor.sort();
-            println!("{:?}", cofactor.nodes);
+            //println!("SORTED {:?}", cofactor.nodes);
             println!();
             println!();
 
             cofactors.push(cofactor);
         }
 
-        states.truncate(states.len() - primary_sources.len());
+        //states.truncate(states.len() - primary_sources.len());
 
         Self { states, cofactors }
     }
 
     pub fn evaluate(&mut self, primary_sources: [bool; PrimarySource::COUNT]) {
-        let cofactor_index: usize = primary_sources.iter().enumerate()
+        let cofactor_index: usize = primary_sources.iter().rev().enumerate()
             .map(|(i, value)| (*value as usize) << (PrimarySource::COUNT - i - 1))
             .sum();
-        println!("Cofactor index: {cofactor_index}");
+        println!("Cofactor index: {cofactor_index:04b}");
         self.cofactors[cofactor_index].evaluate(&mut self.states);
-
-        println!("{:?}", self.states);
+        self.cofactors[cofactor_index].print_states(&self.states);
     }
 }
 
@@ -171,7 +169,21 @@ pub struct Cofactor<ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + T
     nodes: Vec<(Source<ComponentName>, Node, usize)>,
 }
 
-impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + ToIndex> Cofactor<ComponentName> {
+impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + fmt::Display + ToIndex> Cofactor<ComponentName> {
+    fn print_states(&self, states: &[bool]) {
+        assert_eq!(states.len(), self.nodes.len());
+        for i in 0..states.len() {
+            for (source, _node, state_index) in &self.nodes {
+                if *state_index == i {
+                    print!("{}:{} ", source, states[i] as u8);
+                }
+            }
+        }
+
+        println!();
+        println!();
+    }
+
     fn evaluate(&self, states: &mut [bool]) {
         for (_source, node, target_index) in &self.nodes {
             let value = match node {
@@ -188,7 +200,6 @@ impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + ToIndex> Cofact
                 Node::DLatchQ {..} | Node::DLatchN {..} | Node::SRLatchQ {..} | Node::SRLatchN {..} => todo!("How was this not reduced?"),
             };
 
-            println!("Setting state [{target_index}]={value}");
             states[*target_index] = value;
         }
     }
@@ -206,7 +217,9 @@ impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + ToIndex> Cofact
                 if let Some(source_node) = unsorted_nodes[i].clone() {
                     use Node::*;
                     match source_node.1 {
-                        PrimarySource(_) => panic!("PrimarySources should have been eliminated by now."),
+                        PrimarySource(_) => {
+                            panic!("PrimarySources should have already been eliminated.");
+                        }
                         Constant(..) => {
                             sorted_nodes.push(source_node);
                             unsorted_nodes[i] = None;
@@ -240,16 +253,15 @@ impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + ToIndex> Cofact
             }
         }
 
+        //assert_eq!(self.nodes.len(), sorted_nodes.len());
         self.nodes = sorted_nodes;
     }
 
     fn propagate_constants(&mut self) {
-        println!("{:?}", self.nodes);
-
         loop {
             let reduced = self.reduce();
             if reduced {
-                println!("{:?}", self.nodes);
+                //println!("REDUCED {:?}", self.nodes);
             } else {
                 return;
             }
