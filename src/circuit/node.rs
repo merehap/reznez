@@ -140,7 +140,7 @@ impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + fmt::Display + 
 
             let mut cofactor = Cofactor { nodes: nodes.clone() };
             cofactor.propagate_constants();
-            //cofactor.nodes.truncate(cofactor.nodes.len() - primary_sources.len());
+            cofactor.nodes.truncate(cofactor.nodes.len() - primary_sources.len());
             cofactor.sort();
             //println!("SORTED {:?}", cofactor.nodes);
             //println!();
@@ -149,7 +149,7 @@ impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + fmt::Display + 
             cofactors.push(cofactor);
         }
 
-        //states.truncate(states.len() - primary_sources.len());
+        states.truncate(states.len() - primary_sources.len());
 
         Self { states, cofactors }
     }
