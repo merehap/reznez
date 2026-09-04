@@ -87,7 +87,7 @@ impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + fmt::Display + 
                     .is_some();
                 if !found {
                     // Nothing is hooked up to this source.
-                    println!("Removing source {source:?}");
+                    //println!("Removing source {source:?}");
                     //factors_with_source.remove(i);
                 }
             }
@@ -130,21 +130,21 @@ impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + fmt::Display + 
         for mut i in 0..2u8.pow(primary_sources.len() as u32) {
             for j in 0..primary_sources.len() {
                 let constant = i & 1 == 1;
-                print!("{}={constant} ", primary_sources[j]);
+                //print!("{}={constant} ", primary_sources[j]);
                 let node_index = state_count - primary_sources.len() + j;
                 nodes[node_index] = (Source::Primary(primary_sources[j]), Node::Constant(constant), node_index);
                 i >>= 1;
             }
 
-            println!();
+            //println!();
 
             let mut cofactor = Cofactor { nodes: nodes.clone() };
             cofactor.propagate_constants();
             //cofactor.nodes.truncate(cofactor.nodes.len() - primary_sources.len());
             cofactor.sort();
             //println!("SORTED {:?}", cofactor.nodes);
-            println!();
-            println!();
+            //println!();
+            //println!();
 
             cofactors.push(cofactor);
         }
@@ -158,9 +158,13 @@ impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + fmt::Display + 
         let cofactor_index: usize = primary_sources.iter().rev().enumerate()
             .map(|(i, value)| (*value as usize) << (PrimarySource::COUNT - i - 1))
             .sum();
-        println!("Cofactor index: {cofactor_index:04b}");
+        //println!("Cofactor index: {cofactor_index:04b}");
         self.cofactors[cofactor_index].evaluate(&mut self.states);
-        self.cofactors[cofactor_index].print_states(&self.states);
+        //self.cofactors[cofactor_index].print_states(&self.states);
+    }
+
+    pub fn state_at(&self, index: Index) -> bool {
+        self.states[index]
     }
 }
 

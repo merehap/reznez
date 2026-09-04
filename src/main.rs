@@ -41,8 +41,6 @@ use structopt::StructOpt;
 
 use crate::cartridge::cartridge_metadata::{ConsoleType, TimingMode};
 use crate::cartridge::header_db::HeaderDb;
-use crate::circuit::circuit_board::READ_2007_COMPONENTS;
-use crate::circuit::source::PrimarySource;
 use crate::config::{Config, Opt};
 use crate::logging::logger;
 use crate::logging::logger::Logger;
@@ -57,6 +55,7 @@ fn main() {
         prev(info);
     });
 
+    /*
     let mut node_graph = READ_2007_COMPONENTS.to_node_graph(&[PrimarySource::PpuClockFirstHalf, PrimarySource::PpuClockSecondHalf, PrimarySource::Read2007, PrimarySource::Write2007]);
     node_graph.evaluate([true, false, false, false]);
     node_graph.evaluate([false, true, true, false]);
@@ -75,6 +74,7 @@ fn main() {
     node_graph.evaluate([true, false, false, false]);
     println!("DONE");
     return;
+    */
 
     if let Some(source_code_path) = opt.assemble {
         assert!(opt.rom_path.is_none(), "Can't specify both a ROM and code to assemble.");

@@ -162,7 +162,7 @@ impl ToIndex for Read2007ComponentName {
     }
 }
 
-static WRITE_2007_COMPONENTS: LazyLock<ComponentGraph<Write2007ComponentName, {WRITE_2007_COMPONENT_NAME_COUNT}, {LABEL_COUNT}>> = LazyLock::new(|| {
+pub static WRITE_2007_COMPONENTS: LazyLock<ComponentGraph<Write2007ComponentName, {WRITE_2007_COMPONENT_NAME_COUNT}, {LABEL_COUNT}>> = LazyLock::new(|| {
     use Write2007ComponentName::*;
     let mut graph = ComponentGraphBuilder::new()
         .component(Component::new(DLatch0, Box::new(DLatch::new(false))))
@@ -284,7 +284,7 @@ static WRITE_2007_COMPONENTS: LazyLock<ComponentGraph<Write2007ComponentName, {W
 const WRITE_2007_COMPONENT_NAME_COUNT: usize = std::mem::variant_count::<Write2007ComponentName>();
 
 #[derive(ConstParamTy, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
-enum Write2007ComponentName {
+pub enum Write2007ComponentName {
     DLatch0,
     DLatch1,
     DLatch2,
