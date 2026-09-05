@@ -24,6 +24,7 @@ pub enum Factor<ComponentName: ConstParamTy_> {
 pub struct FactorGraph<ComponentName: ConstParamTy_> {
     factors_with_source: Vec<(Factor<ComponentName>, Source<ComponentName>)>,
     signals: Vec<Signal<ComponentName>>,
+    primary_source_count: u8,
 }
 
 impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + ToIndex> FactorGraph<ComponentName> {
@@ -33,6 +34,7 @@ impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + ToIndex> Factor
                 .map(|primary_source| (Factor::PrimarySource(*primary_source), Source::Primary(*primary_source)))
                 .collect(),
             signals,
+            primary_source_count: primary_sources.len().try_into().unwrap(),
         }
     }
 
@@ -74,10 +76,11 @@ pub type Index = usize;
 pub struct NodeGraph<ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + ToIndex> {
     states: Vec<bool>,
     cofactors: Vec<Cofactor<ComponentName>>,
+    primary_source_count: usize,
 }
 
 impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + fmt::Display + ToIndex> NodeGraph<ComponentName> {
-    pub fn new(factor_graph: FactorGraph<ComponentName>) -> Self {
+    pub fn new(factor_graph: FactorGraph<ComponentName>, primary_sources: &[PrimarySource]) -> Self {
         let mut factors_with_source = factor_graph.factors_with_source.clone();
         for i in (0..factors_with_source.len()).rev() {
             let source = &factors_with_source[i].1;
@@ -87,7 +90,6 @@ impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + fmt::Display + 
                     .is_some();
                 if !found {
                     // Nothing is hooked up to this source.
-                    //println!("Removing source {source:?}");
                     factors_with_source.remove(i);
                 }
             }
@@ -124,55 +126,44 @@ impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + fmt::Display + 
             states.push(default_state);
         }
 
-        let primary_sources = [PrimarySource::PpuClockFirstHalf, PrimarySource::PpuClockSecondHalf, PrimarySource::Read2007, PrimarySource::Write2007];
-
         let state_count = states.len();
         let mut cofactors = Vec::new();
-        for mut i in 0..2u8.pow(primary_sources.len() as u32) {
-            for j in 0..primary_sources.len() {
+        for mut i in 0..2u8.pow(factor_graph.primary_source_count as u32) {
+            for j in 0..usize::from(factor_graph.primary_source_count) {
                 let constant = i & 1 == 1;
-                //print!("{}={constant} ", primary_sources[j]);
-                let node_index = state_count - primary_sources.len() + j;
+                let node_index = state_count - usize::from(factor_graph.primary_source_count) + j;
                 nodes[node_index] = (Source::Primary(primary_sources[j]), Node::Constant(constant), node_index);
                 i >>= 1;
             }
-
-            //println!();
 
             let mut cofactor = Cofactor { nodes: nodes.clone() };
             cofactor.propagate_constants();
             cofactor.nodes.truncate(cofactor.nodes.len() - primary_sources.len());
             cofactor.sort();
-            //println!("SORTED {:?}", cofactor.nodes);
-            //println!();
-            //println!();
 
             cofactors.push(cofactor);
         }
 
         states.truncate(states.len() - primary_sources.len());
 
-        Self { states, cofactors }
+        Self { states, cofactors, primary_source_count: factor_graph.primary_source_count.into() }
     }
 
-    pub fn evaluate(&mut self, primary_sources: [bool; PrimarySource::COUNT]) {
-        let cofactor_index: usize = primary_sources.iter().rev().enumerate()
-            .map(|(i, value)| (*value as usize) << (PrimarySource::COUNT - i - 1))
+    pub fn evaluate(&mut self, primary_source_states: &[bool]) {
+        let cofactor_index: usize = primary_source_states.iter().rev().enumerate()
+            .map(|(i, value)| (*value as usize) << (self.primary_source_count - i - 1))
             .sum();
-        //println!("Cofactor index: {cofactor_index:04b}");
         self.cofactors[cofactor_index].evaluate(&mut self.states);
-        //self.cofactors[cofactor_index].print_states(&self.states);
     }
 
     pub fn state_at(&self, index: Index) -> bool {
         self.states[index]
     }
 
-    pub fn format_states(&self, primary_sources: [bool; PrimarySource::COUNT]) -> String {
-        let cofactor_index: usize = primary_sources.iter().rev().enumerate()
-            .map(|(i, value)| (*value as usize) << (PrimarySource::COUNT - i - 1))
+    pub fn format_states(&self, primary_source_states: &[bool]) -> String {
+        let cofactor_index: usize = primary_source_states.iter().rev().enumerate()
+            .map(|(i, value)| (*value as usize) << (primary_source_states.len() - i - 1))
             .sum();
-        //println!("Cofactor index: {cofactor_index:04b}");
         self.cofactors[cofactor_index].format_states(&self.states)
     }
 }
@@ -266,19 +257,12 @@ impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + fmt::Display + 
             }
         }
 
-        //assert_eq!(self.nodes.len(), sorted_nodes.len());
+        //assert_eq!(self.nodes.len(), sorted_nodes.len(), "Failed to reduce some nodes.");
         self.nodes = sorted_nodes;
     }
 
     fn propagate_constants(&mut self) {
-        loop {
-            let reduced = self.reduce();
-            if reduced {
-                //println!("REDUCED {:?}", self.nodes);
-            } else {
-                return;
-            }
-        }
+        while self.reduce() {}
     }
 
     fn reduce(&mut self) -> bool {

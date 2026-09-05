@@ -384,7 +384,7 @@ impl <Name: ConstParamTy_ + PartialEq + Eq + PartialOrd + Ord + Clone + Copy + f
             factor_graph.push_component(component);
         }
 
-        NodeGraph::new(factor_graph)
+        NodeGraph::new(factor_graph, primary_sources)
     }
     /*
     pub fn to_netlist(&self, primary_signal_states: &[bool]) -> Netlist {
