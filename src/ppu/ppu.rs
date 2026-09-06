@@ -150,8 +150,10 @@ impl Ppu {
 
         if bus.ppu_pinout.fetch_cadence_ale {
             bus.set_ppu_address_bus(mapper, bus.ppu.next_fetch_cadence_addr)
-        } else if bus.ppu_pinout.ppu_data_read_ale || bus.ppu_pinout.ppu_data_write_ale {
+        } else if bus.ppu_pinout.ppu_data_read_ale {
             bus.set_ppu_address_bus(mapper, bus.ppu_regs.current_address.to_read_buffer_source())
+        } else if bus.ppu_pinout.ppu_data_write_ale {
+            bus.set_ppu_address_bus(mapper, bus.ppu_regs.current_address)
         }
 
         if bus.ppu_regs.suppress_vblank_active {
