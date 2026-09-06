@@ -139,14 +139,13 @@ impl Ppu {
         let len = bus.ppu.frame_actions.current_cycle_actions(bus.ppu_clock()).len();
         for i in 0..len {
             let cycle_action = bus.ppu.frame_actions.current_cycle_actions(bus.master_clock.ppu_clock())[i];
-            match Ppu::execute_cycle_action(bus, frame, cycle_action) {
-                Followup::None => {}
-                Followup::PpuReadNextRegisterValue => {
-                    let PpuPeek { value, source } = bus.ppu_read(mapper);
-                    bus.ppu.next_register_value = value.resolve_with_zeros();
-                    bus.ppu.next_register_source = source;
-                }
-            }
+            Ppu::execute_cycle_action(bus, frame, cycle_action);
+        }
+
+        if bus.ppu_pinout.fetch_cadence_read {
+            let PpuPeek { value, source } = bus.ppu_read(mapper);
+            bus.ppu.next_register_value = value.resolve_with_zeros();
+            bus.ppu.next_register_source = source;
         }
 
         if bus.ppu_pinout.fetch_cadence_ale {
@@ -236,9 +235,7 @@ impl Ppu {
             secondary_oam, secondary_oam_buffer, composite_decoders, .. }: &mut Bus,
         frame: &mut Frame,
         cycle_action: CycleAction
-    ) -> Followup {
-        let mut followup = Followup::None;
-
+    ) {
         let clock = master_clock.ppu_clock();
 
         use CycleAction::*;
@@ -284,7 +281,6 @@ impl Ppu {
             }
 
             Read => {
-                followup = Followup::PpuReadNextRegisterValue;
                 ppu_pinout.fetch_cadence_read = true;
             }
             PrepareForNextPixel => {
@@ -468,7 +464,7 @@ impl Ppu {
             }
             // TODO: Can this sanely be written branchless? I suspect that's cleanest as it closest models how the hardware works.
             EvaluateSpriteByte => {
-                if !ppu_regs.background_enabled() && !ppu_regs.sprites_enabled() { return Followup::None; }
+                if !ppu_regs.background_enabled() && !ppu_regs.sprites_enabled() { return; }
 
                 let mut should_read = true;
                 let mut start_next_field = false;
@@ -631,13 +627,15 @@ impl Ppu {
                 ppu.next_fetch_cadence_addr = ppu_regs.current_address;
             }
             SetInitialScrollOffsets => {
-                if !ppu_regs.background_enabled() { return Followup::None; }
-                ppu_regs.current_address = ppu_regs.next_address;
+                if ppu_regs.background_enabled() {
+                    ppu_regs.current_address = ppu_regs.next_address;
+                }
             }
             SetInitialYScroll => {
-                if !ppu_regs.background_enabled() { return Followup::None; }
-                let next_address = ppu_regs.next_address;
-                ppu_regs.current_address.copy_y_scroll(next_address);
+                if ppu_regs.background_enabled() {
+                    let next_address = ppu_regs.next_address;
+                    ppu_regs.current_address.copy_y_scroll(next_address);
+                }
             }
 
             ClearFlags => {
@@ -650,8 +648,6 @@ impl Ppu {
                 ciram.enable_writes();
             }
         }
-
-        followup
     }
 
     pub fn background_buffer(&self) -> &FrameBuffer<ColorT> {
@@ -717,10 +713,4 @@ enum RenderingRegisterField {
     BackgroundPatternHighAndNextTile,
     SpritePatternLow,
     SpritePatternHighAndNextSprite,
-}
-
-
-enum Followup {
-    None,
-    PpuReadNextRegisterValue,
 }
