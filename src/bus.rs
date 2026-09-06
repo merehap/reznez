@@ -19,7 +19,7 @@ use crate::memory::cpu::prg_memory::PrgMemory;
 use crate::memory::ppu::chr_memory::{ChrMemory, PeekSource, PpuPeek};
 use crate::memory::regions::palette_ram::PaletteRam;
 use crate::memory::regions::ciram::{Ciram, CiramSide};
-use crate::memory::ppu::ppu_address::{PpuAddress, PpuAddressSection};
+use crate::memory::ppu::ppu_address::{ChrAddress, PpuAddress, PpuAddressSection};
 use crate::memory::ppu::ppu_pinout::PpuPinout;
 use crate::memory::read_result::ReadResult;
 use crate::memory::regions::small_page::SmallPage;
@@ -496,7 +496,7 @@ impl Bus {
 
     pub fn ppu_peek(&self, address: PpuAddress) -> PpuPeek {
         match address.to_section() {
-            PpuAddressSection::Chr(chr_index) => self.peek_chr(chr_index.to_ppu_address()),
+            PpuAddressSection::Chr(chr_addr) => self.peek_chr(chr_addr),
             PpuAddressSection::Palette(palette_ram_index) => {
                 let color = self.palette_ram.peek_color(self.ppu_regs.mask(), palette_ram_index);
                 PpuPeek::new(color.to_read_result(), PeekSource::PaletteTable)
@@ -520,7 +520,7 @@ impl Bus {
         let addr = self.ppu_pinout.address();
         let value = self.cpu_pinout.data_bus;
         match addr.to_section() {
-            PpuAddressSection::Chr(_) => self.chr_memory.write(&mut self.ciram, &mut self.mapper_custom_pages, addr, value),
+            PpuAddressSection::Chr(chr_addr) => self.chr_memory.write(&mut self.ciram, &mut self.mapper_custom_pages, chr_addr, value),
             PpuAddressSection::Palette(palette_ram_index) => self.palette_ram.write(palette_ram_index, value),
         }
     }
@@ -539,8 +539,8 @@ impl Bus {
         }
     }
 
-    pub fn peek_chr(&self, address: PpuAddress) -> PpuPeek {
-        self.chr_memory.peek(&self.ciram, &self.mapper_custom_pages, address)
+    pub fn peek_chr(&self, addr: ChrAddress) -> PpuPeek {
+        self.chr_memory.peek(&self.ciram, &self.mapper_custom_pages, addr)
     }
 
     pub fn set_chr_rom_outer_bank_number(&mut self, index: u8) {

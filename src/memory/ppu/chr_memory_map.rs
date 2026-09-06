@@ -4,7 +4,7 @@ use crate::memory::address_template::address_resolver::AddressResolver;
 use crate::memory::address_template::bank_sizes::BankSizes;
 use crate::memory::bank::bank_number::{BankNumber, ChrBankRegisters, ReadStatus, WriteStatus};
 use crate::memory::ppu::chr_layout::ChrLayout;
-use crate::memory::ppu::ppu_address::PpuAddress;
+use crate::memory::ppu::ppu_address::ChrAddress;
 use crate::memory::register_ids::bank::ChrBankRegisterId;
 use crate::memory::register_ids::source::ChrSourceRegisterId;
 use crate::memory::window::{ChrBankNumberProvider, ChrSource, ChrSourceProvider, ChrWindow, ChrWindowSize};
@@ -102,12 +102,11 @@ impl ChrMemoryMap {
         Ok(memory_map)
     }
 
-    pub fn index_for_address(&self, address: PpuAddress) -> (ChrMemoryIndex, PeekSource) {
-        let address = address.to_u16();
-        assert!(address < 0x4000);
+    pub fn index_for_address(&self, addr: ChrAddress) -> (ChrMemoryIndex, PeekSource) {
+        let addr = addr.to_u16();
 
-        let mapping_index = address / (KIBIBYTE as u16);
-        let offset = address % (KIBIBYTE as u16);
+        let mapping_index = addr / (KIBIBYTE as u16);
+        let offset = addr % (KIBIBYTE as u16);
 
         let page_mapping = self.page_mappings[mapping_index as usize];
         let (chr_memory_index, peek_source) = match page_mapping.mem_type_status() {
@@ -115,12 +114,12 @@ impl ChrMemoryMap {
                 (ChrMemoryIndex::Absent, PeekSource::Void)
             }
             ChrMemTypeStatus::Rom(read_status) => {
-                let index = page_mapping.rom_address_resolver.resolve_index(address);
+                let index = page_mapping.rom_address_resolver.resolve_index(addr);
                 let bank_number = page_mapping.rom_address_resolver.resolve_inner_bank_number();
                 (ChrMemoryIndex::Rom(index, read_status), PeekSource::Rom(BankNumber::from_u16(bank_number)))
             }
             ChrMemTypeStatus::Ram(read_status, write_status) => {
-                let index = page_mapping.ram_address_resolver.resolve_index(address);
+                let index = page_mapping.ram_address_resolver.resolve_index(addr);
                 let bank_number = page_mapping.rom_address_resolver.resolve_inner_bank_number();
                 (ChrMemoryIndex::Ram(index, read_status, write_status), PeekSource::Ram(BankNumber::from_u16(bank_number)))
             }

@@ -282,7 +282,7 @@ impl PpuAddress {
 
     pub fn to_section(self) -> PpuAddressSection {
         match self.to_u16() {
-            0x0000..=0x3EFF => PpuAddressSection::Chr(ChrIndex::new(self.to_u16())),
+            0x0000..=0x3EFF => PpuAddressSection::Chr(ChrAddress::new(self.to_u16())),
             0x3F00..=0x3FFF => PpuAddressSection::Palette(PaletteRamIndex::new(u5::new((self.to_u16() % 0x20) as u8))),
             0x4000..=0xFFFF => unreachable!(),
         }
@@ -296,21 +296,27 @@ impl fmt::Display for PpuAddress {
 }
 
 pub enum PpuAddressSection {
-    Chr(ChrIndex),
+    Chr(ChrAddress),
     Palette(PaletteRamIndex)
 }
 
-pub struct ChrIndex(u16);
+#[derive(Clone, Copy)]
+pub struct ChrAddress(u16);
 
-impl ChrIndex {
-    fn new(index: u16) -> Self {
-        assert!(index < PALETTE_TABLE_START);
-        Self(index)
+impl ChrAddress {
+    fn new(addr: u16) -> Self {
+        assert!(addr < PALETTE_TABLE_START);
+        Self(addr)
     }
 
-    // TODO: Remove this temporary hack.
-    pub fn to_ppu_address(self) -> PpuAddress {
-        PpuAddress::from_u16(self.0)
+    pub fn to_u16(self) -> u16 {
+        self.0
+    }
+}
+
+impl fmt::Display for ChrAddress {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "${:04X}", self.to_u16())
     }
 }
 

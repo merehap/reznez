@@ -6,7 +6,7 @@ use crate::memory::address_template::bank_sizes::BankSizes;
 use crate::memory::bank::bank::MemoryPresence;
 use crate::memory::bank::bank_number::{BankNumber, ChrBankRegisters, ReadStatus, WriteStatus};
 use crate::memory::ppu::chr_layout::{ChrLayouts, ChrLayout};
-use crate::memory::ppu::ppu_address::PpuAddress;
+use crate::memory::ppu::ppu_address::ChrAddress;
 use crate::memory::ppu::chr_memory_map::{ChrMemTypeStatus, ChrMemoryIndex, ChrMemoryMap};
 use crate::memory::read_result::ReadResult;
 use crate::memory::regions::ciram::Ciram;
@@ -132,8 +132,8 @@ impl ChrMemory {
         self.current_layout().windows().len().try_into().unwrap()
     }
 
-    pub fn peek(&self, ciram: &Ciram, mapper_custom_name_tables: &[SmallPage], address: PpuAddress) -> PpuPeek {
-        let (index, source) = self.current_memory_map().index_for_address(address);
+    pub fn peek(&self, ciram: &Ciram, mapper_custom_name_tables: &[SmallPage], addr: ChrAddress) -> PpuPeek {
+        let (index, source) = self.current_memory_map().index_for_address(addr);
         assert_eq!(index.read_status(), ReadStatus::Enabled, "Disabling reading CHR RAM isn't supported yet.");
         let value = ReadResult::full(match index {
             ChrMemoryIndex::Absent => {
@@ -170,10 +170,10 @@ impl ChrMemory {
         &mut self,
         ciram: &mut Ciram,
         mapper_custom_name_tables: &mut [SmallPage],
-        address: PpuAddress,
+        addr: ChrAddress,
         value: u8,
     ) {
-        let (chr_memory_index, _) = self.current_memory_map().index_for_address(address);
+        let (chr_memory_index, _) = self.current_memory_map().index_for_address(addr);
         match chr_memory_index {
             ChrMemoryIndex::Absent => {
                 // TODO: There may be some open bus-related behavior that needs to happen here.
@@ -181,7 +181,7 @@ impl ChrMemory {
             }
             ChrMemoryIndex::Ram(index, _, WriteStatus::Enabled) => {
                 self.ram[index] = value;
-                info!(target: "mapperramwrites", "Setting CHR [${address}]=${value:02} (Work RAM @ ${index:X})");
+                info!(target: "mapperramwrites", "Setting CHR [${addr}]=${value:02} (Work RAM @ ${index:X})");
             }
             ChrMemoryIndex::Ciram(side, index) => {
                 ciram.write(side, index as u16, value);
