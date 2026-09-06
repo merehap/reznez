@@ -293,7 +293,6 @@ impl PpuRegisters {
     // Write 0x2007
     pub fn write_ppu_data(&mut self, value: u8) {
         self.ppu_io_bus.update(value);
-        self.current_address.advance(self.current_address_increment);
     }
 
     // Write 0x2000 (PPUCTRL), 0x2001 (PPUMASK), 0x2003 (OAMADDR), 0x2005 (PPUSCROLL), 0x2006 (PPUADDR)
@@ -337,6 +336,10 @@ impl PpuRegisters {
         };
 
         PpuRegistersTickResult { rendering_toggled }
+    }
+
+    pub fn advance_current_address(&mut self) {
+        self.current_address.advance(self.current_address_increment);
     }
 
     pub fn x_scroll(&self) -> XScroll {

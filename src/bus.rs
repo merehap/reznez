@@ -350,7 +350,7 @@ impl Bus {
                 self.ppu_regs.ppu_read_buffer = self.ppu_read(mapper)
                     .value
                     .resolve_with_bus(self.ppu_regs.ppu_io_bus().value());
-                self.ppu_regs.current_address.advance(self.ppu_regs.current_address_increment());
+                self.ppu_regs.advance_current_address();
 
                 // The current address is corrupted when reading PPUDATA during rendering. Some games depend on this.
                 let is_rendering = self.signals.rendering_enabled && self.signals.scanline_type() != ScanlineType::Vblank;
@@ -443,6 +443,7 @@ impl Bus {
                 self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
                 self.ppu_write();
                 self.ppu_regs.write_ppu_data(self.cpu_pinout.data_bus);
+                self.ppu_regs.advance_current_address();
                 self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
             }
 
