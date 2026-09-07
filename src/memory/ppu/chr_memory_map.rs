@@ -4,7 +4,7 @@ use crate::memory::address_template::address_resolver::AddressResolver;
 use crate::memory::address_template::bank_sizes::BankSizes;
 use crate::memory::bank::bank_number::{BankNumber, ChrBankRegisters, ReadStatus, WriteStatus};
 use crate::memory::ppu::chr_layout::ChrLayout;
-use crate::memory::ppu::ppu_address::ChrAddress;
+use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::register_ids::bank::ChrBankRegisterId;
 use crate::memory::register_ids::source::ChrSourceRegisterId;
 use crate::memory::window::{ChrBankNumberProvider, ChrSource, ChrSourceProvider, ChrWindow, ChrWindowSize};
@@ -102,7 +102,7 @@ impl ChrMemoryMap {
         Ok(memory_map)
     }
 
-    pub fn index_for_address(&self, addr: ChrAddress) -> (ChrMemoryIndex, PeekSource) {
+    pub fn index_for_address(&self, addr: PpuAddress) -> (ChrMemoryIndex, PeekSource) {
         let addr = addr.to_u16();
 
         let mapping_index = addr / (KIBIBYTE as u16);

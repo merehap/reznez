@@ -283,6 +283,7 @@ impl PpuRegisters {
         ReadResult::full(data)
     }
 
+    /*
     // Read 0x2007
     pub fn read_ppu_data(&mut self, palette_ram: &PaletteRam) -> ReadResult {
         let data = if let Some(palette_ram_index) = self.current_address.to_palette_ram_index() {
@@ -296,6 +297,7 @@ impl PpuRegisters {
         self.ppu_io_bus.update(data);
         ReadResult::full(data)
     }
+    */
 
     // Write 0x2007
     pub fn write_ppu_data(&mut self, value: u8) {

@@ -19,7 +19,7 @@ use crate::memory::cpu::prg_memory::PrgMemory;
 use crate::memory::ppu::chr_memory::{ChrMemory, PeekSource, PpuPeek};
 use crate::memory::regions::palette_ram::PaletteRam;
 use crate::memory::regions::ciram::{Ciram, CiramSide};
-use crate::memory::ppu::ppu_address::{ChrAddress, PpuAddress, PpuAddressSection};
+use crate::memory::ppu::ppu_address::{PpuAddress, PpuAddressSection};
 use crate::memory::ppu::ppu_pinout::PpuPinout;
 use crate::memory::read_result::ReadResult;
 use crate::memory::regions::small_page::SmallPage;
@@ -345,19 +345,11 @@ impl Bus {
             Addr::PpuData => {
                 self.signals.start_read_2007();
 
-                let data = if let Some(palette_ram_index) = self.ppu_regs.current_address.to_palette_ram_index() {
-                    // This doesn't count as a PPU read for mapper purposes: /RD hasn't been asserted yet!
-                    let color = self.palette_ram.peek_color(self.ppu_regs.mask(), palette_ram_index);
-                    color.to_read_result().resolve_with_bus(self.ppu_regs.ppu_io_bus.value())
-                } else {
-                    self.ppu_regs.ppu_read_buffer
-                };
-
-                self.ppu_regs.ppu_io_bus.update(data);
-                let data = ReadResult::full(data);
+                let data = self.ppu_regs.peek_ppu_data(&self.palette_ram);
+                self.ppu_regs.ppu_io_bus.update(data.unmasked_value());
 
                 self.set_ppu_address_bus(mapper, self.ppu_regs.current_address.to_read_buffer_source());
-                self.ppu_regs.ppu_read_buffer = self.ppu_read(mapper)
+                self.ppu_regs.ppu_read_buffer = self.chr_read(mapper)
                     .value
                     .resolve_with_bus(self.ppu_regs.ppu_io_bus().value());
                 self.ppu_regs.advance_current_address();
@@ -504,24 +496,35 @@ impl Bus {
         mapper.on_cpu_write(self, addr, self.cpu_pinout.data_bus);
     }
 
-    pub fn ppu_peek(&self, address: PpuAddress) -> PpuPeek {
-        match address.to_section() {
-            PpuAddressSection::Chr(chr_addr) => self.peek_chr(chr_addr),
+    pub fn ppu_peek(&self, addr: PpuAddress) -> PpuPeek {
+        match addr.to_section() {
             PpuAddressSection::Palette(palette_ram_index) => {
                 let color = self.palette_ram.peek_color(self.ppu_regs.mask(), palette_ram_index);
                 PpuPeek::new(color.to_read_result(), PeekSource::PaletteTable)
             }
+            _ => self.chr_memory.peek(&self.ciram, &self.mapper_custom_pages, addr),
         }
     }
 
     pub fn ppu_read(&mut self, mapper: &mut dyn Mapper) -> PpuPeek {
         let addr = self.ppu_pinout.address();
-        let result = self.ppu_peek(addr);
-        let resolved_value = result.value.resolve_with_bus(self.ppu_regs.ppu_io_bus().value());
+        let unresolved_value = self.ppu_peek(addr);
+        self.resolve_ppu_read_value(mapper, addr, unresolved_value)
+    }
+
+    pub fn chr_read(&mut self, mapper: &mut dyn Mapper) -> PpuPeek {
+        let addr = self.ppu_pinout.address();
+        let unresolved_value = self.chr_memory.peek(&self.ciram, &self.mapper_custom_pages, addr);
+        self.resolve_ppu_read_value(mapper, addr, unresolved_value)
+    }
+
+    fn resolve_ppu_read_value(&mut self, mapper: &mut dyn Mapper, addr: PpuAddress, unresolved_value: PpuPeek) -> PpuPeek {
+        let resolved_value = unresolved_value.value.resolve_with_bus(self.ppu_regs.ppu_io_bus().value());
+        // TODO: Determine if MMC5 substitution instead happens before on_ppu_read is called.
         if let Some(substitute) = mapper.on_ppu_read(self, addr, resolved_value) {
             substitute
         } else {
-            result
+            unresolved_value
         }
     }
 
@@ -530,7 +533,7 @@ impl Bus {
         let addr = self.ppu_pinout.address();
         let value = self.cpu_pinout.data_bus;
         match addr.to_section() {
-            PpuAddressSection::Chr(chr_addr) => self.chr_memory.write(&mut self.ciram, &mut self.mapper_custom_pages, chr_addr, value),
+            PpuAddressSection::Chr(_) => self.chr_memory.write(&mut self.ciram, &mut self.mapper_custom_pages, addr, value),
             PpuAddressSection::Palette(palette_ram_index) => self.palette_ram.write(palette_ram_index, value),
         }
     }
@@ -547,10 +550,6 @@ impl Bus {
         if address_changed {
             mapper.on_ppu_address_change(self, self.ppu_pinout.address());
         }
-    }
-
-    pub fn peek_chr(&self, addr: ChrAddress) -> PpuPeek {
-        self.chr_memory.peek(&self.ciram, &self.mapper_custom_pages, addr)
     }
 
     pub fn set_chr_rom_outer_bank_number(&mut self, index: u8) {
