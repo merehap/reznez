@@ -444,7 +444,6 @@ impl Bus {
                 self.ppu_write();
                 self.ppu_regs.write_ppu_data(self.cpu_pinout.data_bus);
                 self.ppu_regs.advance_current_address();
-                self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
             }
 
             // APU channel registers.
