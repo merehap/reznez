@@ -348,7 +348,7 @@ impl Bus {
                 let data = self.ppu_regs.peek_ppu_data(&self.palette_ram);
                 self.ppu_regs.ppu_io_bus.update(data.unmasked_value());
 
-                self.set_ppu_address_bus(mapper, self.ppu_regs.current_address.to_read_buffer_source());
+                self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
                 self.ppu_regs.ppu_read_buffer = self.chr_read(mapper)
                     .value
                     .resolve_with_bus(self.ppu_regs.ppu_io_bus().value());
