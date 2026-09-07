@@ -117,15 +117,6 @@ impl PpuAddress {
         }
     }
 
-    pub fn to_read_buffer_source(self) -> PpuAddress {
-        let mut buffer_addr = self;
-        if buffer_addr.to_u16() >= 0x3000 {
-            buffer_addr = PpuAddress::from_u16(buffer_addr.to_u16() - 0x1000);
-        }
-
-        buffer_addr
-    }
-
     pub fn name_table_quadrant(self) -> NameTableQuadrant {
         splitbits_named_ux!(self.to_u16(), ".... nn.. .... ....").into()
     }
