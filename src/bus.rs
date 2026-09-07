@@ -360,8 +360,6 @@ impl Bus {
                     self.ppu_regs.current_address.increment_fine_y_scroll();
                 }
 
-                self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
-
                 data
             }
             Addr::PpuControl | Addr::PpuMask | Addr::OamAddress | Addr::PpuScroll | Addr::PpuAddress => {
