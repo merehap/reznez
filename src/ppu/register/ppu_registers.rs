@@ -285,9 +285,16 @@ impl PpuRegisters {
 
     // Read 0x2007
     pub fn read_ppu_data(&mut self, palette_ram: &PaletteRam) -> ReadResult {
-        let data = self.peek_ppu_data(palette_ram);
-        self.ppu_io_bus.update(data.unmasked_value());
-        data
+        let data = if let Some(palette_ram_index) = self.current_address.to_palette_ram_index() {
+            // This doesn't count as a PPU read for mapper purposes: /RD hasn't been asserted yet!
+            let color = palette_ram.peek_color(self.mask(), palette_ram_index);
+            color.to_read_result().resolve_with_bus(self.ppu_io_bus.value())
+        } else {
+            self.ppu_read_buffer
+        };
+
+        self.ppu_io_bus.update(data);
+        ReadResult::full(data)
     }
 
     // Write 0x2007
