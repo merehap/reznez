@@ -241,20 +241,24 @@ impl Ppu {
         use CycleAction::*;
         match cycle_action {
             SetPatternIndexAddress => {
+                if signals.rendering_enabled {
+                    ppu_pinout.fetch_cadence_ale = true;
+                }
+
                 ppu.next_rendering_field_to_set = Some((RenderingRegisterField::PatternIndex, 2));
                 ppu.next_fetch_cadence_addr = ppu_regs.current_address.to_name_table_address();
-                ppu_pinout.fetch_cadence_ale = true;
             }
             SetPaletteIndexAddress => {
                 if signals.rendering_enabled {
+                    ppu_pinout.fetch_cadence_ale = true;
                     ppu.next_rendering_field_to_set = Some((RenderingRegisterField::PaletteIndex, 2));
                 }
 
                 ppu.next_fetch_cadence_addr = ppu_regs.current_address.to_attribute_table_address();
-                ppu_pinout.fetch_cadence_ale = true;
             }
             SetPatternLowAddress => {
                 if signals.rendering_enabled {
+                    ppu_pinout.fetch_cadence_ale = true;
                     ppu.next_rendering_field_to_set = Some((RenderingRegisterField::BackgroundPatternLow, 2));
                 }
 
@@ -264,10 +268,10 @@ impl Ppu {
                     ppu_regs.current_address.fine_y_scroll(),
                     false,
                 );
-                ppu_pinout.fetch_cadence_ale = true;
             }
             SetPatternHighAddress => {
                 if signals.rendering_enabled {
+                    ppu_pinout.fetch_cadence_ale = true;
                     ppu.next_rendering_field_to_set = Some((RenderingRegisterField::BackgroundPatternHighAndNextTile, 2));
                 }
 
@@ -277,11 +281,12 @@ impl Ppu {
                     ppu_regs.current_address.fine_y_scroll(),
                     true,
                 );
-                ppu_pinout.fetch_cadence_ale = true;
             }
 
             Read => {
-                ppu_pinout.fetch_cadence_read = true;
+                if signals.rendering_enabled {
+                    ppu_pinout.fetch_cadence_read = true;
+                }
             }
             PrepareForNextPixel => {
                 ppu.pending_register_shift = true;
@@ -578,6 +583,7 @@ impl Ppu {
 
             SetSpritePatternLowAddress => {
                 if signals.rendering_enabled {
+                    ppu_pinout.fetch_cadence_ale = true;
                     ppu.next_rendering_field_to_set = Some((RenderingRegisterField::SpritePatternLow, 2));
                 }
 
@@ -585,10 +591,10 @@ impl Ppu {
                 let addr;
                 (addr, ppu.sprite_visible) = ppu.current_sprite_pattern_address(master_clock, ppu_regs, secondary_oam, select_high);
                 ppu.next_fetch_cadence_addr = addr;
-                ppu_pinout.fetch_cadence_ale = true;
             }
             SetSpritePatternHighAddress => {
                 if signals.rendering_enabled {
+                    ppu_pinout.fetch_cadence_ale = true;
                     ppu.next_rendering_field_to_set = Some((RenderingRegisterField::SpritePatternHighAndNextSprite, 2));
                 }
 
@@ -596,7 +602,6 @@ impl Ppu {
                 let addr;
                 (addr, ppu.sprite_visible) = ppu.current_sprite_pattern_address(master_clock, ppu_regs, secondary_oam, select_high);
                 ppu.next_fetch_cadence_addr = addr;
-                ppu_pinout.fetch_cadence_ale = true;
             }
 
             // TODO: Remove this section in favor of using EdgeDetectors.
