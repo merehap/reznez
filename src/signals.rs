@@ -22,8 +22,8 @@ pub struct Signals {
 
 impl Signals {
     pub fn new() -> Self {
-        let read_2007_nodes = READ_2007_COMPONENTS.to_node_graph(&[PrimarySource::PpuClockFirstHalf, PrimarySource::PpuClockSecondHalf, PrimarySource::Read2007]);
-        let write_2007_nodes = WRITE_2007_COMPONENTS.to_node_graph(&[PrimarySource::PpuClockFirstHalf, PrimarySource::PpuClockSecondHalf, PrimarySource::Write2007]);
+        let read_2007_nodes = READ_2007_COMPONENTS.to_node_graph(&[PrimarySource::PpuClockPhase1, PrimarySource::PpuClockPhase2, PrimarySource::Read2007]);
+        let write_2007_nodes = WRITE_2007_COMPONENTS.to_node_graph(&[PrimarySource::PpuClockPhase1, PrimarySource::PpuClockPhase2, PrimarySource::Write2007]);
         Self {
             rendering_enabled: false,
 
@@ -41,10 +41,10 @@ impl Signals {
         }
     }
 
-    pub fn start_ppu_clock_first_half(&mut self, ppu_pinout: &mut PpuPinout) {
-        assert!(self.circuit_board.source(PrimarySource::PpuClockSecondHalf));
-        self.circuit_board.set_source(PrimarySource::PpuClockFirstHalf, true);
-        self.circuit_board.set_source(PrimarySource::PpuClockSecondHalf, false);
+    pub fn start_ppu_clock_phase_1(&mut self, ppu_pinout: &mut PpuPinout) {
+        assert!(self.circuit_board.source(PrimarySource::PpuClockPhase2));
+        self.circuit_board.set_source(PrimarySource::PpuClockPhase1, true);
+        self.circuit_board.set_source(PrimarySource::PpuClockPhase2, false);
         let read_sources = [true, false, self.read_2007];
         self.read_2007_nodes.evaluate(&read_sources);
         let write_sources = [true, false, self.write_2007];
@@ -70,10 +70,10 @@ impl Signals {
         assert_eq!(self.write_2007_nodes.state_at(1), ppu_pinout.ppu_data_write_ale, "Write ALE didn't match. {}.", self.write_2007_nodes.format_states(&write_sources));
     }
 
-    pub fn start_ppu_clock_second_half(&mut self, ppu_pinout: &mut PpuPinout) {
-        assert!(self.circuit_board.source(PrimarySource::PpuClockFirstHalf));
-        self.circuit_board.set_source(PrimarySource::PpuClockFirstHalf, false);
-        self.circuit_board.set_source(PrimarySource::PpuClockSecondHalf, true);
+    pub fn start_ppu_clock_phase_2(&mut self, ppu_pinout: &mut PpuPinout) {
+        assert!(self.circuit_board.source(PrimarySource::PpuClockPhase1));
+        self.circuit_board.set_source(PrimarySource::PpuClockPhase1, false);
+        self.circuit_board.set_source(PrimarySource::PpuClockPhase2, true);
         let read_sources = [false, true, self.read_2007];
         self.read_2007_nodes.evaluate(&read_sources);
         let write_sources = [false, true, self.write_2007];

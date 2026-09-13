@@ -344,7 +344,7 @@ impl Nes {
 
     fn ppu_step_first_half(&mut self, frame: &mut Frame) -> bool {
         let is_last_cycle_of_frame = self.bus.master_clock.tick_ppu_clock(&mut self.bus.signals).is_some();
-        Ppu::step_first_half(&mut self.bus, &mut *self.mapper, frame);
+        Ppu::step_phase_1(&mut self.bus, &mut *self.mapper, frame);
         is_last_cycle_of_frame
     }
 
@@ -355,7 +355,7 @@ impl Nes {
             self.snapshots.current().add_ppu_position(self.bus.master_clock().ppu_clock());
         }
 
-        Ppu::step_first_half(&mut self.bus, &mut *self.mapper, frame);
+        Ppu::step_phase_1(&mut self.bus, &mut *self.mapper, frame);
 
         self.detect_changes();
 
@@ -363,7 +363,7 @@ impl Nes {
     }
 
     fn ppu_step_second_half(&mut self) {
-        Ppu::step_second_half(&mut self.bus);
+        Ppu::step_phase_2(&mut self.bus);
     }
 
     fn detect_changes(&mut self) {
