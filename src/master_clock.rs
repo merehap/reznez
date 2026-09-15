@@ -3,33 +3,57 @@ use crate::ppu::ppu_clock::{LastCycle, PpuClock};
 use crate::signals::Signals;
 
 use CycleType::*;
-const NTSC_SCHEDULE: [&[CycleType]; 12] = [
+const NTSC_SCHEDULE: [&[CycleType]; 24] = [
     &[Apu, CpuFirstHalf, PpuFirstHalf],
     &[],
+    &[],
+    &[],
     &[PpuSecondHalf],
+    &[],
+    &[],
     &[],
     &[CpuSecondHalf, PpuFirstHalf],
     &[],
+    &[],
+    &[],
     &[PpuSecondHalf],
+    &[],
+    &[],
     &[],
     &[PpuFirstHalf],
     &[],
+    &[],
+    &[],
     &[PpuSecondHalf],
+    &[],
+    &[],
     &[],
 ];
 
-const NTSC_SCHEDULE_WITH_LOGGING: [&[CycleType]; 12] = [
+const NTSC_SCHEDULE_WITH_LOGGING: [&[CycleType]; 24] = [
     &[ApuWithLogging, CpuFirstHalfWithLogging, PpuFirstHalfWithLogging],
     &[],
+    &[],
+    &[],
     &[PpuSecondHalf],
+    &[],
+    &[],
     &[],
     &[CpuSecondHalfWithLogging, PpuFirstHalfWithLogging],
     &[],
+    &[],
+    &[],
     &[PpuSecondHalf],
+    &[],
+    &[],
     &[],
     &[PpuFirstHalfWithLogging],
     &[],
+    &[],
+    &[],
     &[PpuSecondHalf],
+    &[],
+    &[],
     &[],
 ];
 
@@ -40,7 +64,7 @@ pub struct MasterClock {
     ppu_clock: PpuClock,
     pub apu_clock: ApuClock,
 
-    schedule: [&'static [CycleType]; 12],
+    schedule: [&'static [CycleType]; 24],
 }
 
 impl MasterClock {
