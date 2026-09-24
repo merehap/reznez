@@ -47,6 +47,7 @@ pub struct Nes {
     resolved_metadata: ResolvedMetadata,
     metadata_resolver: MetadataResolver,
 
+    diff_logging_enabled: bool,
     log_formatter: Box<dyn Formatter>,
     snapshots: Snapshots,
     latest_values: LatestValues,
@@ -76,6 +77,7 @@ impl Nes {
             resolved_metadata: metadata_resolver.resolve(),
             metadata_resolver,
 
+            diff_logging_enabled: config.diff_logging_enabled,
             log_formatter: Box::new(MesenFormatter),
             snapshots: Snapshots::new(),
             latest_values,
@@ -176,11 +178,7 @@ impl Nes {
         let (prg_memory, chr_memory, name_table_mirrorings) =
             mapper.layout().make_mapper_params(&metadata, cartridge, config.allow_saving)?;
 
-        let master_clock = if config.diff_logging_enabled {
-            MasterClock::new_with_diff_logging(config.starting_cpu_cycle, config.ppu_clock.clone())
-        } else {
-            MasterClock::new(config.starting_cpu_cycle, config.ppu_clock.clone())
-        };
+        let master_clock = MasterClock::new(config.starting_cpu_cycle, config.ppu_clock.clone());
 
         let bank_color_assigner = BankColorAssigner::new(&chr_memory);
         let mut bus = Bus::new(
@@ -248,13 +246,9 @@ impl Nes {
         for action in actions {
             match action {
                 CycleType::Apu => self.apu_step(),
-                CycleType::ApuWithLogging => self.apu_step_with_logging(),
                 CycleType::CpuFirstHalf => self.cpu_step_first_half(),
-                CycleType::CpuFirstHalfWithLogging => self.cpu_step_first_half_with_logging(),
                 CycleType::CpuSecondHalf => step = self.cpu_step_second_half(),
-                CycleType::CpuSecondHalfWithLogging => step = self.cpu_step_second_half_with_logging(),
                 CycleType::PpuFirstHalf => self.ppu_step_first_half(frame),
-                CycleType::PpuFirstHalfWithLogging => self.ppu_step_first_half_with_logging(frame),
                 CycleType::PpuSecondHalf => self.ppu_step_second_half(),
             }
         }
@@ -270,18 +264,13 @@ impl Nes {
     }
 
     fn apu_step(&mut self) {
-        Apu::step(&mut self.bus);
-        self.bus.master_clock_mut().apu_clock_mut().tick();
-    }
-
-    fn apu_step_with_logging(&mut self) {
-        if log_enabled!(target: "timings", Info) {
+        if self.diff_logging_enabled && log_enabled!(target: "timings", Info) {
             self.snapshots.current().apu_regs(self.bus.apu_clock(), &self.bus.apu_regs);
         }
 
         Apu::step(&mut self.bus);
 
-        if log_enabled!(target: "timings", Info) {
+        if self.diff_logging_enabled && log_enabled!(target: "timings", Info) {
             self.snapshots.current().frame_irq(&self.bus);
         }
 
@@ -291,12 +280,7 @@ impl Nes {
     }
 
     fn cpu_step_first_half(&mut self) {
-        Cpu::step_first_half(&mut self.bus, &mut *self.mapper);
-    }
-
-    fn cpu_step_first_half_with_logging(&mut self) {
-
-        if log_enabled!(target: "timings", Info) {
+        if self.diff_logging_enabled && log_enabled!(target: "timings", Info) {
             self.snapshots.current().instruction(self.bus.cpu.mode_state().state_label());
         }
 
@@ -306,18 +290,14 @@ impl Nes {
     }
 
     fn cpu_step_second_half(&mut self) -> Option<Step> {
-        Cpu::step_second_half(&mut self.bus, &mut *self.mapper)
-    }
-
-    fn cpu_step_second_half_with_logging(&mut self) -> Option<Step> {
         let mut interrupt_text = String::new();
-        if log_enabled!(target: "cpuinstructions", Info) {
+        if self.diff_logging_enabled && log_enabled!(target: "cpuinstructions", Info) {
             interrupt_text = formatter::interrupts(self);
         }
 
         let step = Cpu::step_second_half(&mut self.bus, &mut *self.mapper);
 
-        if log_enabled!(target: "cpuinstructions", Info) &&
+        if self.diff_logging_enabled && log_enabled!(target: "cpuinstructions", Info) &&
                 let Some((current_instruction, start_address)) = self.bus.cpu.mode_state().new_instruction_with_address() {
 
             let formatted_instruction = self.log_formatter.format_instruction(
@@ -328,7 +308,7 @@ impl Nes {
             info!("{formatted_instruction}");
         }
 
-        if log_enabled!(target: "timings", Info) {
+        if self.diff_logging_enabled && log_enabled!(target: "timings", Info) {
             if self.bus.apu_regs.clock_reset_status() == ClockResetStatus::Pending {
                 self.snapshots.start();
             }
@@ -343,11 +323,7 @@ impl Nes {
     }
 
     fn ppu_step_first_half(&mut self, frame: &mut Frame) {
-        Ppu::step_phase_1(&mut self.bus, &mut *self.mapper, frame);
-    }
-
-    fn ppu_step_first_half_with_logging(&mut self, frame: &mut Frame) {
-        if log_enabled!(target: "timings", Info) {
+        if self.diff_logging_enabled && log_enabled!(target: "timings", Info) {
             self.snapshots.current().add_ppu_position(self.bus.master_clock().ppu_clock());
         }
 
@@ -361,6 +337,10 @@ impl Nes {
     }
 
     fn detect_changes(&mut self) {
+        if !self.diff_logging_enabled {
+            return;
+        }
+
         if log_enabled!(target: "ppuflags", Info) {
             let latest = &mut self.latest_values;
             let mask = self.bus.ppu_regs.mask();

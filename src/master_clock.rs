@@ -3,7 +3,7 @@ use crate::ppu::ppu_clock::PpuClock;
 use crate::signals::Signals;
 
 use CycleType::*;
-const NTSC_SCHEDULE: [&[CycleType]; 24] = [
+const NTSC_SCHEDULE_WITH_LOGGING: [&[CycleType]; 24] = [
     &[Apu, CpuFirstHalf, PpuFirstHalf],
     &[],
     &[],
@@ -30,33 +30,6 @@ const NTSC_SCHEDULE: [&[CycleType]; 24] = [
     &[],
 ];
 
-const NTSC_SCHEDULE_WITH_LOGGING: [&[CycleType]; 24] = [
-    &[ApuWithLogging, CpuFirstHalfWithLogging, PpuFirstHalfWithLogging],
-    &[],
-    &[],
-    &[],
-    &[PpuSecondHalf],
-    &[],
-    &[],
-    &[],
-    &[CpuSecondHalfWithLogging, PpuFirstHalfWithLogging],
-    &[],
-    &[],
-    &[],
-    &[PpuSecondHalf],
-    &[],
-    &[],
-    &[],
-    &[PpuFirstHalfWithLogging],
-    &[],
-    &[],
-    &[],
-    &[PpuSecondHalf],
-    &[],
-    &[],
-    &[],
-];
-
 pub struct MasterClock {
     master_cycle: u64,
 
@@ -71,20 +44,6 @@ pub struct MasterClock {
 
 impl MasterClock {
     pub fn new(starting_cpu_cycle: i64, ppu_clock: PpuClock) -> Self {
-        Self {
-            master_cycle: 0,
-
-            cpu_cycle: starting_cpu_cycle,
-            ppu_clock,
-            apu_clock: ApuClock::new(),
-
-            is_last_dot_of_frame: false,
-
-            schedule: NTSC_SCHEDULE,
-        }
-    }
-
-    pub fn new_with_diff_logging(starting_cpu_cycle: i64, ppu_clock: PpuClock) -> Self {
         Self {
             master_cycle: 0,
 
@@ -148,12 +107,8 @@ impl MasterClock {
 
 pub enum CycleType {
     Apu,
-    ApuWithLogging,
     CpuFirstHalf,
-    CpuFirstHalfWithLogging,
     CpuSecondHalf,
-    CpuSecondHalfWithLogging,
     PpuFirstHalf,
-    PpuFirstHalfWithLogging,
     PpuSecondHalf,
 }
