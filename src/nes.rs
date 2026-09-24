@@ -244,8 +244,7 @@ impl Nes {
 
     pub fn step(&mut self, frame: &mut Frame) -> StepResult {
         let mut step = None;
-        let mut is_last_cycle_of_frame = false;
-        let (actions, end_reached) = self.bus.master_clock.tick();
+        let (actions, end_reached) = self.bus.master_clock.tick(&mut self.bus.signals);
         for action in actions {
             match action {
                 CycleType::Apu => self.apu_step(),
@@ -254,8 +253,8 @@ impl Nes {
                 CycleType::CpuFirstHalfWithLogging => self.cpu_step_first_half_with_logging(),
                 CycleType::CpuSecondHalf => step = self.cpu_step_second_half(),
                 CycleType::CpuSecondHalfWithLogging => step = self.cpu_step_second_half_with_logging(),
-                CycleType::PpuFirstHalf => is_last_cycle_of_frame = self.ppu_step_first_half(frame),
-                CycleType::PpuFirstHalfWithLogging => is_last_cycle_of_frame = self.ppu_step_first_half_with_logging(frame),
+                CycleType::PpuFirstHalf => self.ppu_step_first_half(frame),
+                CycleType::PpuFirstHalfWithLogging => self.ppu_step_first_half_with_logging(frame),
                 CycleType::PpuSecondHalf => self.ppu_step_second_half(),
             }
         }
@@ -264,7 +263,10 @@ impl Nes {
             self.snapshots.start_next();
         }
 
-        StepResult { step, is_last_cycle_of_frame }
+        StepResult {
+            step,
+            is_last_cycle_of_frame: self.bus.master_clock.is_last_dot_of_frame(),
+        }
     }
 
     fn apu_step(&mut self) {
@@ -340,15 +342,11 @@ impl Nes {
         step
     }
 
-    fn ppu_step_first_half(&mut self, frame: &mut Frame) -> bool {
-        let is_last_cycle_of_frame = self.bus.master_clock.tick_ppu_clock(&mut self.bus.signals).is_some();
+    fn ppu_step_first_half(&mut self, frame: &mut Frame) {
         Ppu::step_phase_1(&mut self.bus, &mut *self.mapper, frame);
-        is_last_cycle_of_frame
     }
 
-    fn ppu_step_first_half_with_logging(&mut self, frame: &mut Frame) -> bool {
-        let is_last_cycle_of_frame = self.bus.master_clock.tick_ppu_clock(&mut self.bus.signals).is_some();
-
+    fn ppu_step_first_half_with_logging(&mut self, frame: &mut Frame) {
         if log_enabled!(target: "timings", Info) {
             self.snapshots.current().add_ppu_position(self.bus.master_clock().ppu_clock());
         }
@@ -356,8 +354,6 @@ impl Nes {
         Ppu::step_phase_1(&mut self.bus, &mut *self.mapper, frame);
 
         self.detect_changes();
-
-        is_last_cycle_of_frame
     }
 
     fn ppu_step_second_half(&mut self) {

@@ -1,5 +1,5 @@
 use crate::apu::apu_clock::ApuClock;
-use crate::ppu::ppu_clock::{LastCycle, PpuClock};
+use crate::ppu::ppu_clock::PpuClock;
 use crate::signals::Signals;
 
 use CycleType::*;
@@ -64,6 +64,8 @@ pub struct MasterClock {
     ppu_clock: PpuClock,
     pub apu_clock: ApuClock,
 
+    is_last_dot_of_frame: bool,
+
     schedule: [&'static [CycleType]; 24],
 }
 
@@ -76,6 +78,8 @@ impl MasterClock {
             ppu_clock,
             apu_clock: ApuClock::new(),
 
+            is_last_dot_of_frame: false,
+
             schedule: NTSC_SCHEDULE,
         }
     }
@@ -87,6 +91,8 @@ impl MasterClock {
             cpu_cycle: starting_cpu_cycle,
             ppu_clock,
             apu_clock: ApuClock::new(),
+
+            is_last_dot_of_frame: false,
 
             schedule: NTSC_SCHEDULE_WITH_LOGGING,
         }
@@ -112,7 +118,11 @@ impl MasterClock {
         &mut self.apu_clock
     }
 
-    pub fn tick(&mut self) -> (&'static [CycleType], bool) {
+    pub fn is_last_dot_of_frame(&self) -> bool {
+        self.is_last_dot_of_frame
+    }
+
+    pub fn tick(&mut self, signals: &mut Signals) -> (&'static [CycleType], bool) {
         let period: u64 = self.schedule.len().try_into()
             .expect("Sane schedule period.");
         let index: usize = (self.master_cycle % period).try_into()
@@ -123,13 +133,16 @@ impl MasterClock {
             self.cpu_cycle += 1;
         }
 
+        // FIXME: Remove this hack.
+        if self.master_cycle.is_multiple_of(period / 3) {
+            self.is_last_dot_of_frame = self.ppu_clock.tick(signals).is_some();
+        } else {
+            self.is_last_dot_of_frame = false;
+        }
+
         self.master_cycle += 1;
         let end_reached = self.master_cycle.is_multiple_of(period);
         (self.schedule[index], end_reached)
-    }
-
-    pub fn tick_ppu_clock(&mut self, signals: &mut Signals) -> Option<LastCycle> {
-        self.ppu_clock.tick(signals)
     }
 }
 
