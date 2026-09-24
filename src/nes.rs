@@ -289,12 +289,10 @@ impl Nes {
     }
 
     fn cpu_step_first_half(&mut self) {
-        self.bus.master_clock_mut().increment_cpu_cycle();
         Cpu::step_first_half(&mut self.bus, &mut *self.mapper);
     }
 
     fn cpu_step_first_half_with_logging(&mut self) {
-        self.bus.master_clock_mut().increment_cpu_cycle();
 
         if log_enabled!(target: "timings", Info) {
             self.snapshots.current().instruction(self.bus.cpu.mode_state().state_label());

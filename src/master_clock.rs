@@ -117,19 +117,15 @@ impl MasterClock {
             .expect("Sane schedule period.");
         let index: usize = (self.master_cycle % period).try_into()
             .expect("Sane index.");
+
+        // FIXME: Remove this hack.
+        if self.master_cycle.is_multiple_of(period) {
+            self.cpu_cycle += 1;
+        }
+
         self.master_cycle += 1;
         let end_reached = self.master_cycle.is_multiple_of(period);
         (self.schedule[index], end_reached)
-    }
-
-    // TODO: Remove this. Stepping the master clock should do this automatically.
-    pub fn increment_master_cycle(&mut self) {
-        self.master_cycle += 1;
-    }
-
-    // TODO: Remove this. Stepping the master clock should do this automatically.
-    pub fn increment_cpu_cycle(&mut self) {
-        self.cpu_cycle += 1;
     }
 
     pub fn tick_ppu_clock(&mut self, signals: &mut Signals) -> Option<LastCycle> {
