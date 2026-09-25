@@ -57,7 +57,7 @@ static SCHEDULED_EVENTS: LazyLock<BTreeMap<Crc, BTreeMap<FrameNumber, (Event, Bu
         vec![(147, 148, Start), (372, 373, Start), (453, 454, Start), (556, 557, Start), (768, 769, Start), (888, 889, Start),
              (999, 1000, Start), (1124, 1125, Start)]);
     // Fantastic Adventures of Dizzy - [BROKEN] Scanline lifts by one then returns, repeating.
-    presses_by_full_crc.insert(0x59318584, vec![(364, 365, Start), (456, 457, Start), (580, 581, Start)]);
+    presses_by_full_crc.insert(0x59318584, vec![(464, 465, Start), (556, 557, Start), (780, 781, Start)]);
     // Super Fighter 3 - [BROKEN] Flickering scanline segment.
     presses_by_full_crc.insert(0x520C552E, vec![(690, 691, Start), (798, 799, Start)]);
     // Armadillo - [BROKEN] Flickering scanline.
@@ -119,6 +119,7 @@ static SCHEDULED_EVENTS: LazyLock<BTreeMap<Crc, BTreeMap<FrameNumber, (Event, Bu
     for (full_crc, presses) in presses_by_full_crc {
         let mut events: BTreeMap<i64, (Event, ButtonStatus)> = BTreeMap::new();
         for (press_frame_number, unpress_frame_number, event) in presses {
+            assert!(press_frame_number < unpress_frame_number);
             events.insert(press_frame_number, (event, ButtonStatus::Pressed));
             events.insert(unpress_frame_number, (event, ButtonStatus::Unpressed));
         }
@@ -231,8 +232,9 @@ impl TestSummary {
                             fs::create_dir_all(format!("tests/actual_frames/{}/", directory.display())).unwrap();
                             let actual_ppm_path =
                                 format!("tests/actual_frames/{}/frame{:03}.ppm", directory.display(), frame_number);
+                            let expected_ppm_path = frame_entry.full_path.to_string_lossy();
                             fs::write(actual_ppm_path.clone(), actual_ppm.to_bytes()).unwrap();
-                            println!("\t\tROM {rom_id} didn't match expected hash at frame {frame_number}. See '{actual_ppm_path}'");
+                            println!("\t\tROM {rom_id} didn't match expected hash at frame {frame_number}. See '{actual_ppm_path}' '{expected_ppm_path}'");
                         }
                     }
                 }
