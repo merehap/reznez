@@ -248,11 +248,11 @@ impl Nes {
             self.bus.master_clock.apu_clock.parity.toggle();
         }
 
-        if self.bus.master_clock.cpu_first_half {
+        if self.bus.master_clock.m2_rise {
             self.cpu_step_first_half();
         }
 
-        if self.bus.master_clock.cpu_second_half {
+        if self.bus.master_clock.middle_of_m2_high {
             step = self.cpu_step_second_half();
         }
 

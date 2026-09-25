@@ -15,8 +15,8 @@ pub struct MasterClock {
     cpu_offset: u8,
     ppu_offset: u8,
 
-    pub cpu_first_half: bool,
-    pub cpu_second_half: bool,
+    pub m2_rise: bool,
+    pub middle_of_m2_high: bool,
     pub ppu_first_half: bool,
     pub ppu_second_half: bool,
     pub apu: bool,
@@ -36,8 +36,8 @@ impl MasterClock {
             cpu_offset: 0,
             ppu_offset: 0,
 
-            cpu_first_half: false,
-            cpu_second_half: false,
+            m2_rise: false,
+            middle_of_m2_high: false,
             ppu_first_half: false,
             ppu_second_half: false,
             apu: false,
@@ -71,8 +71,8 @@ impl MasterClock {
     }
 
     pub fn tick(&mut self, signals: &mut Signals) -> bool {
-        self.cpu_first_half = false;
-        self.cpu_second_half = false;
+        self.m2_rise = false;
+        self.middle_of_m2_high = false;
         self.ppu_first_half = false;
         self.ppu_second_half = false;
         self.apu = false;
@@ -83,13 +83,12 @@ impl MasterClock {
                 self.cpu_offset = 0;
 
                 self.cpu_cycle += 1;
-                self.cpu_first_half = true;
+                self.m2_rise = true;
             }
             8 => {
-                self.cpu_second_half = true;
+                self.middle_of_m2_high = true;
             }
             14 => {
-
             }
             0..=23 => {}
             25.. => unreachable!(),
