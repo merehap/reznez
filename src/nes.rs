@@ -28,7 +28,7 @@ use crate::logging::formatter;
 use crate::logging::formatter::*;
 use crate::mapper::mapper::Mapper;
 use crate::mapper::mapper_list;
-use crate::master_clock::{CycleType, MasterClock};
+use crate::master_clock::MasterClock;
 use crate::memory::raw_memory::RawData;
 use crate::memory::bank::bank_number::{BankNumber, ReadStatus, WriteStatus};
 use crate::bus::Bus;
@@ -242,15 +242,26 @@ impl Nes {
 
     pub fn step(&mut self, frame: &mut Frame) -> StepResult {
         let mut step = None;
-        let (actions, end_reached) = self.bus.master_clock.tick(&mut self.bus.signals);
-        for action in actions {
-            match action {
-                CycleType::Apu => self.apu_step(),
-                CycleType::CpuFirstHalf => self.cpu_step_first_half(),
-                CycleType::CpuSecondHalf => step = self.cpu_step_second_half(),
-                CycleType::PpuFirstHalf => self.ppu_step_first_half(frame),
-                CycleType::PpuSecondHalf => self.ppu_step_second_half(),
-            }
+        let end_reached = self.bus.master_clock.tick(&mut self.bus.signals);
+        if self.bus.master_clock.apu {
+            self.apu_step();
+            self.bus.master_clock.apu_clock.parity.toggle();
+        }
+
+        if self.bus.master_clock.cpu_first_half {
+            self.cpu_step_first_half();
+        }
+
+        if self.bus.master_clock.cpu_second_half {
+            step = self.cpu_step_second_half();
+        }
+
+        if self.bus.master_clock.ppu_first_half {
+            self.ppu_step_first_half(frame);
+        }
+
+        if self.bus.master_clock.ppu_second_half {
+            self.ppu_step_second_half();
         }
 
         if end_reached {

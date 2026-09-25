@@ -3,7 +3,7 @@ use std::fmt;
 pub struct ApuClock {
     total_cpu_cycles: u64,
     cpu_cycle: u16,
-    parity: CycleParity,
+    pub parity: CycleParity,
     step_mode: StepMode,
     is_in_frame_irq_window: bool,
 }
@@ -37,7 +37,6 @@ impl ApuClock {
         }
 
         self.cpu_cycle %= 2 * self.step_mode.frame_length();
-        self.parity.toggle();
     }
 
     pub fn step_mode(&self) -> StepMode {

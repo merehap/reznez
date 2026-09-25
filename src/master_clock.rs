@@ -2,33 +2,8 @@ use crate::apu::apu_clock::ApuClock;
 use crate::ppu::ppu_clock::PpuClock;
 use crate::signals::Signals;
 
-use CycleType::*;
-const NTSC_SCHEDULE_WITH_LOGGING: [&[CycleType]; 24] = [
-    &[Apu, CpuFirstHalf, PpuFirstHalf],
-    &[],
-    &[],
-    &[],
-    &[PpuSecondHalf],
-    &[],
-    &[],
-    &[],
-    &[CpuSecondHalf, PpuFirstHalf],
-    &[],
-    &[],
-    &[],
-    &[PpuSecondHalf],
-    &[],
-    &[],
-    &[],
-    &[PpuFirstHalf],
-    &[],
-    &[],
-    &[],
-    &[PpuSecondHalf],
-    &[],
-    &[],
-    &[],
-];
+// Master half-cycles
+const PERIOD: u64 = 24;
 
 pub struct MasterClock {
     master_cycle: u64,
@@ -37,9 +12,13 @@ pub struct MasterClock {
     ppu_clock: PpuClock,
     pub apu_clock: ApuClock,
 
-    is_last_dot_of_frame: bool,
+    pub cpu_first_half: bool,
+    pub cpu_second_half: bool,
+    pub ppu_first_half: bool,
+    pub ppu_second_half: bool,
+    pub apu: bool,
 
-    schedule: [&'static [CycleType]; 24],
+    is_last_dot_of_frame: bool,
 }
 
 impl MasterClock {
@@ -51,9 +30,13 @@ impl MasterClock {
             ppu_clock,
             apu_clock: ApuClock::new(),
 
-            is_last_dot_of_frame: false,
+            cpu_first_half: false,
+            cpu_second_half: false,
+            ppu_first_half: false,
+            ppu_second_half: false,
+            apu: false,
 
-            schedule: NTSC_SCHEDULE_WITH_LOGGING,
+            is_last_dot_of_frame: false,
         }
     }
 
@@ -81,34 +64,40 @@ impl MasterClock {
         self.is_last_dot_of_frame
     }
 
-    pub fn tick(&mut self, signals: &mut Signals) -> (&'static [CycleType], bool) {
-        let period: u64 = self.schedule.len().try_into()
-            .expect("Sane schedule period.");
-        let index: usize = (self.master_cycle % period).try_into()
-            .expect("Sane index.");
+    pub fn tick(&mut self, signals: &mut Signals) -> bool {
+        self.cpu_first_half = false;
+        self.cpu_second_half = false;
+        self.ppu_first_half = false;
+        self.ppu_second_half = false;
+        self.apu = false;
+        self.is_last_dot_of_frame = false;
 
         // FIXME: Remove this hack.
-        if self.master_cycle.is_multiple_of(period) {
-            self.cpu_cycle += 1;
+        match self.master_cycle % PERIOD {
+            0 => {
+                self.cpu_cycle += 1;
+                self.cpu_first_half = true;
+                self.apu = true;
+            }
+            8 => {
+                self.cpu_second_half = true;
+            }
+            _ => {}
         }
 
-        // FIXME: Remove this hack.
-        if self.master_cycle.is_multiple_of(period / 3) {
-            self.is_last_dot_of_frame = self.ppu_clock.tick(signals).is_some();
-        } else {
-            self.is_last_dot_of_frame = false;
+        match self.master_cycle % 8 {
+            0 => {
+                self.is_last_dot_of_frame = self.ppu_clock.tick(signals).is_some();
+                self.ppu_first_half = true;
+            }
+            4 => {
+                self.ppu_second_half = true;
+            }
+            _ => {}
         }
 
         self.master_cycle += 1;
-        let end_reached = self.master_cycle.is_multiple_of(period);
-        (self.schedule[index], end_reached)
+        let end_reached = self.master_cycle.is_multiple_of(PERIOD);
+        end_reached
     }
-}
-
-pub enum CycleType {
-    Apu,
-    CpuFirstHalf,
-    CpuSecondHalf,
-    PpuFirstHalf,
-    PpuSecondHalf,
 }
