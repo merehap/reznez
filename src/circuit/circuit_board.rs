@@ -309,8 +309,8 @@ impl ToIndex for Write2007ComponentName {
 }
 
 const STARTUP_PRIMARY_SOURCE_STATES: [bool; std::mem::variant_count::<PrimarySource>()] = [
-    false, // PpuClockFirstHalf
-    true,  // PpuClockSecondHalf
+    true, // PpuClockFirstHalf
+    false,  // PpuClockSecondHalf
     false, // Read2007
     false, // Write2007
 ];

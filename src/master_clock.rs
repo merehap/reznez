@@ -12,6 +12,9 @@ pub struct MasterClock {
     ppu_clock: PpuClock,
     pub apu_clock: ApuClock,
 
+    cpu_offset: u8,
+    ppu_offset: u8,
+
     pub cpu_first_half: bool,
     pub cpu_second_half: bool,
     pub ppu_first_half: bool,
@@ -29,6 +32,9 @@ impl MasterClock {
             cpu_cycle: starting_cpu_cycle,
             ppu_clock,
             apu_clock: ApuClock::new(),
+
+            cpu_offset: 0,
+            ppu_offset: 0,
 
             cpu_first_half: false,
             cpu_second_half: false,
@@ -72,31 +78,45 @@ impl MasterClock {
         self.apu = false;
         self.is_last_dot_of_frame = false;
 
-        // FIXME: Remove this hack.
-        match self.master_cycle % PERIOD {
-            0 => {
+        match self.cpu_offset {
+            24 => {
+                self.cpu_offset = 0;
+
                 self.cpu_cycle += 1;
                 self.cpu_first_half = true;
-                self.apu = true;
             }
             8 => {
                 self.cpu_second_half = true;
             }
-            _ => {}
+            14 => {
+
+            }
+            0..=23 => {}
+            25.. => unreachable!(),
         }
 
-        match self.master_cycle % 8 {
-            0 => {
+        match self.ppu_offset {
+            8 => {
+                self.ppu_offset = 0;
+
                 self.is_last_dot_of_frame = self.ppu_clock.tick(signals).is_some();
                 self.ppu_first_half = true;
             }
             4 => {
                 self.ppu_second_half = true;
             }
-            _ => {}
+            0..=7 => {}
+            9.. => unreachable!(),
+        }
+
+        if self.cpu_offset == 0 {
+            self.apu = true;
         }
 
         self.master_cycle += 1;
+        self.cpu_offset += 1;
+        self.ppu_offset += 1;
+
         let end_reached = self.master_cycle.is_multiple_of(PERIOD);
         end_reached
     }
