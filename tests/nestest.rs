@@ -52,9 +52,9 @@ fn nestest() {
 
     let mut config = Config::new(&opt);
     // Nestest starts the first instruction a cycle early compared to the NES Manual and Mesen.
-    config.starting_cpu_cycle = -1;
+    config.starting_cpu_cycle = 0;
     // Nestest starts the first instruction on cycle 0, but PPU stuff happens before that.
-    config.ppu_clock = PpuClock::starting_at(-1, MAX_SCANLINE, LastCycle::Normal as u16 - 22);
+    config.ppu_clock = PpuClock::starting_at(-1, MAX_SCANLINE, LastCycle::Normal as u16 - 21);
 
     let cartridge = Nes::load_cartridge(&opt.rom_path.unwrap()).unwrap();
     let mut nes = Nes::new(&HeaderDb::load(), &config, &cartridge).unwrap();
