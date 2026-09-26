@@ -19,6 +19,7 @@ pub struct CpuPinout {
     // NMI. Triggers when the signal goes low.
     pub nmi_signal_detector: EdgeDetector<SignalLevel>,
     // R/W (Read/Write signal)
+    pub read_write: ReadWrite,
     // OE2 (Controller 2 enable)
     // OE1 (Controller 1 enable)
     // OUT0..OUT2 (Controller outputs)
@@ -35,6 +36,7 @@ impl CpuPinout {
             address_bus: CpuAddress::ZERO,
             data_bus: 0,
             nmi_signal_detector: EdgeDetector::target_value(SignalLevel::Low),
+            read_write: ReadWrite::Read,
 
             mapper_irq_asserted: false,
             frame_irq_asserted: false,
@@ -81,4 +83,10 @@ impl CpuPinout {
     pub fn assert_dmc_irq(&mut self) {
         self.dmc_irq_asserted = true;
     }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum ReadWrite {
+    Write,
+    Read,
 }

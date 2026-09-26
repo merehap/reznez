@@ -15,7 +15,7 @@ use crate::cpu::step::*;
 use crate::mapper::mapper::Mapper;
 use crate::memory::cpu::cpu_address::{CpuAddress, FriendlyCpuAddress};
 use crate::bus::{Bus, IRQ_VECTOR_HIGH, IRQ_VECTOR_LOW, NMI_VECTOR_HIGH, NMI_VECTOR_LOW, RESET_VECTOR_HIGH, RESET_VECTOR_LOW};
-use crate::memory::cpu::cpu_pinout::CpuPinout;
+use crate::memory::cpu::cpu_pinout::{CpuPinout, ReadWrite};
 use crate::memory::signal_level::SignalLevel;
 
 pub struct Cpu {
@@ -206,6 +206,14 @@ impl Cpu {
         }
 
         mapper.on_m2_rise(bus);
+    }
+
+    pub fn step_read_write(Bus { cpu, cpu_pinout, .. }: &mut Bus) {
+        cpu_pinout.read_write = if cpu.step.is_read() {
+            ReadWrite::Read
+        } else {
+            ReadWrite::Write
+        };
     }
 
     pub fn step_m2_middle_of_high(bus: &mut Bus, mapper: &mut dyn Mapper) -> Option<Step> {

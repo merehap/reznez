@@ -82,12 +82,10 @@ impl MasterClock {
                 self.cpu_cycle += 1;
                 self.m2_transition = Some(M2Transition::Rising);
             }
-            8 => {
-                self.m2_transition = Some(M2Transition::MiddleOfHigh);
-            }
-            14 => {
-                self.m2_transition = Some(M2Transition::Falling);
-            }
+            1 => self.m2_transition = Some(M2Transition::Romsel),
+            2 => self.m2_transition = Some(M2Transition::PpuselReadWrite),
+            8 => self.m2_transition = Some(M2Transition::MiddleOfHigh),
+            14 => self.m2_transition = Some(M2Transition::Falling),
             0..=23 => {}
             25.. => unreachable!(),
         }
@@ -122,6 +120,8 @@ impl MasterClock {
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum M2Transition {
     Rising,
+    Romsel,
+    PpuselReadWrite,
     MiddleOfHigh,
     Falling,
 }

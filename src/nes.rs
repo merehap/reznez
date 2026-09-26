@@ -250,6 +250,12 @@ impl Nes {
 
         match self.bus.master_clock.m2_transition {
             Some(M2Transition::Rising) => self.cpu_step_m2_rising(),
+            Some(M2Transition::Romsel) => { /* TODO? */ }
+            Some(M2Transition::PpuselReadWrite) => {
+                // PPUSEL actually is activated before R/W is, but effects of PPUSEL occur after R/W.
+                Cpu::step_read_write(&mut self.bus);
+                Ppu::ppusel(&mut self.bus);
+            }
             Some(M2Transition::MiddleOfHigh) => step = self.cpu_step_middle_of_m2_high(),
             Some(M2Transition::Falling) => self.cpu_step_m2_falling(),
             None => {}

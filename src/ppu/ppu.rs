@@ -97,6 +97,10 @@ impl Ppu {
         }
     }
 
+    pub fn ppusel(Bus {..}: &mut Bus) {
+
+    }
+
     pub fn step_phase_1(bus: &mut Bus, mapper: &mut dyn Mapper, frame: &mut Frame) {
         bus.signals.start_ppu_clock_phase_1(&mut bus.ppu_pinout);
 
