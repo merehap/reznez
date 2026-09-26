@@ -70,7 +70,8 @@ impl Mapper for Mapper073 {
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, bus: &mut Bus) {
+    // TODO: Verify if the IRQ counter actually triggers on the falling edge.
+    fn on_m2_fall(&mut self, bus: &mut Bus) {
         let low_triggered = self.low_irq_counter.tick().triggered;
         if low_triggered {
             match self.irq_mode {

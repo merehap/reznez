@@ -217,7 +217,7 @@ impl Mapper for Mapper005 {
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, _bus: &mut Bus) {
+    fn on_m2_rise(&mut self, _bus: &mut Bus) {
         self.frame_state.maybe_end_frame();
     }
 

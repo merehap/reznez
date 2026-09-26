@@ -333,7 +333,7 @@ impl Nes {
     }
 
     fn cpu_step_m2_falling(&mut self) {
-        Cpu::step_m2_falling(&mut self.bus)
+        Cpu::step_m2_falling(&mut self.bus, &mut *self.mapper)
     }
 
     fn ppu_step_first_half(&mut self, frame: &mut Frame) {

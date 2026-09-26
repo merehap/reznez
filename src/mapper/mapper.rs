@@ -49,7 +49,8 @@ pub trait Mapper {
     // provides a relief valve for the rare settings that can't be expressed in a Layout.
     fn init_mapper_params(&self, _bus: &mut Bus) {}
     // Most mappers don't care about CPU cycles.
-    fn on_end_of_cpu_cycle(&mut self, _bus: &mut Bus) {}
+    fn on_m2_rise(&mut self, _bus: &mut Bus) {}
+    fn on_m2_fall(&mut self, _bus: &mut Bus) {}
     fn on_cpu_read(&mut self, _bus: &mut Bus, _addr: CpuAddress, _value: u8) {}
     fn on_cpu_write(&mut self, _bus: &mut Bus, _addr: CpuAddress, _value: u8) {}
     // Most mappers don't care about PPU cycles.

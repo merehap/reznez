@@ -204,6 +204,8 @@ impl Cpu {
             bus.ppu_regs.vblank_active = false;
             bus.ppu_regs.suppress_vblank_active = true;
         }
+
+        mapper.on_m2_rise(bus);
     }
 
     pub fn step_m2_middle_of_high(bus: &mut Bus, mapper: &mut dyn Mapper) -> Option<Step> {
@@ -279,13 +281,13 @@ impl Cpu {
             bus.cpu.irq_status = IrqStatus::Inactive;
         }
 
-        mapper.on_end_of_cpu_cycle(bus);
         Some(bus.cpu.step)
     }
 
-    pub fn step_m2_falling(bus: &mut Bus) {
+    pub fn step_m2_falling(bus: &mut Bus, mapper: &mut dyn Mapper) {
         bus.signals.stop_read_2007();
         bus.signals.stop_write_2007();
+        mapper.on_m2_fall(bus);
     }
 
     fn execute_step_action(Bus { cpu, cpu_pinout, apu_regs, dmc_dma, oam_dma, .. }: &mut Bus, action: StepAction, value: u8) {

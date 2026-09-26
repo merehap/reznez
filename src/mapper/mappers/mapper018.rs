@@ -46,7 +46,8 @@ pub struct Mapper018 {
 }
 
 impl Mapper for Mapper018 {
-    fn on_end_of_cpu_cycle(&mut self, bus: &mut Bus) {
+    // Falling edge verified.
+    fn on_m2_fall(&mut self, bus: &mut Bus) {
         // Disch: When enabled, the IRQ counter counts down every CPU cycle.
         //        When it wraps, an IRQ is generated.
         if self.irq_enabled {

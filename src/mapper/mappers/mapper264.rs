@@ -106,7 +106,8 @@ impl Mapper for Mapper264 {
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, bus: &mut Bus) {
+    // TODO: Verify if the IRQ counter actually triggers on the falling edge.
+    fn on_m2_fall(&mut self, bus: &mut Bus) {
         if self.irq_counter.tick().triggered {
             bus.cpu_pinout.assert_mapper_irq();
             self.irq_counter.disable();

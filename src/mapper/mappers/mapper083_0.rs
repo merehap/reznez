@@ -73,7 +73,8 @@ impl Mapper for Mapper083_0 {
         self.cony.write_register(bus, addr, value);
     }
 
-    fn on_end_of_cpu_cycle(&mut self, bus: &mut Bus) {
+    // TODO: Verify if the IRQ counter actually triggers on the falling edge.
+    fn on_m2_fall(&mut self, bus: &mut Bus) {
         self.cony.on_end_of_cpu_cycle(bus);
     }
 
