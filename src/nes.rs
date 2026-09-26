@@ -28,7 +28,7 @@ use crate::logging::formatter;
 use crate::logging::formatter::*;
 use crate::mapper::mapper::Mapper;
 use crate::mapper::mapper_list;
-use crate::master_clock::{M2Transition, MasterClock};
+use crate::master_clock::{M2Event, MasterClock};
 use crate::memory::raw_memory::RawData;
 use crate::memory::bank::bank_number::{BankNumber, ReadStatus, WriteStatus};
 use crate::bus::Bus;
@@ -249,15 +249,12 @@ impl Nes {
         }
 
         match self.bus.master_clock.m2_transition {
-            Some(M2Transition::Rising) => self.cpu_step_m2_rising(),
-            Some(M2Transition::Romsel) => { /* TODO? */ }
-            Some(M2Transition::PpuselReadWrite) => {
-                // PPUSEL actually is activated before R/W is, but effects of PPUSEL occur after R/W.
-                Cpu::step_read_write(&mut self.bus);
-                Ppu::ppusel(&mut self.bus);
-            }
-            Some(M2Transition::MiddleOfHigh) => step = self.cpu_step_middle_of_m2_high(),
-            Some(M2Transition::Falling) => self.cpu_step_m2_falling(),
+            Some(M2Event::Rise) => self.cpu_step_m2_rising(),
+            Some(M2Event::ChipSelect) => Ppu::ppusel(&mut self.bus),
+            Some(M2Event::DataBusReady) => { /* TODO. */ }
+            Some(M2Event::MiddleOfHigh) => step = self.cpu_step_middle_of_m2_high(),
+            Some(M2Event::Fall) => self.cpu_step_m2_falling(),
+            Some(M2Event::ReadWriteSelect) => Cpu::step_read_write(&mut self.bus),
             None => {}
         }
 

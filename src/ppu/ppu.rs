@@ -104,7 +104,7 @@ impl Ppu {
         use FriendlyCpuAddress::*;
         match (bus.cpu_pinout.read_write, bus.cpu_address_bus().to_friendly()) {
             (Read, PpuStatus) => { /* TODO */ }
-            (Read, OamData) => { /* TODO */ }
+            (Read, OamData) => { /* Nothing to do until the end of the read. */ }
             (Read, PpuData) => { /* TODO */ }
             (Read, PpuControl | PpuMask | OamAddress | PpuScroll) => { /* Write-only */ }
             (Read, _) => { /* Do nothing. */ }

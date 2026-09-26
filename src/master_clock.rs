@@ -15,7 +15,7 @@ pub struct MasterClock {
     cpu_offset: u8,
     ppu_offset: u8,
 
-    pub m2_transition: Option<M2Transition>,
+    pub m2_transition: Option<M2Event>,
     pub ppu_first_half: bool,
     pub ppu_second_half: bool,
     pub apu: bool,
@@ -75,20 +75,20 @@ impl MasterClock {
         self.apu = false;
         self.is_last_dot_of_frame = false;
 
-        match self.cpu_offset {
+        self.m2_transition = match self.cpu_offset {
             24 => {
                 self.cpu_offset = 0;
-
                 self.cpu_cycle += 1;
-                self.m2_transition = Some(M2Transition::Rising);
+                Some(M2Event::Rise)
             }
-            1 => self.m2_transition = Some(M2Transition::Romsel),
-            2 => self.m2_transition = Some(M2Transition::PpuselReadWrite),
-            8 => self.m2_transition = Some(M2Transition::MiddleOfHigh),
-            14 => self.m2_transition = Some(M2Transition::Falling),
-            0..=23 => {}
+            2 => Some(M2Event::ChipSelect),
+            5 => Some(M2Event::DataBusReady),
+            8 => Some(M2Event::MiddleOfHigh),
+            15 => Some(M2Event::Fall),
+            19 => Some(M2Event::ReadWriteSelect),
+            0..=23 => None,
             25.. => unreachable!(),
-        }
+        };
 
         match self.ppu_offset {
             8 => {
@@ -118,10 +118,11 @@ impl MasterClock {
 }
 
 #[derive(PartialEq, Eq, Clone, Copy)]
-pub enum M2Transition {
-    Rising,
-    Romsel,
-    PpuselReadWrite,
+pub enum M2Event {
+    Rise,
+    ChipSelect,
+    DataBusReady,
     MiddleOfHigh,
-    Falling,
+    Fall,
+    ReadWriteSelect,
 }
