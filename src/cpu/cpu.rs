@@ -71,7 +71,7 @@ impl Cpu {
             h: 0,
 
             mode_state: CpuModeState::startup(),
-            // Dummy step that is never used.
+            // TODO: Figure out the right value.
             step: Step::Read(From::ProgramCounterTarget, &[]),
 
             nmi_status: NmiStatus::Inactive,
@@ -100,6 +100,8 @@ impl Cpu {
         self.reset_status = ResetStatus::Ready;
 
         self.mode_state = CpuModeState::startup();
+        // TODO: Figure out the right right thing to do here.
+        self.step = Step::Read(From::ProgramCounterTarget, &[]);
 
         self.address_carry = 0;
         self.nmi_status = NmiStatus::Inactive;
@@ -173,8 +175,6 @@ impl Cpu {
         } else if bus.cpu.irq_status == IrqStatus::Pending && !bus.cpu.status.interrupts_disabled {
             bus.cpu.irq_status = IrqStatus::Ready;
         }
-
-        bus.cpu.step = bus.cpu.mode_state.current_step();
 
         let cycle_parity = bus.apu_clock().cycle_parity();
         bus.dmc_dma.step(bus.cpu.step.is_read(), cycle_parity);
@@ -296,6 +296,12 @@ impl Cpu {
     }
 
     pub fn step_m2_falling(bus: &mut Bus, mapper: &mut dyn Mapper) {
+        if bus.cpu.mode_state.is_jammed() {
+            return;
+        }
+
+        bus.cpu.step = bus.cpu.mode_state.current_step();
+
         bus.signals.stop_read_2007();
         bus.signals.stop_write_2007();
         mapper.on_m2_fall(bus);
