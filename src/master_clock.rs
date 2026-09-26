@@ -15,8 +15,7 @@ pub struct MasterClock {
     cpu_offset: u8,
     ppu_offset: u8,
 
-    pub m2_rise: bool,
-    pub middle_of_m2_high: bool,
+    pub m2_transition: Option<M2Transition>,
     pub ppu_first_half: bool,
     pub ppu_second_half: bool,
     pub apu: bool,
@@ -36,8 +35,7 @@ impl MasterClock {
             cpu_offset: 0,
             ppu_offset: 0,
 
-            m2_rise: false,
-            middle_of_m2_high: false,
+            m2_transition: None,
             ppu_first_half: false,
             ppu_second_half: false,
             apu: false,
@@ -71,8 +69,7 @@ impl MasterClock {
     }
 
     pub fn tick(&mut self, signals: &mut Signals) -> bool {
-        self.m2_rise = false;
-        self.middle_of_m2_high = false;
+        self.m2_transition = None;
         self.ppu_first_half = false;
         self.ppu_second_half = false;
         self.apu = false;
@@ -83,12 +80,13 @@ impl MasterClock {
                 self.cpu_offset = 0;
 
                 self.cpu_cycle += 1;
-                self.m2_rise = true;
+                self.m2_transition = Some(M2Transition::Rising);
             }
             8 => {
-                self.middle_of_m2_high = true;
+                self.m2_transition = Some(M2Transition::MiddleOfHigh);
             }
             14 => {
+                self.m2_transition = Some(M2Transition::Falling);
             }
             0..=23 => {}
             25.. => unreachable!(),
@@ -119,4 +117,11 @@ impl MasterClock {
         let end_reached = self.master_cycle.is_multiple_of(PERIOD);
         end_reached
     }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy)]
+pub enum M2Transition {
+    Rising,
+    MiddleOfHigh,
+    Falling,
 }

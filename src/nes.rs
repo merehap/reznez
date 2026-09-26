@@ -28,7 +28,7 @@ use crate::logging::formatter;
 use crate::logging::formatter::*;
 use crate::mapper::mapper::Mapper;
 use crate::mapper::mapper_list;
-use crate::master_clock::MasterClock;
+use crate::master_clock::{M2Transition, MasterClock};
 use crate::memory::raw_memory::RawData;
 use crate::memory::bank::bank_number::{BankNumber, ReadStatus, WriteStatus};
 use crate::bus::Bus;
@@ -248,12 +248,11 @@ impl Nes {
             self.bus.master_clock.apu_clock.parity.toggle();
         }
 
-        if self.bus.master_clock.m2_rise {
-            self.cpu_step_first_half();
-        }
-
-        if self.bus.master_clock.middle_of_m2_high {
-            step = self.cpu_step_second_half();
+        match self.bus.master_clock.m2_transition {
+            Some(M2Transition::Rising) => self.cpu_step_m2_rising(),
+            Some(M2Transition::MiddleOfHigh) => step = self.cpu_step_middle_of_m2_high(),
+            Some(M2Transition::Falling) => self.cpu_step_m2_falling(),
+            None => {}
         }
 
         if self.bus.master_clock.ppu_first_half {
@@ -290,23 +289,23 @@ impl Nes {
         self.bus.master_clock_mut().apu_clock_mut().tick();
     }
 
-    fn cpu_step_first_half(&mut self) {
+    fn cpu_step_m2_rising(&mut self) {
         if self.diff_logging_enabled && log_enabled!(target: "timings", Info) {
             self.snapshots.current().instruction(self.bus.cpu.mode_state().state_label());
         }
 
-        let step = Cpu::step_first_half(&mut self.bus, &mut *self.mapper);
+        let step = Cpu::step_m2_rise(&mut self.bus, &mut *self.mapper);
         self.detect_changes();
         step
     }
 
-    fn cpu_step_second_half(&mut self) -> Option<Step> {
+    fn cpu_step_middle_of_m2_high(&mut self) -> Option<Step> {
         let mut interrupt_text = String::new();
         if self.diff_logging_enabled && log_enabled!(target: "cpuinstructions", Info) {
             interrupt_text = formatter::interrupts(self);
         }
 
-        let step = Cpu::step_second_half(&mut self.bus, &mut *self.mapper);
+        let step = Cpu::step_m2_middle_of_high(&mut self.bus, &mut *self.mapper);
 
         if self.diff_logging_enabled && log_enabled!(target: "cpuinstructions", Info) &&
                 let Some((current_instruction, start_address)) = self.bus.cpu.mode_state().new_instruction_with_address() {
@@ -331,6 +330,10 @@ impl Nes {
 
         self.detect_changes();
         step
+    }
+
+    fn cpu_step_m2_falling(&mut self) {
+        Cpu::step_m2_falling(&mut self.bus)
     }
 
     fn ppu_step_first_half(&mut self, frame: &mut Frame) {

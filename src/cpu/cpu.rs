@@ -151,8 +151,7 @@ impl Cpu {
         self.nmi_status == NmiStatus::Pending
     }
 
-    // ϕ1. M2 is low
-    pub fn step_first_half(bus: &mut Bus, mapper: &mut dyn Mapper) {
+    pub fn step_m2_rise(bus: &mut Bus, mapper: &mut dyn Mapper) {
         if bus.cpu_pinout.reset.current_value() == SignalLevel::Low {
             // The CPU doesn't do anything while the RESET button is held down.
             return;
@@ -207,8 +206,7 @@ impl Cpu {
         }
     }
 
-    // ϕ2. M2 is high
-    pub fn step_second_half(bus: &mut Bus, mapper: &mut dyn Mapper) -> Option<Step> {
+    pub fn step_m2_middle_of_high(bus: &mut Bus, mapper: &mut dyn Mapper) -> Option<Step> {
         if bus.cpu_pinout.reset.current_value() == SignalLevel::Low {
             // The CPU doesn't do anything while the RESET button is held down.
             return None;
@@ -286,6 +284,10 @@ impl Cpu {
 
         mapper.on_end_of_cpu_cycle(bus);
         Some(bus.cpu.step)
+    }
+
+    pub fn step_m2_falling(_bus: &mut Bus) {
+
     }
 
     fn execute_step_action(Bus { cpu, cpu_pinout, apu_regs, dmc_dma, oam_dma, .. }: &mut Bus, action: StepAction, value: u8) {
