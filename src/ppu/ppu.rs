@@ -5,6 +5,8 @@ use ux::u5;
 use crate::mapper::mapper::Mapper;
 use crate::bus::Bus;
 use crate::master_clock::MasterClock;
+use crate::memory::cpu::cpu_address::FriendlyCpuAddress;
+use crate::memory::cpu::cpu_pinout::ReadWrite;
 use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::regions::secondary_oam::{SecondaryOam, SpriteField};
@@ -97,8 +99,25 @@ impl Ppu {
         }
     }
 
-    pub fn ppusel(Bus {..}: &mut Bus) {
+    pub fn ppusel(bus: &mut Bus) {
+        use ReadWrite::*;
+        use FriendlyCpuAddress::*;
+        match (bus.cpu_pinout.read_write, bus.cpu_address_bus().to_friendly()) {
+            (Read, PpuStatus) => { /* TODO */ }
+            (Read, OamData) => { /* TODO */ }
+            (Read, PpuData) => { /* TODO */ }
+            (Read, PpuControl | PpuMask | OamAddress | PpuScroll) => { /* Write-only */ }
+            (Read, _) => { /* Do nothing. */ }
 
+            (Write, PpuControl) => { /* TODO */ }
+            (Write, PpuMask) => { /* TODO */ }
+            (Write, OamAddress) => { /* TODO */ }
+            (Write, OamData) => { /* TODO */ }
+            (Write, PpuScroll) => { /* TODO */ }
+            (Write, PpuData) => { /* TODO */ }
+            (Write, PpuStatus) => { /* Read-only */ }
+            (Write, _) => { /* Do nothing. */ }
+        }
     }
 
     pub fn step_phase_1(bus: &mut Bus, mapper: &mut dyn Mapper, frame: &mut Frame) {

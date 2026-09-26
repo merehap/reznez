@@ -14,7 +14,7 @@ use crate::cpu::status::Status;
 use crate::cpu::step::*;
 use crate::mapper::mapper::Mapper;
 use crate::memory::cpu::cpu_address::{CpuAddress, FriendlyCpuAddress};
-use crate::bus::{Bus, IRQ_VECTOR_HIGH, IRQ_VECTOR_LOW, NMI_VECTOR_HIGH, NMI_VECTOR_LOW, RESET_VECTOR_HIGH, RESET_VECTOR_LOW};
+use crate::bus::{AddressBusType, Bus, IRQ_VECTOR_HIGH, IRQ_VECTOR_LOW, NMI_VECTOR_HIGH, NMI_VECTOR_LOW, RESET_VECTOR_HIGH, RESET_VECTOR_LOW};
 use crate::memory::cpu::cpu_pinout::{CpuPinout, ReadWrite};
 use crate::memory::signal_level::SignalLevel;
 
@@ -151,6 +151,10 @@ impl Cpu {
         self.nmi_status == NmiStatus::Pending
     }
 
+    pub fn current_address_bus_type(&self) -> AddressBusType {
+        self.step.address_bus_type()
+    }
+
     pub fn step_m2_rise(bus: &mut Bus, mapper: &mut dyn Mapper) {
         if bus.cpu_pinout.reset.current_value() == SignalLevel::Low {
             // The CPU doesn't do anything while the RESET button is held down.
@@ -198,7 +202,7 @@ impl Cpu {
         }
 
         if !bus.cpu.step.is_read() {
-            bus.cpu_write(mapper, bus.cpu.step.address_bus_type());
+            bus.cpu_write(mapper);
             bus.cpu.value = bus.cpu_pinout.data_bus;
         } else if address.to_friendly() == FriendlyCpuAddress::PpuStatus {
             bus.ppu_regs.vblank_active = false;
@@ -223,7 +227,7 @@ impl Cpu {
         }
 
         if bus.cpu.step.is_read() {
-            bus.cpu.value = bus.cpu_read(mapper, bus.cpu.step.address_bus_type());
+            bus.cpu.value = bus.cpu_read(mapper);
         }
 
         if let Step::ReadField(field, ..) = bus.cpu.step {
@@ -252,8 +256,7 @@ impl Cpu {
         if log_enabled!(target: "cpustep", Info) {
             let step_name = if halted { "HALTED".to_string() } else { bus.cpu.mode_state.step_name() };
             let cpu_cycle = bus.cpu_cycle();
-            let current_address_bus_type = bus.cpu.step.address_bus_type();
-            let current_address = bus.cpu_address_bus(current_address_bus_type);
+            let current_address = bus.cpu_address_bus();
             let prg_index = if *current_address < 0x6000 {
                 String::new()
             } else {

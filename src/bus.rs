@@ -168,8 +168,8 @@ impl Bus {
         &self.palette_ram
     }
 
-    pub fn cpu_address_bus(&self, address_bus_type: AddressBusType) -> CpuAddress {
-        match address_bus_type {
+    pub fn cpu_address_bus(&self) -> CpuAddress {
+        match self.cpu.current_address_bus_type() {
             AddressBusType::Cpu => self.cpu_pinout.address_bus,
             AddressBusType::OamDma => self.oam_dma_address_bus,
             AddressBusType::DmcDma => self.dmc_dma_address_bus,
@@ -337,8 +337,8 @@ impl Bus {
 
     #[inline]
     #[rustfmt::skip]
-    pub fn cpu_read(&mut self, mapper: &mut dyn Mapper, address_bus_type: AddressBusType) -> u8 {
-        let addr = self.cpu_address_bus(address_bus_type);
+    pub fn cpu_read(&mut self, mapper: &mut dyn Mapper) -> u8 {
+        let addr = self.cpu_address_bus();
         use FriendlyCpuAddress as Addr;
         let normal_read_value = match addr.to_friendly() {
             Addr::CpuInternalRam(index) => self.cpu_internal_ram().peek(index),
@@ -398,7 +398,7 @@ impl Bus {
         let is_apu_status_read = self.apu_registers_active() && apu_addr.to_friendly() == Addr::ApuStatus;
         self.cpu_pinout.data_bus = if !is_apu_status_read {
             normal_read_value.dominate(apu_read_value).resolve_with_bus(self.cpu_pinout.data_bus)
-        } else if address_bus_type == AddressBusType::Cpu {
+        } else if self.cpu.current_address_bus_type() == AddressBusType::Cpu {
             normal_read_value.resolve_with_bus(self.cpu_pinout.data_bus)
         } else {
             apu_read_value.resolve_with_bus(self.cpu_pinout.data_bus)
@@ -418,8 +418,8 @@ impl Bus {
     // TODO: APU register mirroring probably affects writes (at least for $2004/$4004), so implement it.
     #[inline]
     #[rustfmt::skip]
-    pub fn cpu_write(&mut self, mapper: &mut dyn Mapper, address_bus_type: AddressBusType) {
-        let addr = self.cpu_address_bus(address_bus_type);
+    pub fn cpu_write(&mut self, mapper: &mut dyn Mapper) {
+        let addr = self.cpu_address_bus();
 
         use FriendlyCpuAddress as Addr;
         match addr.to_friendly() {
@@ -482,7 +482,7 @@ impl Bus {
                 if matches!(*addr, 0x6000..=0xFFFF) {
                     // TODO: Verify if bus conflicts only occur for address >= 0x6000.
                     if mapper.has_bus_conflicts() {
-                        let rom_value = self.cpu_peek_unresolved(mapper, address_bus_type, addr);
+                        let rom_value = self.cpu_peek_unresolved(mapper, self.cpu.current_address_bus_type(), addr);
                         self.cpu_pinout.data_bus = rom_value.bus_conflict(self.cpu_pinout.data_bus);
                     }
 
