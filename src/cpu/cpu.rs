@@ -212,9 +212,6 @@ impl Cpu {
             return None;
         }
 
-        bus.signals.stop_read_2007();
-        bus.signals.stop_write_2007();
-
         if bus.cpu.step.is_read() {
             bus.cpu.value = bus.cpu_read(mapper, bus.cpu.step.address_bus_type());
         }
@@ -286,8 +283,9 @@ impl Cpu {
         Some(bus.cpu.step)
     }
 
-    pub fn step_m2_falling(_bus: &mut Bus) {
-
+    pub fn step_m2_falling(bus: &mut Bus) {
+        bus.signals.stop_read_2007();
+        bus.signals.stop_write_2007();
     }
 
     fn execute_step_action(Bus { cpu, cpu_pinout, apu_regs, dmc_dma, oam_dma, .. }: &mut Bus, action: StepAction, value: u8) {
