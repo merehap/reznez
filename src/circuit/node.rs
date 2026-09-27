@@ -156,10 +156,12 @@ impl <ComponentName: ConstParamTy_ + Clone + Copy + fmt::Debug + fmt::Display + 
         self.cofactors[cofactor_index].evaluate(&mut self.states);
     }
 
+    #[allow(dead_code)]
     pub fn state_at(&self, index: Index) -> bool {
         self.states[index]
     }
 
+    #[allow(dead_code)]
     pub fn format_states(&self, primary_source_states: &[bool]) -> String {
         let cofactor_index: usize = primary_source_states.iter().rev().enumerate()
             .map(|(i, value)| (*value as usize) << (primary_source_states.len() - i - 1))
