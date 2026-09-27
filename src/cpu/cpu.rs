@@ -212,7 +212,6 @@ impl Cpu {
             bus.cpu_write(mapper);
             bus.cpu.value = bus.cpu_pinout.data_bus;
         } else if address.to_friendly() == FriendlyCpuAddress::PpuStatus {
-            bus.ppu_regs.vblank_active = false;
             bus.ppu_regs.suppress_vblank_active = true;
         }
 
