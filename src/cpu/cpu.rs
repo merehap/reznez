@@ -193,6 +193,13 @@ impl Cpu {
             OamDmaAction::Write => OAM_WRITE_STEP,
         };
 
+        // FIXME: This placement is wrong. It should be earlier: during the ReadWrite step.
+        bus.cpu_pinout.read_write = if bus.cpu.step.is_read() {
+            ReadWrite::Read
+        } else {
+            ReadWrite::Write
+        };
+
         let current_address_bus_type = bus.cpu.step.address_bus_type();
         let address = bus.cpu.lookup_step_address(bus, bus.cpu.step);
         bus.set_cpu_address_bus(current_address_bus_type, address);
@@ -210,14 +217,6 @@ impl Cpu {
         }
 
         mapper.on_m2_rise(bus);
-    }
-
-    pub fn step_read_write(Bus { cpu, cpu_pinout, .. }: &mut Bus) {
-        cpu_pinout.read_write = if cpu.step.is_read() {
-            ReadWrite::Read
-        } else {
-            ReadWrite::Write
-        };
     }
 
     pub fn step_m2_middle_of_high(bus: &mut Bus, mapper: &mut dyn Mapper) -> Option<Step> {
@@ -305,6 +304,10 @@ impl Cpu {
         bus.signals.stop_read_2007();
         bus.signals.stop_write_2007();
         mapper.on_m2_fall(bus);
+    }
+
+    pub fn step_read_write(Bus {..}: &mut Bus) {
+        // TODO: Implement this once DMA step selection can be moved here.
     }
 
     fn execute_step_action(Bus { cpu, cpu_pinout, apu_regs, dmc_dma, oam_dma, .. }: &mut Bus, action: StepAction, value: u8) {
