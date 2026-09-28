@@ -17,7 +17,7 @@ pub struct CpuPinout {
     // M2 (CPU phase)
     // IRQ - only available as a method, not a field.
     // NMI. Triggers when the signal goes low.
-    pub nmi_signal_detector: EdgeDetector<SignalLevel>,
+    pub nmi_edge_detector: EdgeDetector<SignalLevel>,
     // R/W (Read/Write signal)
     pub read_write: ReadWrite,
     // OE2 (Controller 2 enable)
@@ -35,7 +35,7 @@ impl CpuPinout {
             reset: EdgeDetector::target_value(SignalLevel::High),
             address_bus: CpuAddress::ZERO,
             data_bus: 0,
-            nmi_signal_detector: EdgeDetector::target_value(SignalLevel::Low),
+            nmi_edge_detector: EdgeDetector::target_value(SignalLevel::Low),
             read_write: ReadWrite::Read,
 
             mapper_irq_asserted: false,

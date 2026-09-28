@@ -48,6 +48,10 @@ impl <V: PartialEq + Eq + Clone + Copy + Default + ConstParamTy_> EdgeDetector<V
         self.value = value;
     }
 
+    pub fn modify_value<F>(&mut self, mut f: F) where F: FnMut(&mut V) {
+        f(&mut self.value)
+    }
+
     pub fn detect(&mut self) -> bool {
         // If there's no target, then target is considered always hit.
         let target_value_hit = self.target_value.is_none_or(|target| self.value == target);

@@ -288,7 +288,7 @@ impl Bus {
         use FriendlyCpuAddress as Addr;
         let normal_peek_value = match addr.to_friendly() {
             Addr::CpuInternalRam(index) => self.cpu_internal_ram().peek(index),
-            Addr::PpuStatus             => self.ppu_regs.peek_status(),
+            Addr::PpuStatus             => self.ppu_regs.peek_status(self.cpu_pinout.data_bus),
             Addr::OamData               => self.ppu_regs.peek_oam_data(&self.oam),
             Addr::PpuData               => self.ppu_regs.peek_ppu_data(&self.palette_ram),
             Addr::PpuControl | Addr::PpuMask | Addr::OamAddress | Addr::PpuScroll | Addr::PpuAddress => {
@@ -342,7 +342,7 @@ impl Bus {
         use FriendlyCpuAddress as Addr;
         let normal_read_value = match addr.to_friendly() {
             Addr::CpuInternalRam(index) => self.cpu_internal_ram().peek(index),
-            Addr::PpuStatus             => self.ppu_regs.read_status(),
+            Addr::PpuStatus             => self.ppu_regs.read_status(&mut self.cpu_pinout.data_bus),
             Addr::OamData               => self.ppu_regs.read_oam_data(&mut self.oam, &self.signals, self.oam_buffer),
             Addr::PpuData => {
                 self.signals.start_read_2007();

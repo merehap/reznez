@@ -51,6 +51,8 @@ Gracefully handle bad PRG size? ((( Boy and His Blob, A - Trouble on Blobolonia 
 (Low priority) What should happen when BankIndex > bank_count when bank_count isn't a power of 2? Open bus?
 
 UNTESTED BY EXISTING TEST ROMS
+NMI PollInterrupts timing. It seems like TriCNES polls the latched edge detection one cycle too early for writes.
+Can anything interfere with the early, post-opcode-fetch cycles of an instruction? TriCNES just combines all the address formation steps into the final step.
 IRQ behavior for the vast majority of IRQ mappers
 Race conditions between is_in_frame_irq_window and $4017 writes
 PPUMask emphasis (Visual-only test: needs to be very creative since no register reads back emphasis)

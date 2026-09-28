@@ -18,7 +18,7 @@ use crate::cartridge::header_db::HeaderDb;
 use crate::cartridge::resolved_metadata::{MetadataResolver, ResolvedMetadata};
 use crate::config::Config;
 use crate::counter::irq_counter_info::IrqCounterInfo;
-use crate::cpu::cpu::{Cpu, IrqStatus, NmiStatus, ResetStatus};
+use crate::cpu::cpu::{Cpu, IrqStatus, ResetStatus};
 use crate::cpu::cpu_mode::CpuMode;
 use crate::cpu::dmc_dma::{DmcDmaAction, DmcDmaState};
 use crate::cpu::oam_dma::{OamDmaAction, OamDmaState};
@@ -248,11 +248,12 @@ impl Nes {
             self.bus.master_clock.apu_clock.parity.toggle();
         }
 
-        match self.bus.master_clock.m2_transition {
+        match self.bus.master_clock.m2_event {
             Some(M2Event::Rise) => self.cpu_step_m2_rising(),
             Some(M2Event::ChipSelect) => Ppu::ppusel(&mut self.bus),
-            Some(M2Event::DataBusReady) => { /* TODO. */ }
+            Some(M2Event::DataBusReady) => Ppu::cpu_data_bus_ready(&mut self.bus),
             Some(M2Event::MiddleOfHigh) => step = self.cpu_step_middle_of_m2_high(),
+            Some(M2Event::EndOfHigh) => Cpu::step_end_of_high(&mut self.bus),
             Some(M2Event::Fall) => self.cpu_step_m2_falling(),
             Some(M2Event::ReadWriteSelect) => Cpu::step_read_write(&mut self.bus),
             None => {}
@@ -328,7 +329,7 @@ impl Nes {
 
             self.snapshots.current().cpu_cycle(self.bus.cpu_cycle());
             self.snapshots.current().irq_status(self.bus.cpu.irq_status());
-            self.snapshots.current().nmi_status(self.bus.cpu.nmi_status());
+            self.snapshots.current().nmi_pending(self.bus.cpu.nmi_pending());
         }
 
         self.detect_changes();
@@ -387,8 +388,8 @@ impl Nes {
             }
 
             let regs = &self.bus.ppu_regs;
-            if latest.vblank_active.set_value_then_detect(regs.vblank_active) {
-                info!("VBlank active changed to {}", regs.vblank_active);
+            if latest.vblank_active.set_value_then_detect(regs.ppu_status_vblank_active) {
+                info!("VBlank active changed to {}", regs.ppu_status_vblank_active);
             }
             if latest.sprite0_hit.set_value_then_detect(regs.sprite0_hit) {
                 info!("Sprite 0 hit changed to {}", regs.sprite0_hit);
@@ -409,8 +410,8 @@ impl Nes {
             if latest.irq_status_detector.set_value_then_detect(self.bus.cpu.irq_status()) {
                 info!("IRQ status in CPU: {:?}. Cycle: {}", self.bus.cpu.irq_status(), self.bus.cpu_cycle());
             }
-            if latest.nmi_status_detector.set_value_then_detect(self.bus.cpu.nmi_status()) {
-                info!("NMI status: {:?}. Cycle: {}", self.bus.cpu.nmi_status(), self.bus.cpu_cycle());
+            if latest.nmi_status_detector.set_value_then_detect(self.bus.cpu.nmi_pending()) {
+                info!("NMI pending: {:?}. Cycle: {}", self.bus.cpu.nmi_pending(), self.bus.cpu_cycle());
             }
             if latest.reset_status_detector.set_value_then_detect(self.bus.cpu.reset_status()) {
                 info!("RESET status: {:?}. Cycle: {}", self.bus.cpu.reset_status(), self.bus.cpu_cycle());
@@ -421,8 +422,8 @@ impl Nes {
             if latest.oam_cpu_halt_detector.set_value_then_detect(self.bus.oam_dma.latest_action().cpu_should_be_halted()) {
                 info!("CPU halted for OAM DMA transfer at {}.", self.bus.oam_dma.address());
             }
-            if latest.nmi_signal_detector.set_value_then_detect(self.bus.cpu_pinout.nmi_signal_detector.current_value()) {
-                info!("NMI signal went {:?}.", self.bus.cpu_pinout.nmi_signal_detector.current_value());
+            if latest.nmi_signal_detector.set_value_then_detect(self.bus.cpu_pinout.nmi_edge_detector.current_value()) {
+                info!("NMI signal went {:?}.", self.bus.cpu_pinout.nmi_edge_detector.current_value());
             }
             if latest.reset_signal_detector.set_value_then_detect(self.bus.cpu_pinout.reset.current_value()) {
                 info!("RESET signal went {:?}.", self.bus.cpu_pinout.reset.current_value());
@@ -653,7 +654,7 @@ struct LatestValues {
     reset_signal_detector: EdgeDetector<SignalLevel>,
 
     irq_status_detector: EdgeDetector<IrqStatus>,
-    nmi_status_detector: EdgeDetector<NmiStatus>,
+    nmi_status_detector: EdgeDetector<bool>,
     reset_status_detector: EdgeDetector<ResetStatus>,
 
     extended_cpu_mode: ExtendedCpuMode,
@@ -882,7 +883,7 @@ impl Snapshots {
             append(&mut instr, &center(&snapshot.instruction.clone()), true, skip);
             append(&mut fcw_status, &center(&format!("{:?}", snapshot.frame_counter_write_status)),
                 snapshot.frame_counter_write_status != ClockResetStatus::Inactive, skip);
-            append(&mut nmi_status, &center(&format!("{:?}", snapshot.nmi_status)), snapshot.nmi_status != NmiStatus::Inactive, skip);
+            append(&mut nmi_status, &center(&format!("{:?}", snapshot.nmi_pending)), snapshot.nmi_pending, skip);
             append(&mut irq_status, &center(&format!("{:?}", snapshot.irq_status)), snapshot.irq_status != IrqStatus::Inactive, skip);
             append(&mut frame_irq, &center("Raise IRQ"), snapshot.frame_irq, skip);
         };
@@ -939,7 +940,7 @@ struct Snapshot {
     frame_counter_write_status: ClockResetStatus,
     frame_irq: bool,
     irq_status: IrqStatus,
-    nmi_status: NmiStatus,
+    nmi_pending: bool,
     ppu_pos: [(u16, u16); 3],
 }
 
@@ -952,7 +953,7 @@ struct SnapshotBuilder {
     frame_counter_write_status: Option<ClockResetStatus>,
     frame_irq: Option<bool>,
     irq_status: Option<IrqStatus>,
-    nmi_status: Option<NmiStatus>,
+    nmi_pending: Option<bool>,
     ppu_pos: VecDeque<(u16, u16)>,
 }
 
@@ -992,8 +993,8 @@ impl SnapshotBuilder {
         self.irq_status = Some(irq_status);
     }
 
-    fn nmi_status(&mut self, nmi_status: NmiStatus) {
-        self.nmi_status = Some(nmi_status);
+    fn nmi_pending(&mut self, nmi_pending: bool) {
+        self.nmi_pending = Some(nmi_pending);
     }
 
     fn build(self) -> Snapshot {
@@ -1006,7 +1007,7 @@ impl SnapshotBuilder {
             frame_counter_write_status: self.frame_counter_write_status.unwrap(),
             frame_irq: self.frame_irq.unwrap(),
             irq_status: self.irq_status.unwrap(),
-            nmi_status: self.nmi_status.unwrap(),
+            nmi_pending: self.nmi_pending.unwrap(),
             ppu_pos: [self.ppu_pos[0], self.ppu_pos[1], self.ppu_pos[2]],
         }
     }

@@ -36,7 +36,8 @@ pub struct Cpu {
     mode_state: CpuModeState,
     step: Step,
 
-    nmi_status: NmiStatus,
+    nmi_falling_edge_detected: bool,
+    nmi_pending: bool,
     irq_status: IrqStatus,
     reset_status: ResetStatus,
 
@@ -74,7 +75,8 @@ impl Cpu {
             // TODO: Figure out the right value.
             step: Step::Read(From::ProgramCounterTarget, &[]),
 
-            nmi_status: NmiStatus::Inactive,
+            nmi_falling_edge_detected: false,
+            nmi_pending: false,
             irq_status: IrqStatus::Inactive,
             reset_status: ResetStatus::Active,
 
@@ -104,7 +106,7 @@ impl Cpu {
         self.step = Step::Read(From::ProgramCounterTarget, &[]);
 
         self.address_carry = 0;
-        self.nmi_status = NmiStatus::Inactive;
+        self.nmi_pending = false;
         self.irq_status = IrqStatus::Inactive;
         self.current_interrupt_vector = None;
     }
@@ -137,10 +139,6 @@ impl Cpu {
         &self.mode_state
     }
 
-    pub fn nmi_status(&self) -> NmiStatus {
-        self.nmi_status
-    }
-
     pub fn irq_status(&self) -> IrqStatus {
         self.irq_status
     }
@@ -150,7 +148,7 @@ impl Cpu {
     }
 
     pub fn nmi_pending(&self) -> bool {
-        self.nmi_status == NmiStatus::Pending
+        self.nmi_pending
     }
 
     pub fn current_address_bus_type(&self) -> AddressBusType {
@@ -168,11 +166,9 @@ impl Cpu {
             return;
         }
 
-        bus.ppu_regs.ppu_status_vblank_active = bus.ppu_regs.vblank_active;
+        //bus.ppu_regs.ppu_status_vblank_active = bus.ppu_regs.vblank_active;
 
-        if bus.cpu.nmi_status == NmiStatus::Pending {
-            bus.cpu.nmi_status = NmiStatus::Ready;
-        } else if bus.cpu.irq_status == IrqStatus::Pending && !bus.cpu.status.interrupts_disabled {
+        if !bus.cpu.nmi_pending && bus.cpu.irq_status == IrqStatus::Pending && !bus.cpu.status.interrupts_disabled {
             bus.cpu.irq_status = IrqStatus::Ready;
         }
 
@@ -211,8 +207,29 @@ impl Cpu {
         if !bus.cpu.step.is_read() {
             bus.cpu_write(mapper);
             bus.cpu.value = bus.cpu_pinout.data_bus;
-        } else if address.to_friendly() == FriendlyCpuAddress::PpuStatus {
-            bus.ppu_regs.suppress_vblank_active = true;
+        }
+
+        use ReadWrite::*;
+        use FriendlyCpuAddress::*;
+        match (bus.cpu_pinout.read_write, address.to_friendly()) {
+            (Read, PpuStatus) => {
+                bus.cpu_pinout.data_bus = ((bus.ppu_regs.ppu_status_vblank_active as u8) << 7) | (bus.cpu_pinout.data_bus & 0b0111_1111);
+                bus.ppu_regs.read_2002 = true;
+                //log::info!("\t{} Pending suppresson of VBlank active.", bus.ppu_clock());
+            }
+            (Read, OamData) => { /* Nothing to do until the end of the read. */ }
+            (Read, PpuData) => { /* TODO */ }
+            (Read, PpuControl | PpuMask | OamAddress | PpuScroll) => { /* Write-only */ }
+            (Read, _) => { /* Do nothing. */ }
+
+            (Write, PpuControl) => { /* TODO */ }
+            (Write, PpuMask) => { /* TODO */ }
+            (Write, OamAddress) => { /* TODO */ }
+            (Write, OamData) => { /* TODO */ }
+            (Write, PpuScroll) => { /* TODO */ }
+            (Write, PpuData) => { /* TODO */ }
+            (Write, PpuStatus) => { /* Read-only */ }
+            (Write, _) => { /* Do nothing. */ }
         }
 
         mapper.on_m2_rise(bus);
@@ -222,6 +239,17 @@ impl Cpu {
         if bus.cpu_pinout.reset.current_value() == SignalLevel::Low {
             // The CPU doesn't do anything while the RESET button is held down.
             return None;
+        }
+
+        if bus.ppu_regs.read_2002 {
+            /*
+            let value = bus.ppu_regs.peek_status().unmasked_value();
+            bus.cpu_pinout.data_bus &= 0b1000_0000;
+            bus.cpu_pinout.data_bus |= value & 0b0111_1111;
+            bus.ppu_regs.ppu_io_bus.update_from_status_read(bus.cpu_pinout.data_bus);
+
+            bus.ppu_regs.write_toggle = WriteToggle::FirstByte;
+            */
         }
 
         if bus.cpu.step.is_read() {
@@ -250,6 +278,12 @@ impl Cpu {
             Cpu::execute_step_action(bus, action, bus.cpu.value);
         }
 
+        if bus.ppu_regs.ppu_status_vblank_active && bus.ppu_regs.nmi_enabled() {
+            bus.cpu_pinout.nmi_edge_detector.set_value(SignalLevel::Low);
+        } else if bus.cpu.mode_state.is_first_step() {
+            bus.cpu_pinout.nmi_edge_detector.set_value(SignalLevel::High);
+        }
+
         let halted = bus.dmc_dma.cpu_should_be_halted() || bus.oam_dma.cpu_should_be_halted();
         if log_enabled!(target: "cpustep", Info) {
             let step_name = if halted { "HALTED".to_string() } else { bus.cpu.mode_state.step_name() };
@@ -276,11 +310,6 @@ impl Cpu {
             }
         }
 
-        let edge_detected = bus.cpu_pinout.nmi_signal_detector.detect();
-        if edge_detected {
-            bus.cpu.nmi_status = NmiStatus::Pending;
-        }
-
         // Keep irq_pending and irq_status in sync
         if bus.cpu_pinout.irq_asserted() {
             if bus.cpu.irq_status == IrqStatus::Inactive && !bus.cpu.status.interrupts_disabled {
@@ -293,9 +322,18 @@ impl Cpu {
         Some(bus.cpu.step)
     }
 
+    pub fn step_end_of_high(_bus: &mut Bus) {
+
+    }
+
     pub fn step_m2_falling(bus: &mut Bus, mapper: &mut dyn Mapper) {
         if bus.cpu.mode_state.is_jammed() {
             return;
+        }
+
+        let nmi_fall = bus.cpu_pinout.nmi_edge_detector.detect();
+        if nmi_fall {
+            bus.cpu.nmi_falling_edge_detected = true;
         }
 
         bus.cpu.step = bus.cpu.mode_state.current_step();
@@ -320,10 +358,11 @@ impl Cpu {
                     cpu.reset_status = ResetStatus::Active;
                     cpu_pinout.data_bus = 0x00;
                     cpu.mode_state.interrupt_sequence(InterruptType::Reset);
-                } else if cpu.nmi_status == NmiStatus::Active {
+                } else if cpu.nmi_pending {
+                    cpu.nmi_falling_edge_detected = false;
                     cpu_pinout.data_bus = 0x00;
                     cpu.mode_state.interrupt_sequence(InterruptType::Nmi);
-                } else if cpu.irq_status == IrqStatus::Active && cpu.nmi_status == NmiStatus::Inactive {
+                } else if cpu.irq_status == IrqStatus::Active && !cpu.nmi_pending {
                     cpu_pinout.data_bus = 0x00;
                     cpu.mode_state.interrupt_sequence(InterruptType::Irq);
                 } else {
@@ -498,7 +537,7 @@ impl Cpu {
                     if cpu.reset_status != ResetStatus::Inactive {
                         info!(target: "cpuflowcontrol", "Setting interrupt vector to RESET.");
                         Some(InterruptType::Reset)
-                    } else if cpu.nmi_status != NmiStatus::Inactive {
+                    } else if cpu.nmi_pending {
                         info!(target: "cpuflowcontrol", "Setting interrupt vector to NMI.");
                         Some(InterruptType::Nmi)
                     } else if cpu.irq_status != IrqStatus::Inactive {
@@ -513,22 +552,22 @@ impl Cpu {
                 cpu.mode_state.interrupt_vector_set(cpu.current_interrupt_vector);
 
                 // Clear interrupt statuses now that the vector is set.
-                cpu.nmi_status = NmiStatus::Inactive;
+                cpu.nmi_pending = false;
                 cpu.irq_status = IrqStatus::Inactive;
                 cpu.reset_status = ResetStatus::Inactive;
             }
             StepAction::ClearInterruptVector => cpu.current_interrupt_vector = None,
             StepAction::PollInterrupts => {
-                if cpu.nmi_status == NmiStatus::Ready {
-                    cpu.nmi_status = NmiStatus::Active;
+                if cpu.nmi_falling_edge_detected {
+                    cpu.nmi_pending = true;
                 } else if cpu.irq_status == IrqStatus::Ready && !cpu.status.interrupts_disabled {
                     cpu.irq_status = IrqStatus::Active;
                 }
             }
             StepAction::MaybePollInterrupts => {
                 if cpu.address_carry != 0 {
-                    if cpu.nmi_status == NmiStatus::Ready {
-                        cpu.nmi_status = NmiStatus::Ready;
+                    if cpu.nmi_falling_edge_detected {
+                        cpu.nmi_pending = true;
                     } else if cpu.irq_status == IrqStatus::Ready && !cpu.status.interrupts_disabled {
                         cpu.irq_status = IrqStatus::Active;
                     }
@@ -788,15 +827,6 @@ impl Cpu {
 
 fn is_neg(value: u8) -> bool {
     (value >> 7) == 1
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug, Default, ConstParamTy)]
-pub enum NmiStatus {
-    #[default]
-    Inactive,
-    Pending,
-    Ready,
-    Active,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Default, ConstParamTy)]

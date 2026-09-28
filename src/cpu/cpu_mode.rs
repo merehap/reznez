@@ -94,6 +94,10 @@ impl CpuModeState {
         self.mode == CpuMode::Jammed
     }
 
+    pub fn step_index(&self) -> usize {
+        self.step_index
+    }
+
     pub fn should_suppress_next_instruction_start(&self) -> bool {
         matches!(self.next_mode, Some(CpuMode::Instruction(_, InstructionMode::BranchTaken | InstructionMode::BranchOops)))
     }
@@ -195,6 +199,10 @@ impl CpuModeState {
         if let Some(new_interrupt_type) = interrupt_vector {
             self.mode = CpuMode::InterruptSequence(new_interrupt_type);
         }
+    }
+
+    pub fn is_first_step(&self) -> bool {
+        self.step_index == 0
     }
 
     pub fn step(&mut self) {

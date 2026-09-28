@@ -261,6 +261,7 @@ pub const RTS_STEPS: &[Step] = &[
     Read(                             From::ProgramCounterTarget, &[IncrementPC, PollInterrupts]),
 ];
 
+// FIXME: This is polling interrupts on both cycles. Presumably only the second cycle should.
 pub const PHA_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode, PollInterrupts]),
     WriteField(Accumulator         , To::TopOfStack, &[DecrementStackPointer, PollInterrupts]),

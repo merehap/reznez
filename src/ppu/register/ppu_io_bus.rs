@@ -28,6 +28,11 @@ impl PpuIoBus {
         self.lower_bits_decay_countdown = MAX_SCANLINE;
     }
 
+    pub fn update_top_bit(&mut self, top_bit: bool) {
+        // FIXME: This should update the decay status, too.
+        self.value = ((top_bit as u8) << 7) | (self.value & 0b0111_1111);
+    }
+
     pub fn update_from_status_read(&mut self, value: u8) {
         self.value = value;
         // The lower bits are unaffected since PPUStatus doesn't power them.

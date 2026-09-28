@@ -1,5 +1,6 @@
 use log::{info, log_enabled};
 use log::Level::Info;
+use splitbits::splitbits;
 use ux::u5;
 
 use crate::mapper::mapper::Mapper;
@@ -10,16 +11,16 @@ use crate::memory::cpu::cpu_pinout::ReadWrite;
 use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::regions::secondary_oam::{SecondaryOam, SpriteField};
-use crate::memory::signal_level::SignalLevel;
 use crate::ppu::cycle_action::cycle_action::CycleAction;
 use crate::ppu::cycle_action::frame_actions::{FrameActions, NTSC_FRAME_ACTIONS};
+use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::palette::color::Color;
 use crate::ppu::palette::rgb::Rgb;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::palette::color_t::ColorT;
 use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::ppu::pixel_index::{PixelColumn, PixelIndex, PixelRow};
-use crate::ppu::register::ppu_registers::{PpuRegisters, Toggle};
+use crate::ppu::register::ppu_registers::{AddressIncrement, ExtPinRole, PpuRegisters, Toggle};
 use crate::ppu::register::registers::attribute_register::AttributeRegister;
 use crate::ppu::register::registers::pattern_register::PatternRegister;
 use crate::ppu::render::frame::{DebugBuffer, FrameBuffer, Frame};
@@ -120,6 +121,47 @@ impl Ppu {
         }
     }
 
+    pub fn cpu_data_bus_ready(bus: &mut Bus) {
+        let friendly_cpu_addr = bus.cpu_address_bus().to_friendly();
+        let read_write = bus.cpu_pinout.read_write;
+
+        let ppu_regs = &mut bus.ppu_regs;
+
+        use ReadWrite::*;
+        use FriendlyCpuAddress::*;
+        match (read_write, friendly_cpu_addr) {
+            (Read, PpuStatus) => { /* TODO */ }
+            (Read, OamData) => { /* Nothing to do until the end of the read. */ }
+            (Read, PpuData) => { /* TODO */ }
+            (Read, PpuControl | PpuMask | OamAddress | PpuScroll) => { /* Write-only */ }
+            (Read, _) => { /* Do nothing. */ }
+
+            (Write, PpuControl) => {
+                let fields = splitbits!(ppu_regs.ppu_io_bus.value(), "nehb siqq");
+                if !ppu_regs.nmi_enabled && fields.n {
+                    log::info!("{} NMI enabled", bus.master_clock.ppu_clock());
+                }
+
+                ppu_regs.nmi_enabled = fields.n;
+                ppu_regs.ext_pin_role              = [ExtPinRole::Read       , ExtPinRole::Write      ][fields.e as usize];
+                ppu_regs.sprite_height             = [SpriteHeight::Normal   , SpriteHeight::Tall     ][fields.h as usize];
+                ppu_regs.background_table_side     = [PatternTableSide::Left , PatternTableSide::Right][fields.b as usize];
+                ppu_regs.sprite_table_side         = [PatternTableSide::Left , PatternTableSide::Right][fields.s as usize];
+                ppu_regs.current_address_increment = [AddressIncrement::Right, AddressIncrement::Down ][fields.i as usize];
+                ppu_regs.base_name_table_quadrant =  NameTableQuadrant::ALL[fields.q as usize];
+
+                ppu_regs.next_address.set_name_table_quadrant(ppu_regs.base_name_table_quadrant);
+            }
+            (Write, PpuMask) => { /* TODO */ }
+            (Write, OamAddress) => { /* TODO */ }
+            (Write, OamData) => { /* TODO */ }
+            (Write, PpuScroll) => { /* TODO */ }
+            (Write, PpuData) => { /* TODO */ }
+            (Write, PpuStatus) => { /* Read-only */ }
+            (Write, _) => { /* Do nothing. */ }
+        }
+    }
+
     pub fn step_phase_1(bus: &mut Bus, mapper: &mut dyn Mapper, frame: &mut Frame) {
         bus.signals.start_ppu_clock_phase_1(&mut bus.ppu_pinout);
 
@@ -177,15 +219,15 @@ impl Ppu {
             bus.set_ppu_address_bus(mapper, bus.ppu_regs.current_address)
         }
 
-        if bus.ppu_regs.suppress_vblank_active {
-            bus.ppu_regs.vblank_active = false;
-            bus.ppu_regs.suppress_vblank_active = false;
+        bus.ppu_regs.vset_latch_1 = !bus.ppu_regs.vset;
+        if bus.ppu_regs.vset && !bus.ppu_regs.vset_latch_2 {
+            bus.ppu_regs.ppu_status_vblank_active = true;
         }
 
-        if bus.ppu_regs.vblank_active && bus.ppu_regs.nmi_enabled() {
-            bus.cpu_pinout.nmi_signal_detector.set_value(SignalLevel::Low);
-        } else {
-            bus.cpu_pinout.nmi_signal_detector.set_value(SignalLevel::High);
+        if bus.ppu_regs.read_2002 {
+            //log::info!("\t{} Suppressed VBlank active.", bus.ppu_clock());
+            bus.ppu_regs.ppu_status_vblank_active = false;
+            bus.ppu_regs.read_2002 = false;
         }
 
         mapper.on_end_of_ppu_cycle();
@@ -193,6 +235,14 @@ impl Ppu {
 
     pub fn step_phase_2(Bus { ppu, ppu_regs, ppu_pinout, master_clock, signals, secondary_oam, oam_buffer, secondary_oam_buffer, .. }: &mut Bus) {
         signals.start_ppu_clock_phase_2(ppu_pinout);
+
+        ppu_regs.vset = false;
+        if ppu_regs.pending_vblank {
+            ppu_regs.vset = true;
+            ppu_regs.pending_vblank = false;
+        }
+
+        ppu_regs.vset_latch_2 = !ppu_regs.vset_latch_1;
 
         if ppu_regs.background_enabled() || ppu_regs.sprites_enabled() {
             if signals.scanline_type() == ScanlineType::Visible {
@@ -650,7 +700,7 @@ impl Ppu {
             }
 
             StartVblank => {
-                ppu_regs.vblank_active = true;
+                ppu_regs.pending_vblank = true;
                 // "During VBlank ... the value on the PPU address bus is the current value of the v register."
                 ppu.next_fetch_cadence_addr = ppu_regs.current_address;
             }
@@ -667,7 +717,7 @@ impl Ppu {
             }
 
             ClearFlags => {
-                ppu_regs.vblank_active = false;
+                ppu_regs.ppu_status_vblank_active = false;
                 ppu_regs.sprite0_hit = false;
                 ppu_regs.sprite_overflow = false;
 

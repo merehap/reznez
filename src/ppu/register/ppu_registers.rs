@@ -1,5 +1,5 @@
 use log::{Level, info, log_enabled};
-use splitbits::{splitbits, combinebits};
+use splitbits::{splitbits, replacebits};
 
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll};
 use crate::memory::read_result::ReadResult;
@@ -16,13 +16,13 @@ use crate::signals::{ScanlineType, Signals};
 
 pub struct PpuRegisters {
     // PPUCTRL (0x2000) sub-registers
-    nmi_enabled: bool,
-    ext_pin_role: ExtPinRole,
-    sprite_height: SpriteHeight,
-    background_table_side: PatternTableSide,
-    sprite_table_side: PatternTableSide,
-    current_address_increment: AddressIncrement,
-    base_name_table_quadrant: NameTableQuadrant,
+    pub nmi_enabled: bool,
+    pub ext_pin_role: ExtPinRole,
+    pub sprite_height: SpriteHeight,
+    pub background_table_side: PatternTableSide,
+    pub sprite_table_side: PatternTableSide,
+    pub current_address_increment: AddressIncrement,
+    pub base_name_table_quadrant: NameTableQuadrant,
 
     // PPUMASK (0x2001)
     mask: Mask,
@@ -31,9 +31,13 @@ pub struct PpuRegisters {
     rendering_toggle_state: RenderingToggleState,
 
     // PPUSTATUS (0x2002) sub-registers
-    pub vblank_active: bool,
+    pub pending_vblank: bool,
+    pub vset: bool,
+    pub vset_latch_1: bool,
+    pub vset_latch_2: bool,
+    //pub vblank_active: bool,
     pub ppu_status_vblank_active: bool,
-    pub suppress_vblank_active: bool,
+    pub read_2002: bool,
     pub sprite0_hit: bool,
     pub sprite0_hit_pending: bool,
     pub sprite_overflow: bool,
@@ -47,7 +51,7 @@ pub struct PpuRegisters {
 
     // PPUSCROLL (0x2005) and PPUADDR (0x2006)
     pub next_address: PpuAddress, // "t"
-    write_toggle: WriteToggle, // "w"
+    pub write_toggle: WriteToggle, // "w"
 
     // PPUADDR (0x2006) and PPUDATA (0x2007)
     pub current_address: PpuAddress, // "v"
@@ -80,9 +84,13 @@ impl PpuRegisters {
             rendering_toggle_state: RenderingToggleState::Inactive,
 
             // PPUSTATUS (0x2002)
-            vblank_active: false,
+            //vblank_active: false,
+            pending_vblank: false,
+            vset: false,
+            vset_latch_1: false,
+            vset_latch_2: false,
             ppu_status_vblank_active: false,
-            suppress_vblank_active: false,
+            read_2002: false,
             sprite0_hit: false,
             sprite0_hit_pending: false,
             sprite_overflow: false,
@@ -122,17 +130,7 @@ impl PpuRegisters {
     // Write 0x2000
     pub fn write_ctrl(&mut self, value: u8) {
         self.ppu_io_bus.update(value);
-
-        let fields = splitbits!(value, "nehb siqq");
-        self.nmi_enabled = fields.n;
-        self.ext_pin_role              = [ExtPinRole::Read       , ExtPinRole::Write      ][fields.e as usize];
-        self.sprite_height             = [SpriteHeight::Normal   , SpriteHeight::Tall     ][fields.h as usize];
-        self.background_table_side     = [PatternTableSide::Left , PatternTableSide::Right][fields.b as usize];
-        self.sprite_table_side         = [PatternTableSide::Left , PatternTableSide::Right][fields.s as usize];
-        self.current_address_increment = [AddressIncrement::Right, AddressIncrement::Down ][fields.i as usize];
-        self.base_name_table_quadrant =  NameTableQuadrant::ALL[fields.q as usize];
-
-        self.next_address.set_name_table_quadrant(self.base_name_table_quadrant);
+        // TODO: Add early writes.
     }
 
     // PPUMASK sub-registers
@@ -176,18 +174,18 @@ impl PpuRegisters {
     }
 
     // Peek 0x2002
-    pub fn peek_status(&self) -> ReadResult {
-        let v = self.ppu_status_vblank_active;
+    pub fn peek_status(&self, cpu_data_bus: u8) -> ReadResult {
+        let v = (cpu_data_bus >> 7) == 1;
         let h = self.sprite0_hit;
         let o = self.sprite_overflow;
-        let b = self.ppu_io_bus.value() & 0b0001_1111;
-        ReadResult::full(combinebits!("vhobbbbb"))
+        // VBlank Active has already been placed on the bus by read_vblank_active().
+        ReadResult::full(replacebits!(self.ppu_io_bus.value(), "vho....."))
     }
 
     // Read 0x2002
-    pub fn read_status(&mut self) -> ReadResult {
-        let value = self.peek_status();
-        self.ppu_io_bus.update_from_status_read(value.unmasked_value());
+    pub fn read_status(&mut self, cpu_data_bus: &mut u8) -> ReadResult {
+        *cpu_data_bus = self.peek_status(*cpu_data_bus).unmasked_value();
+        self.ppu_io_bus.update_from_status_read(*cpu_data_bus);
 
         self.write_toggle = WriteToggle::FirstByte;
 

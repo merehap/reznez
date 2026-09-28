@@ -15,7 +15,7 @@ pub struct MasterClock {
     cpu_offset: u8,
     ppu_offset: u8,
 
-    pub m2_transition: Option<M2Event>,
+    pub m2_event: Option<M2Event>,
     pub ppu_first_half: bool,
     pub ppu_second_half: bool,
     pub apu: bool,
@@ -35,7 +35,7 @@ impl MasterClock {
             cpu_offset: 0,
             ppu_offset: 0,
 
-            m2_transition: None,
+            m2_event: None,
             ppu_first_half: false,
             ppu_second_half: false,
             apu: false,
@@ -69,13 +69,13 @@ impl MasterClock {
     }
 
     pub fn tick(&mut self, signals: &mut Signals) -> bool {
-        self.m2_transition = None;
+        self.m2_event = None;
         self.ppu_first_half = false;
         self.ppu_second_half = false;
         self.apu = false;
         self.is_last_dot_of_frame = false;
 
-        self.m2_transition = match self.cpu_offset {
+        self.m2_event = match self.cpu_offset {
             24 => {
                 self.cpu_offset = 0;
                 self.cpu_cycle += 1;
@@ -123,6 +123,7 @@ pub enum M2Event {
     ChipSelect,
     DataBusReady,
     MiddleOfHigh,
+    EndOfHigh,
     Fall,
     ReadWriteSelect,
 }
