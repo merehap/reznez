@@ -138,11 +138,11 @@ impl Ppu {
 
             (Write, PpuControl) => {
                 let fields = splitbits!(ppu_regs.ppu_io_bus.value(), "nehb siqq");
-                if !ppu_regs.nmi_enabled && fields.n {
+                if !ppu_regs.nmi_enabled() && fields.n {
                     log::info!("{} NMI enabled", bus.master_clock.ppu_clock());
                 }
 
-                ppu_regs.nmi_enabled = fields.n;
+                ppu_regs.set_nmi_enabled(&mut bus.cpu_pinout, fields.n);
                 ppu_regs.ext_pin_role              = [ExtPinRole::Read       , ExtPinRole::Write      ][fields.e as usize];
                 ppu_regs.sprite_height             = [SpriteHeight::Normal   , SpriteHeight::Tall     ][fields.h as usize];
                 ppu_regs.background_table_side     = [PatternTableSide::Left , PatternTableSide::Right][fields.b as usize];
@@ -219,30 +219,25 @@ impl Ppu {
             bus.set_ppu_address_bus(mapper, bus.ppu_regs.current_address)
         }
 
-        bus.ppu_regs.vset_latch_1 = !bus.ppu_regs.vset;
-        if bus.ppu_regs.vset && !bus.ppu_regs.vset_latch_2 {
-            bus.ppu_regs.ppu_status_vblank_active = true;
-        }
-
         if bus.ppu_regs.read_2002 {
             //log::info!("\t{} Suppressed VBlank active.", bus.ppu_clock());
-            bus.ppu_regs.ppu_status_vblank_active = false;
             bus.ppu_regs.read_2002 = false;
+            bus.ppu_regs.set_vblank_active(&mut bus.cpu_pinout, false);
         }
 
         mapper.on_end_of_ppu_cycle();
     }
 
-    pub fn step_phase_2(Bus { ppu, ppu_regs, ppu_pinout, master_clock, signals, secondary_oam, oam_buffer, secondary_oam_buffer, .. }: &mut Bus) {
+    pub fn step_phase_2(Bus { ppu, ppu_regs, ppu_pinout, cpu_pinout, master_clock, signals, secondary_oam, oam_buffer, secondary_oam_buffer, .. }: &mut Bus) {
         signals.start_ppu_clock_phase_2(ppu_pinout);
 
-        ppu_regs.vset = false;
-        if ppu_regs.pending_vblank {
-            ppu_regs.vset = true;
-            ppu_regs.pending_vblank = false;
+        if master_clock.ppu_clock().scanline() == 241 && master_clock.ppu_clock().cycle() == 1 {
+            ppu_regs.set_vblank_active(cpu_pinout, true);
         }
 
-        ppu_regs.vset_latch_2 = !ppu_regs.vset_latch_1;
+        if master_clock.ppu_clock().scanline() == 261 && master_clock.ppu_clock().cycle() == 1 {
+            ppu_regs.set_vblank_active(cpu_pinout, false);
+        }
 
         if ppu_regs.background_enabled() || ppu_regs.sprites_enabled() {
             if signals.scanline_type() == ScanlineType::Visible {
@@ -700,7 +695,6 @@ impl Ppu {
             }
 
             StartVblank => {
-                ppu_regs.pending_vblank = true;
                 // "During VBlank ... the value on the PPU address bus is the current value of the v register."
                 ppu.next_fetch_cadence_addr = ppu_regs.current_address;
             }
@@ -717,7 +711,7 @@ impl Ppu {
             }
 
             ClearFlags => {
-                ppu_regs.ppu_status_vblank_active = false;
+                //ppu_regs.set_vblank_active(cpu_pinout, false);
                 ppu_regs.sprite0_hit = false;
                 ppu_regs.sprite_overflow = false;
 

@@ -209,11 +209,16 @@ impl Cpu {
             bus.cpu.value = bus.cpu_pinout.data_bus;
         }
 
+        mapper.on_m2_rise(bus);
+    }
+
+    pub fn step_chip_selected(bus: &mut Bus) {
         use ReadWrite::*;
         use FriendlyCpuAddress::*;
-        match (bus.cpu_pinout.read_write, address.to_friendly()) {
+        match (bus.cpu_pinout.read_write, bus.cpu_address_bus().to_friendly()) {
             (Read, PpuStatus) => {
-                bus.cpu_pinout.data_bus = ((bus.ppu_regs.ppu_status_vblank_active as u8) << 7) | (bus.cpu_pinout.data_bus & 0b0111_1111);
+                log::info!("Setting vblank in data bus");
+                bus.cpu_pinout.data_bus = ((bus.ppu_regs.vblank_active() as u8) << 7) | (bus.cpu_pinout.data_bus & 0b0111_1111);
                 bus.ppu_regs.read_2002 = true;
                 //log::info!("\t{} Pending suppresson of VBlank active.", bus.ppu_clock());
             }
@@ -231,8 +236,6 @@ impl Cpu {
             (Write, PpuStatus) => { /* Read-only */ }
             (Write, _) => { /* Do nothing. */ }
         }
-
-        mapper.on_m2_rise(bus);
     }
 
     pub fn step_m2_middle_of_high(bus: &mut Bus, mapper: &mut dyn Mapper) -> Option<Step> {
@@ -276,12 +279,6 @@ impl Cpu {
         bus.cpu.original_program_counter = bus.cpu.program_counter;
         for &action in bus.cpu.step.actions() {
             Cpu::execute_step_action(bus, action, bus.cpu.value);
-        }
-
-        if bus.ppu_regs.ppu_status_vblank_active && bus.ppu_regs.nmi_enabled() {
-            bus.cpu_pinout.nmi_edge_detector.set_value(SignalLevel::Low);
-        } else if bus.cpu.mode_state.is_first_step() {
-            bus.cpu_pinout.nmi_edge_detector.set_value(SignalLevel::High);
         }
 
         let halted = bus.dmc_dma.cpu_should_be_halted() || bus.oam_dma.cpu_should_be_halted();
@@ -333,6 +330,7 @@ impl Cpu {
 
         let nmi_fall = bus.cpu_pinout.nmi_edge_detector.detect();
         if nmi_fall {
+            log::info!("{} Falling edge detected", bus.ppu_clock());
             bus.cpu.nmi_falling_edge_detected = true;
         }
 

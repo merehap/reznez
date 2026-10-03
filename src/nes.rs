@@ -250,7 +250,10 @@ impl Nes {
 
         match self.bus.master_clock.m2_event {
             Some(M2Event::Rise) => self.cpu_step_m2_rising(),
-            Some(M2Event::ChipSelect) => Ppu::ppusel(&mut self.bus),
+            Some(M2Event::ChipSelected) => {
+                Cpu::step_chip_selected(&mut self.bus);
+                Ppu::ppusel(&mut self.bus);
+            }
             Some(M2Event::DataBusReady) => Ppu::cpu_data_bus_ready(&mut self.bus),
             Some(M2Event::MiddleOfHigh) => step = self.cpu_step_middle_of_m2_high(),
             Some(M2Event::EndOfHigh) => Cpu::step_end_of_high(&mut self.bus),
@@ -388,8 +391,8 @@ impl Nes {
             }
 
             let regs = &self.bus.ppu_regs;
-            if latest.vblank_active.set_value_then_detect(regs.ppu_status_vblank_active) {
-                info!("VBlank active changed to {}", regs.ppu_status_vblank_active);
+            if latest.vblank_active.set_value_then_detect(regs.vblank_active()) {
+                info!("VBlank active changed to {}", regs.vblank_active());
             }
             if latest.sprite0_hit.set_value_then_detect(regs.sprite0_hit) {
                 info!("Sprite 0 hit changed to {}", regs.sprite0_hit);

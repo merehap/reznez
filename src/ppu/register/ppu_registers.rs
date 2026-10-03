@@ -1,9 +1,11 @@
 use log::{Level, info, log_enabled};
 use splitbits::{splitbits, replacebits};
 
+use crate::memory::cpu::cpu_pinout::CpuPinout;
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll};
 use crate::memory::read_result::ReadResult;
 use crate::memory::regions::palette_ram::PaletteRam;
+use crate::memory::signal_level::SignalLevel;
 use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::ppu::ppu_clock::PpuClock;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
@@ -16,7 +18,7 @@ use crate::signals::{ScanlineType, Signals};
 
 pub struct PpuRegisters {
     // PPUCTRL (0x2000) sub-registers
-    pub nmi_enabled: bool,
+    nmi_enabled: bool,
     pub ext_pin_role: ExtPinRole,
     pub sprite_height: SpriteHeight,
     pub background_table_side: PatternTableSide,
@@ -31,12 +33,7 @@ pub struct PpuRegisters {
     rendering_toggle_state: RenderingToggleState,
 
     // PPUSTATUS (0x2002) sub-registers
-    pub pending_vblank: bool,
-    pub vset: bool,
-    pub vset_latch_1: bool,
-    pub vset_latch_2: bool,
-    //pub vblank_active: bool,
-    pub ppu_status_vblank_active: bool,
+    vblank_active: bool,
     pub read_2002: bool,
     pub sprite0_hit: bool,
     pub sprite0_hit_pending: bool,
@@ -84,12 +81,7 @@ impl PpuRegisters {
             rendering_toggle_state: RenderingToggleState::Inactive,
 
             // PPUSTATUS (0x2002)
-            //vblank_active: false,
-            pending_vblank: false,
-            vset: false,
-            vset_latch_1: false,
-            vset_latch_2: false,
-            ppu_status_vblank_active: false,
+            vblank_active: false,
             read_2002: false,
             sprite0_hit: false,
             sprite0_hit_pending: false,
@@ -118,8 +110,34 @@ impl PpuRegisters {
         }
     }
 
+    pub fn nmi_enabled(&self) -> bool {
+        self.nmi_enabled
+    }
+
+    pub fn vblank_active(&self) -> bool {
+        self.vblank_active
+    }
+
+    pub fn set_nmi_enabled(&mut self, cpu_pinout: &mut CpuPinout, value: bool) {
+        self.nmi_enabled = value;
+        cpu_pinout.nmi_edge_detector.set_value(self.nmi_signal_level());
+    }
+
+    pub fn set_vblank_active(&mut self, cpu_pinout: &mut CpuPinout, value: bool) {
+        self.vblank_active = value;
+        cpu_pinout.nmi_edge_detector.set_value(self.nmi_signal_level());
+    }
+
+    fn nmi_signal_level(&self) -> SignalLevel {
+        if self.nmi_enabled && self.vblank_active {
+            SignalLevel::Low
+        } else {
+            SignalLevel::High
+        }
+    }
+
     // PPUCTRL sub-registers
-    pub fn nmi_enabled(&self) -> bool { self.nmi_enabled }
+    //pub fn nmi_enabled(&self) -> bool { self.nmi_enabled }
     pub fn ext_pin_role(&self) -> ExtPinRole { self.ext_pin_role }
     pub fn sprite_height(&self) -> SpriteHeight { self.sprite_height }
     pub fn background_table_side(&self) -> PatternTableSide { self.background_table_side }
@@ -184,6 +202,7 @@ impl PpuRegisters {
 
     // Read 0x2002
     pub fn read_status(&mut self, cpu_data_bus: &mut u8) -> ReadResult {
+        log::info!("Reading the rest of PPUSTATUS");
         *cpu_data_bus = self.peek_status(*cpu_data_bus).unmasked_value();
         self.ppu_io_bus.update_from_status_read(*cpu_data_bus);
 
