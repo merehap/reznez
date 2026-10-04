@@ -8,6 +8,16 @@ pub enum SignalLevel {
     Low,
 }
 
+impl SignalLevel {
+    pub fn is_high(self) -> bool {
+        self == Self::High
+    }
+
+    pub fn is_low(self) -> bool {
+        self == Self::Low
+    }
+}
+
 impl BitOrAssign for SignalLevel {
     fn bitor_assign(&mut self, rhs: Self) {
         *self = if *self == Self::Low || rhs == Self::Low {
