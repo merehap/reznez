@@ -254,6 +254,7 @@ impl Nes {
                 Cpu::step_chip_selected(&mut self.bus);
                 Ppu::ppusel(&mut self.bus);
             }
+            Some(M2Event::Phi2Rise) => Cpu::step_phi2_rise(&mut self.bus),
             Some(M2Event::DataBusReady) => Ppu::cpu_data_bus_ready(&mut self.bus),
             Some(M2Event::MiddleOfHigh) => step = self.cpu_step_middle_of_m2_high(),
             Some(M2Event::EndOfHigh) => Cpu::step_end_of_high(&mut self.bus),
@@ -425,8 +426,8 @@ impl Nes {
             if latest.oam_cpu_halt_detector.set_value_then_detect(self.bus.oam_dma.latest_action().cpu_should_be_halted()) {
                 info!("CPU halted for OAM DMA transfer at {}.", self.bus.oam_dma.address());
             }
-            if latest.nmi_signal_detector.set_value_then_detect(self.bus.cpu_pinout.nmi_edge_detector.current_value()) {
-                info!("NMI signal went {:?}.", self.bus.cpu_pinout.nmi_edge_detector.current_value());
+            if latest.nmi_signal_detector.set_value_then_detect(self.bus.cpu_pinout.nmi) {
+                info!("NMI signal went {:?}.", self.bus.cpu_pinout.nmi);
             }
             if latest.reset_signal_detector.set_value_then_detect(self.bus.cpu_pinout.reset.current_value()) {
                 info!("RESET signal went {:?}.", self.bus.cpu_pinout.reset.current_value());

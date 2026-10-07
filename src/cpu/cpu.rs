@@ -6,6 +6,7 @@ use log::Level::Info;
 use crate::config::CpuStepFormatting;
 use crate::cpu::cpu_mode::{CpuModeState, InterruptType};
 use crate::cpu::dmc_dma::DmcDmaAction;
+use crate::cpu::nmi_edge_detector::NmiEdgeDetector;
 use crate::cpu::step_action::{StepAction, From, To, Field};
 use crate::cpu::instruction::{Instruction, AccessMode, OpCode};
 use crate::cpu::oam_dma::OamDmaAction;
@@ -36,6 +37,7 @@ pub struct Cpu {
     mode_state: CpuModeState,
     step: Step,
 
+    nmi_edge_detector: NmiEdgeDetector,
     nmi_falling_edge_detected: bool,
     nmi_pending: bool,
     irq_status: IrqStatus,
@@ -75,6 +77,7 @@ impl Cpu {
             // TODO: Figure out the right value.
             step: Step::Read(From::ProgramCounterTarget, &[]),
 
+            nmi_edge_detector: NmiEdgeDetector::new(),
             nmi_falling_edge_detected: false,
             nmi_pending: false,
             irq_status: IrqStatus::Inactive,
@@ -238,6 +241,11 @@ impl Cpu {
         }
     }
 
+    pub fn step_phi2_rise(bus: &mut Bus) {
+        let brk7 = if bus.cpu.step.has(StepAction::Brk7) { SignalLevel::Low } else { SignalLevel::High };
+        bus.cpu.nmi_edge_detector.step_phi2(brk7);
+    }
+
     pub fn step_m2_middle_of_high(bus: &mut Bus, mapper: &mut dyn Mapper) -> Option<Step> {
         if bus.cpu_pinout.reset.current_value() == SignalLevel::Low {
             // The CPU doesn't do anything while the RESET button is held down.
@@ -299,7 +307,7 @@ impl Cpu {
         if !halted {
             bus.cpu.mode_state.step();
 
-            if bus.cpu.step.has_start_new_instruction() {
+            if bus.cpu.step.has(StepAction::StartNextInstruction) {
                 bus.cpu.mode_state.set_current_instruction_with_address(
                     Instruction::from_code_point(bus.cpu.value),
                     bus.cpu_pinout.address_bus,
@@ -328,11 +336,13 @@ impl Cpu {
             return;
         }
 
-        let nmi_fall = bus.cpu_pinout.nmi_edge_detector.detect();
-        if nmi_fall {
+        let brk6e = if bus.cpu.step.has(StepAction::Brk6) { SignalLevel::Low } else { SignalLevel::High };
+        bus.cpu.nmi_edge_detector.step_phi1(bus.cpu_pinout.nmi, brk6e);
+        if !bus.cpu.nmi_falling_edge_detected && bus.cpu.nmi_edge_detector.donmi_signal().is_low() {
             log::info!("{} Falling edge detected", bus.ppu_clock());
-            bus.cpu.nmi_falling_edge_detected = true;
         }
+
+        bus.cpu.nmi_falling_edge_detected = bus.cpu.nmi_edge_detector.donmi_signal().is_low();
 
         bus.cpu.step = bus.cpu.mode_state.current_step();
 
@@ -357,7 +367,7 @@ impl Cpu {
                     cpu_pinout.data_bus = 0x00;
                     cpu.mode_state.interrupt_sequence(InterruptType::Reset);
                 } else if cpu.nmi_pending {
-                    cpu.nmi_falling_edge_detected = false;
+                    //cpu.nmi_falling_edge_detected = false;
                     cpu_pinout.data_bus = 0x00;
                     cpu.mode_state.interrupt_sequence(InterruptType::Nmi);
                 } else if cpu.irq_status == IrqStatus::Active && !cpu.nmi_pending {
@@ -608,6 +618,9 @@ impl Cpu {
             StepAction::AddCarryToPC => {
                 cpu.program_counter = cpu.program_counter.offset_high(cpu.address_carry);
             }
+
+            StepAction::Brk6 => { /* Just a marker. Will be checked at the end of phi2. */ }
+            StepAction::Brk7 => { /* Just a marker. Will be checked at the end of phi1. */ }
         }
     }
 

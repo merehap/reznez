@@ -228,8 +228,8 @@ pub const RESET_STEPS: &[Step] = &[
     Read(                             From::TopOfStack, &[DecrementStackPointer]),
     Read(                             From::TopOfStack, &[DecrementStackPointer]),
     Read(                             From::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
-    ReadField(Operand               , From::InterruptVectorLow , &[DisableInterrupts]),
-    ReadField(ProgramCounterHighByte, From::InterruptVectorHigh, &[ClearInterruptVector]),
+    ReadField(Operand               , From::InterruptVectorLow , &[DisableInterrupts, Brk6]),
+    ReadField(ProgramCounterHighByte, From::InterruptVectorHigh, &[ClearInterruptVector, Brk7]),
 ];
 
 pub const BRK_STEPS: &[Step] = &[
@@ -237,8 +237,8 @@ pub const BRK_STEPS: &[Step] = &[
     WriteField(ProgramCounterHighByte, To::TopOfStack, &[DecrementStackPointer]),
     WriteField(ProgramCounterLowByte , To::TopOfStack, &[DecrementStackPointer]),
     WriteField(Status                , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
-    ReadField(Operand                , From::InterruptVectorLow , &[DisableInterrupts]),
-    ReadField(ProgramCounterHighByte , From::InterruptVectorHigh, &[ClearInterruptVector]),
+    ReadField(Operand                , From::InterruptVectorLow , &[DisableInterrupts, Brk6]),
+    ReadField(ProgramCounterHighByte , From::InterruptVectorHigh, &[ClearInterruptVector, Brk7]),
 ];
 
 pub const RTI_STEPS: &[Step] = &[
@@ -354,19 +354,9 @@ impl Step {
         matches!(*self, Self::OamRead(..) | Self::OamWrite(..) | Self::DmcRead(..))
     }
 
-    pub fn has_start_new_instruction(&self) -> bool {
+    pub fn has(&self, target: StepAction) -> bool {
         for action in self.actions() {
-            if matches!(action, StepAction::StartNextInstruction) {
-                return true;
-            }
-        }
-
-        false
-    }
-
-    pub fn has_interpret_op_code(&self) -> bool {
-        for action in self.actions() {
-            if matches!(action, StepAction::InterpretOpCode) {
+            if *action == target {
                 return true;
             }
         }

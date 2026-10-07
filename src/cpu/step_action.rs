@@ -31,6 +31,9 @@ pub enum StepAction {
     MaybeInsertOopsStep,
     MaybeInsertBranchOopsStep,
 
+    Brk6,
+    Brk7,
+
     StartNextInstruction,
     InterpretOpCode,
     ExecuteOpCode,

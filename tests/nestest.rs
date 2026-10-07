@@ -10,6 +10,7 @@ use std::str::FromStr;
 
 use reznez::cartridge::header_db::HeaderDb;
 use reznez::config::{Config, GuiType, Opt};
+use reznez::cpu::step_action::StepAction;
 use reznez::cpu::instruction::{Instruction, OpCode};
 use reznez::cpu::status::Status;
 use reznez::memory::cpu::cpu_address::CpuAddress;
@@ -97,7 +98,7 @@ fn nestest() {
             s = nes.stack_pointer();
 
             // FIXME: Find another way to break that doesn't involve checking for InterpretOpCode.
-            if let Some(step) = nes.step(&mut frame).step && step.has_interpret_op_code() {
+            if let Some(step) = nes.step(&mut frame).step && step.has(StepAction::InterpretOpCode) {
                 break;
             }
         }

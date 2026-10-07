@@ -120,12 +120,12 @@ impl PpuRegisters {
 
     pub fn set_nmi_enabled(&mut self, cpu_pinout: &mut CpuPinout, value: bool) {
         self.nmi_enabled = value;
-        cpu_pinout.nmi_edge_detector.set_value(self.nmi_signal_level());
+        cpu_pinout.nmi = self.nmi_signal_level();
     }
 
     pub fn set_vblank_active(&mut self, cpu_pinout: &mut CpuPinout, value: bool) {
         self.vblank_active = value;
-        cpu_pinout.nmi_edge_detector.set_value(self.nmi_signal_level());
+        cpu_pinout.nmi = self.nmi_signal_level();
     }
 
     fn nmi_signal_level(&self) -> SignalLevel {

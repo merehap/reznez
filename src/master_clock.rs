@@ -123,6 +123,7 @@ impl MasterClock {
 pub enum M2Event {
     Rise,
     ChipSelected,
+    Phi2Rise,
     DataBusReady,
     MiddleOfHigh,
     EndOfHigh,
