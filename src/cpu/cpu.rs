@@ -6,6 +6,7 @@ use log::Level::Info;
 use crate::config::CpuStepFormatting;
 use crate::cpu::cpu_mode::{CpuModeState, InterruptType};
 use crate::cpu::dmc_dma::DmcDmaAction;
+use crate::cpu::interrupt_cycle_detector::InterruptCycleDetector;
 use crate::cpu::nmi_edge_detector::NmiEdgeDetector;
 use crate::cpu::step_action::{StepAction, From, To, Field};
 use crate::cpu::instruction::{Instruction, AccessMode, OpCode};
@@ -39,6 +40,7 @@ pub struct Cpu {
 
     // High when a DMA is running, low during normal CPU operation.
     ready: SignalLevel,
+    interrupt_cycle_detector: InterruptCycleDetector,
     nmi_edge_detector: NmiEdgeDetector,
     nmi_falling_edge_detected: bool,
     nmi_pending: bool,
@@ -80,6 +82,7 @@ impl Cpu {
             step: Step::Read(From::ProgramCounterTarget, &[]),
 
             ready: SignalLevel::Low,
+            interrupt_cycle_detector: InterruptCycleDetector::new(),
             nmi_edge_detector: NmiEdgeDetector::new(),
             nmi_falling_edge_detected: false,
             nmi_pending: false,
@@ -252,7 +255,8 @@ impl Cpu {
 
     pub fn step_phi2_rise(bus: &mut Bus) {
         let brk5 = if bus.cpu.step.has(StepAction::Brk5) { SignalLevel::High } else { SignalLevel::Low };
-        bus.cpu.nmi_edge_detector.step_phi2(brk5, bus.cpu.ready);
+        bus.cpu.interrupt_cycle_detector.step_phi2(brk5, bus.cpu.ready);
+        bus.cpu.nmi_edge_detector.step_phi2(&bus.cpu.interrupt_cycle_detector, brk5, bus.cpu.ready);
     }
 
     pub fn step_m2_middle_of_high(bus: &mut Bus, mapper: &mut dyn Mapper) -> Option<Step> {
@@ -334,13 +338,13 @@ impl Cpu {
             return;
         }
 
-        bus.cpu.nmi_edge_detector.step_phi1(bus.cpu_pinout.nmi, bus.cpu.ready);
+        bus.cpu.interrupt_cycle_detector.step_phi1(bus.cpu.ready);
+        bus.cpu.nmi_edge_detector.step_phi1(&bus.cpu.interrupt_cycle_detector, bus.cpu_pinout.nmi, bus.cpu.ready);
         if !bus.cpu.nmi_falling_edge_detected && bus.cpu.nmi_edge_detector.donmi_signal().is_low() {
             log::info!("{} Falling edge detected", bus.ppu_clock());
         }
 
         bus.cpu.nmi_falling_edge_detected = bus.cpu.nmi_edge_detector.donmi_signal().is_low();
-
 
         bus.signals.stop_read_2007();
         bus.signals.stop_write_2007();

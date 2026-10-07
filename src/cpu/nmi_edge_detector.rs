@@ -1,18 +1,11 @@
-use crate::memory::signal_level::{SignalLevel, nand, nor, nor3};
+use crate::{cpu::interrupt_cycle_detector::InterruptCycleDetector, memory::signal_level::{SignalLevel, nor, nor3}};
 
 // Questions:
 // * Should this all be processed right on the clock transition?
 // https://github.com/emu-russia/breaks/blob/master/BreakingNESWiki_DeepL/6502/interrupts.md
 #[derive(Clone, Copy)]
 pub struct NmiEdgeDetector {
-    // D latches. Active is "true".
-
-    // Interrupt Cycle 6-7 latches. TODO: Move into their own struct.
-    brk5: SignalLevel,
-    brk6_1: SignalLevel,
-    brk6_2: SignalLevel,
-
-    // The actual NMI edge detector latches.
+    // D latches
     nmip: SignalLevel,
     brk6e: SignalLevel,
     brk7: SignalLevel,
@@ -26,10 +19,6 @@ pub struct NmiEdgeDetector {
 impl NmiEdgeDetector {
     pub fn new() -> Self {
         Self {
-            brk5: SignalLevel::Low,
-            brk6_1: SignalLevel::Low,
-            brk6_2: SignalLevel::High,
-
             nmip: SignalLevel::High,
             brk6e: SignalLevel::Low,
             brk7: SignalLevel::High,
@@ -45,36 +34,18 @@ impl NmiEdgeDetector {
         nor(self.donmi, nor(self.ff1, self.brk6e))
     }
 
-    pub fn step_phi1(&mut self, nmip_signal: SignalLevel, ready_signal: SignalLevel) {
-        self.brk6_1 = !self.brk5 & nand(ready_signal, !self.brk6_1);
-
+    pub fn step_phi1(&mut self, cycle_detector: &InterruptCycleDetector, nmip_signal: SignalLevel, ready_signal: SignalLevel) {
         self.nmip = nmip_signal;
-        self.brk6e = self.brk6e_signal(ready_signal);
+        self.brk6e = cycle_detector.brk6e_signal(ready_signal);
         self.delay2 = !self.delay1;
 
         let last_source = nor(self.nmip, nor(self.ff2, self.delay2));
         self.donmi = nor3(!self.brk7, nmip_signal, last_source);
-        log::info!("NMIP {:?}, BRK5 {:?}, BRK6_1 {:?}, BRK6_2 {:?}, BRK6E {:?}, BRK7 {:?}, DONMI {:?}",
-            self.nmip, self.brk5, self.brk6_1, self.brk6_2, self.brk6e, self.brk7, self.donmi);
+        log::info!("NMIP {:?}, BRK6E {:?}, BRK7 {:?}, DONMI {:?}", self.nmip, self.brk6e, self.brk7, self.donmi);
     }
 
-    pub fn brk5_rdy_signal(self, brk5_signal: SignalLevel, ready_signal: SignalLevel) -> SignalLevel {
-        brk5_signal & !ready_signal
-    }
-
-    pub fn brk6e_signal(self, ready_signal: SignalLevel) -> SignalLevel {
-        nor(!self.brk6_2, ready_signal)
-    }
-
-    pub fn brk7_signal(self, brk5_signal: SignalLevel, ready_signal: SignalLevel) ->  SignalLevel {
-        nor(!self.brk6_1, self.brk5_rdy_signal(brk5_signal, ready_signal))
-    }
-
-    pub fn step_phi2(&mut self, brk5_signal: SignalLevel, ready_signal: SignalLevel) {
-        self.brk5 = self.brk5_rdy_signal(brk5_signal, ready_signal);
-        self.brk6_2 = !self.brk6_1;
-
-        self.brk7 = self.brk7_signal(brk5_signal, ready_signal);
+    pub fn step_phi2(&mut self, cycle_detector: &InterruptCycleDetector, brk5_signal: SignalLevel, ready_signal: SignalLevel) {
+        self.brk7 = cycle_detector.brk7_signal(brk5_signal, ready_signal);
 
         let donmi_low = self.donmi_signal();
         self.ff1 = donmi_low;
@@ -82,7 +53,6 @@ impl NmiEdgeDetector {
 
         self.ff2 = nor(self.nmip, nor(self.ff2, self.delay2));
 
-        log::info!("NMIP {:?}, BRK5 {:?}, BRK6_1 {:?}, BRK6_2 {:?}, BRK6E {:?}, BRK7 {:?}, DONMI {:?}",
-            self.nmip, self.brk5, self.brk6_1, self.brk6_2, self.brk6e, self.brk7, self.donmi);
+        log::info!("NMIP {:?}, BRK6E {:?}, BRK7 {:?}, DONMI {:?}", self.nmip, self.brk6e, self.brk7, self.donmi);
     }
 }

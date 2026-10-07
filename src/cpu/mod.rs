@@ -2,6 +2,7 @@ pub mod cpu;
 pub mod cpu_mode;
 pub mod dmc_dma;
 pub mod instruction;
+pub mod interrupt_cycle_detector;
 pub mod nmi_edge_detector;
 pub mod oam_dma;
 pub mod status;
