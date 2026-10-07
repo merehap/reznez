@@ -82,10 +82,13 @@ impl MasterClock {
                 Some(M2Event::Rise)
             }
             2 => Some(M2Event::ChipSelected),
+            3 => Some(M2Event::Phi2Rise),
             5 => Some(M2Event::DataBusReady),
             8 => Some(M2Event::MiddleOfHigh),
+            14 => Some(M2Event::EndOfHigh),
             15 => Some(M2Event::Fall),
             19 => Some(M2Event::ReadWriteSelect),
+            23 => Some(M2Event::EndOfLow),
             0..=23 => None,
             25.. => unreachable!(),
         };
@@ -123,9 +126,11 @@ impl MasterClock {
 pub enum M2Event {
     Rise,
     ChipSelected,
+    Phi2Rise,
     DataBusReady,
     MiddleOfHigh,
     EndOfHigh,
     Fall,
     ReadWriteSelect,
+    EndOfLow,
 }

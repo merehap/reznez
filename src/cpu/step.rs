@@ -228,7 +228,7 @@ pub const RESET_STEPS: &[Step] = &[
     Read(                             From::TopOfStack, &[DecrementStackPointer]),
     Read(                             From::TopOfStack, &[DecrementStackPointer]),
     Read(                             From::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
-    ReadField(Operand               , From::InterruptVectorLow , &[DisableInterrupts]),
+    ReadField(Operand               , From::InterruptVectorLow , &[DisableInterrupts, Brk5]),
     ReadField(ProgramCounterHighByte, From::InterruptVectorHigh, &[ClearInterruptVector]),
 ];
 
@@ -237,7 +237,7 @@ pub const BRK_STEPS: &[Step] = &[
     WriteField(ProgramCounterHighByte, To::TopOfStack, &[DecrementStackPointer]),
     WriteField(ProgramCounterLowByte , To::TopOfStack, &[DecrementStackPointer]),
     WriteField(Status                , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
-    ReadField(Operand                , From::InterruptVectorLow , &[DisableInterrupts]),
+    ReadField(Operand                , From::InterruptVectorLow , &[DisableInterrupts, Brk5]),
     ReadField(ProgramCounterHighByte , From::InterruptVectorHigh, &[ClearInterruptVector]),
 ];
 
@@ -354,19 +354,9 @@ impl Step {
         matches!(*self, Self::OamRead(..) | Self::OamWrite(..) | Self::DmcRead(..))
     }
 
-    pub fn has_start_new_instruction(&self) -> bool {
+    pub fn has(&self, target: StepAction) -> bool {
         for action in self.actions() {
-            if matches!(action, StepAction::StartNextInstruction) {
-                return true;
-            }
-        }
-
-        false
-    }
-
-    pub fn has_interpret_op_code(&self) -> bool {
-        for action in self.actions() {
-            if matches!(action, StepAction::InterpretOpCode) {
+            if *action == target {
                 return true;
             }
         }

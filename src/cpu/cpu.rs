@@ -6,6 +6,7 @@ use log::Level::Info;
 use crate::config::CpuStepFormatting;
 use crate::cpu::cpu_mode::{CpuModeState, InterruptType};
 use crate::cpu::dmc_dma::DmcDmaAction;
+use crate::cpu::nmi_edge_detector::NmiEdgeDetector;
 use crate::cpu::step_action::{StepAction, From, To, Field};
 use crate::cpu::instruction::{Instruction, AccessMode, OpCode};
 use crate::cpu::oam_dma::OamDmaAction;
@@ -36,6 +37,9 @@ pub struct Cpu {
     mode_state: CpuModeState,
     step: Step,
 
+    // High when a DMA is running, low during normal CPU operation.
+    ready: SignalLevel,
+    nmi_edge_detector: NmiEdgeDetector,
     nmi_falling_edge_detected: bool,
     nmi_pending: bool,
     irq_status: IrqStatus,
@@ -75,6 +79,8 @@ impl Cpu {
             // TODO: Figure out the right value.
             step: Step::Read(From::ProgramCounterTarget, &[]),
 
+            ready: SignalLevel::Low,
+            nmi_edge_detector: NmiEdgeDetector::new(),
             nmi_falling_edge_detected: false,
             nmi_pending: false,
             irq_status: IrqStatus::Inactive,
@@ -189,6 +195,12 @@ impl Cpu {
             OamDmaAction::Write => OAM_WRITE_STEP,
         };
 
+        bus.cpu.ready = if bus.dmc_dma.latest_action() == DmcDmaAction::DoNothing && bus.oam_dma.latest_action() == OamDmaAction::DoNothing {
+            SignalLevel::Low
+        } else {
+            SignalLevel::High
+        };
+
         // FIXME: This placement is wrong. It should be earlier: during the ReadWrite step.
         bus.cpu_pinout.read_write = if bus.cpu.step.is_read() {
             ReadWrite::Read
@@ -236,6 +248,11 @@ impl Cpu {
             (Write, PpuStatus) => { /* Read-only */ }
             (Write, _) => { /* Do nothing. */ }
         }
+    }
+
+    pub fn step_phi2_rise(bus: &mut Bus) {
+        let brk5 = if bus.cpu.step.has(StepAction::Brk5) { SignalLevel::High } else { SignalLevel::Low };
+        bus.cpu.nmi_edge_detector.step_phi2(brk5, bus.cpu.ready);
     }
 
     pub fn step_m2_middle_of_high(bus: &mut Bus, mapper: &mut dyn Mapper) -> Option<Step> {
@@ -296,17 +313,6 @@ impl Cpu {
             info!("{prg_index:08} {step_name} PC: {}, Cycle: {cpu_cycle}, {}", bus.cpu.original_program_counter, bus.cpu.formatted_step);
         }
 
-        if !halted {
-            bus.cpu.mode_state.step();
-
-            if bus.cpu.step.has_start_new_instruction() {
-                bus.cpu.mode_state.set_current_instruction_with_address(
-                    Instruction::from_code_point(bus.cpu.value),
-                    bus.cpu_pinout.address_bus,
-                );
-            }
-        }
-
         // Keep irq_pending and irq_status in sync
         if bus.cpu_pinout.irq_asserted() {
             if bus.cpu.irq_status == IrqStatus::Inactive && !bus.cpu.status.interrupts_disabled {
@@ -328,13 +334,13 @@ impl Cpu {
             return;
         }
 
-        let nmi_fall = bus.cpu_pinout.nmi_edge_detector.detect();
-        if nmi_fall {
+        bus.cpu.nmi_edge_detector.step_phi1(bus.cpu_pinout.nmi, bus.cpu.ready);
+        if !bus.cpu.nmi_falling_edge_detected && bus.cpu.nmi_edge_detector.donmi_signal().is_low() {
             log::info!("{} Falling edge detected", bus.ppu_clock());
-            bus.cpu.nmi_falling_edge_detected = true;
         }
 
-        bus.cpu.step = bus.cpu.mode_state.current_step();
+        bus.cpu.nmi_falling_edge_detected = bus.cpu.nmi_edge_detector.donmi_signal().is_low();
+
 
         bus.signals.stop_read_2007();
         bus.signals.stop_write_2007();
@@ -343,6 +349,22 @@ impl Cpu {
 
     pub fn step_read_write(Bus {..}: &mut Bus) {
         // TODO: Implement this once DMA step selection can be moved here.
+    }
+
+    pub fn step_end_of_low(Bus { cpu, cpu_pinout, dmc_dma, oam_dma, .. }: &mut Bus) {
+        let halted = dmc_dma.cpu_should_be_halted() || oam_dma.cpu_should_be_halted();
+        if !halted {
+            cpu.mode_state.step();
+
+            if cpu.step.has(StepAction::StartNextInstruction) {
+                cpu.mode_state.set_current_instruction_with_address(
+                    Instruction::from_code_point(cpu.value),
+                    cpu_pinout.address_bus,
+                );
+            }
+        }
+
+        cpu.step = cpu.mode_state.current_step();
     }
 
     fn execute_step_action(Bus { cpu, cpu_pinout, apu_regs, dmc_dma, oam_dma, .. }: &mut Bus, action: StepAction, value: u8) {
@@ -357,7 +379,7 @@ impl Cpu {
                     cpu_pinout.data_bus = 0x00;
                     cpu.mode_state.interrupt_sequence(InterruptType::Reset);
                 } else if cpu.nmi_pending {
-                    cpu.nmi_falling_edge_detected = false;
+                    //cpu.nmi_falling_edge_detected = false;
                     cpu_pinout.data_bus = 0x00;
                     cpu.mode_state.interrupt_sequence(InterruptType::Nmi);
                 } else if cpu.irq_status == IrqStatus::Active && !cpu.nmi_pending {
@@ -608,6 +630,8 @@ impl Cpu {
             StepAction::AddCarryToPC => {
                 cpu.program_counter = cpu.program_counter.offset_high(cpu.address_carry);
             }
+
+            StepAction::Brk5 => { /* Just a marker. Will be checked at the beginning of phi2. */ }
         }
     }
 
