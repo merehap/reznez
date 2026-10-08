@@ -112,7 +112,8 @@ pub static START_VBLANK_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::
     use CycleAction::*;
 
     let mut scanline = ScanlineActions::new();
-    scanline.add(0, vec![StartVblankScanlines, StartVblank]);
+    scanline.add(0, vec![StartVblankScanlines]);
+    scanline.add(1, vec![StartVblank]);
     scanline
 });
 

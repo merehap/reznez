@@ -232,7 +232,6 @@ impl Cpu {
         use FriendlyCpuAddress::*;
         match (bus.cpu_pinout.read_write, bus.cpu_address_bus().to_friendly()) {
             (Read, PpuStatus) => {
-                log::info!("Setting vblank in data bus");
                 bus.cpu_pinout.data_bus = ((bus.ppu_regs.vblank_active() as u8) << 7) | (bus.cpu_pinout.data_bus & 0b0111_1111);
                 bus.ppu_regs.read_2002 = true;
                 //log::info!("\t{} Pending suppresson of VBlank active.", bus.ppu_clock());

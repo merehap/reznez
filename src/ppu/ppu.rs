@@ -228,16 +228,8 @@ impl Ppu {
         mapper.on_end_of_ppu_cycle();
     }
 
-    pub fn step_phase_2(Bus { ppu, ppu_regs, ppu_pinout, cpu_pinout, master_clock, signals, secondary_oam, oam_buffer, secondary_oam_buffer, .. }: &mut Bus) {
+    pub fn step_phase_2(Bus { ppu, ppu_regs, ppu_pinout, master_clock, signals, secondary_oam, oam_buffer, secondary_oam_buffer, .. }: &mut Bus) {
         signals.start_ppu_clock_phase_2(ppu_pinout);
-
-        if master_clock.ppu_clock().scanline() == 241 && master_clock.ppu_clock().cycle() == 1 {
-            ppu_regs.set_vblank_active(cpu_pinout, true);
-        }
-
-        if master_clock.ppu_clock().scanline() == 261 && master_clock.ppu_clock().cycle() == 1 {
-            ppu_regs.set_vblank_active(cpu_pinout, false);
-        }
 
         if ppu_regs.background_enabled() || ppu_regs.sprites_enabled() {
             if signals.scanline_type() == ScanlineType::Visible {
@@ -299,7 +291,7 @@ impl Ppu {
     }
 
     fn execute_cycle_action(
-        Bus { ppu, ppu_regs, ppu_pinout, master_clock, signals, palette_ram, ciram, oam,
+        Bus { ppu, ppu_regs, ppu_pinout, cpu_pinout, master_clock, signals, palette_ram, ciram, oam,
             secondary_oam, secondary_oam_buffer, composite_decoders, .. }: &mut Bus,
         frame: &mut Frame,
         cycle_action: CycleAction
@@ -695,6 +687,7 @@ impl Ppu {
             }
 
             StartVblank => {
+                ppu_regs.set_vblank_active(cpu_pinout, true);
                 // "During VBlank ... the value on the PPU address bus is the current value of the v register."
                 ppu.next_fetch_cadence_addr = ppu_regs.current_address;
             }
@@ -711,7 +704,7 @@ impl Ppu {
             }
 
             ClearFlags => {
-                //ppu_regs.set_vblank_active(cpu_pinout, false);
+                ppu_regs.set_vblank_active(cpu_pinout, false);
                 ppu_regs.sprite0_hit = false;
                 ppu_regs.sprite_overflow = false;
 

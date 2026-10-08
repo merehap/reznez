@@ -202,7 +202,6 @@ impl PpuRegisters {
 
     // Read 0x2002
     pub fn read_status(&mut self, cpu_data_bus: &mut u8) -> ReadResult {
-        log::info!("Reading the rest of PPUSTATUS");
         *cpu_data_bus = self.peek_status(*cpu_data_bus).unmasked_value();
         self.ppu_io_bus.update_from_status_read(*cpu_data_bus);
 

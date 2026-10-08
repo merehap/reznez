@@ -21,7 +21,7 @@ impl NmiEdgeDetector {
         Self {
             nmip: SignalLevel::High,
             brk6e: SignalLevel::Low,
-            brk7: SignalLevel::High,
+            brk7: SignalLevel::High, // FIXME: This value is probably wrong.
             ff1: SignalLevel::High, // NMI would trigger immediately after RESET if this started Low.
             ff2: SignalLevel::Low,
             delay1: SignalLevel::High,
@@ -41,7 +41,6 @@ impl NmiEdgeDetector {
 
         let last_source = nor(self.nmip, nor(self.ff2, self.delay2));
         self.donmi = nor3(!self.brk7, nmip_signal, last_source);
-        log::info!("NMIP {:?}, BRK6E {:?}, BRK7 {:?}, DONMI {:?}", self.nmip, self.brk6e, self.brk7, self.donmi);
     }
 
     pub fn step_phi2(&mut self, cycle_detector: &InterruptCycleDetector, brk5_signal: SignalLevel, ready_signal: SignalLevel) {
@@ -52,7 +51,5 @@ impl NmiEdgeDetector {
         self.delay1 = donmi_low;
 
         self.ff2 = nor(self.nmip, nor(self.ff2, self.delay2));
-
-        log::info!("NMIP {:?}, BRK6E {:?}, BRK7 {:?}, DONMI {:?}", self.nmip, self.brk6e, self.brk7, self.donmi);
     }
 }
