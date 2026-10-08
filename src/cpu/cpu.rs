@@ -316,6 +316,19 @@ impl Cpu {
             info!("{prg_index:08} {step_name} PC: {}, Cycle: {cpu_cycle}, {}", bus.cpu.original_program_counter, bus.cpu.formatted_step);
         }
 
+        if !halted {
+            bus.cpu.mode_state.step();
+
+            if bus.cpu.step.has(StepAction::StartNextInstruction) {
+                bus.cpu.mode_state.set_current_instruction_with_address(
+                    Instruction::from_code_point(bus.cpu.value),
+                    bus.cpu_pinout.address_bus,
+                );
+            }
+        }
+
+        bus.cpu.step = bus.cpu.mode_state.current_step();
+
         // Keep irq_pending and irq_status in sync
         if bus.cpu_pinout.irq_asserted() {
             if bus.cpu.irq_status == IrqStatus::Inactive && !bus.cpu.status.interrupts_disabled {
@@ -355,19 +368,7 @@ impl Cpu {
     }
 
     pub fn step_end_of_low(Bus { cpu, cpu_pinout, dmc_dma, oam_dma, .. }: &mut Bus) {
-        let halted = dmc_dma.cpu_should_be_halted() || oam_dma.cpu_should_be_halted();
-        if !halted {
-            cpu.mode_state.step();
 
-            if cpu.step.has(StepAction::StartNextInstruction) {
-                cpu.mode_state.set_current_instruction_with_address(
-                    Instruction::from_code_point(cpu.value),
-                    cpu_pinout.address_bus,
-                );
-            }
-        }
-
-        cpu.step = cpu.mode_state.current_step();
     }
 
     fn execute_step_action(Bus { cpu, cpu_pinout, apu_regs, dmc_dma, oam_dma, .. }: &mut Bus, action: StepAction, value: u8) {
