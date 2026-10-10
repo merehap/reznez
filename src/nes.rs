@@ -265,11 +265,11 @@ impl Nes {
         }
 
         if self.bus.master_clock.ppu_first_half {
-            self.ppu_step_first_half(frame);
+            self.ppu_step_pckl_high(frame);
         }
 
         if self.bus.master_clock.ppu_second_half {
-            self.ppu_step_second_half();
+            self.ppu_step_pclk_low();
         }
 
         if end_reached {
@@ -345,18 +345,18 @@ impl Nes {
         Cpu::step_m2_falling(&mut self.bus, &mut *self.mapper)
     }
 
-    fn ppu_step_first_half(&mut self, frame: &mut Frame) {
+    fn ppu_step_pckl_high(&mut self, frame: &mut Frame) {
         if self.diff_logging_enabled && log_enabled!(target: "timings", Info) {
             self.snapshots.current().add_ppu_position(self.bus.master_clock().ppu_clock());
         }
 
-        Ppu::step_phase_1(&mut self.bus, &mut *self.mapper, frame);
+        Ppu::step_pclk_high(&mut self.bus, &mut *self.mapper, frame);
 
         self.detect_changes();
     }
 
-    fn ppu_step_second_half(&mut self) {
-        Ppu::step_phase_2(&mut self.bus);
+    fn ppu_step_pclk_low(&mut self) {
+        Ppu::step_pclk_low(&mut self.bus);
     }
 
     fn detect_changes(&mut self) {

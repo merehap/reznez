@@ -10,3 +10,4 @@ pub mod register;
 pub mod render;
 pub mod sprite;
 pub mod tile_number;
+pub mod vblank_interrupt_handler;

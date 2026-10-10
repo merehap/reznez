@@ -29,7 +29,7 @@ pub static READ_2007_COMPONENTS: LazyLock<ComponentGraph<Read2007ComponentName, 
         .component(Component::new(NorAle, Box::new(Nor)))
         .component(Component::new(NorRead, Box::new(Nor)))
         .signal(Signal {
-            source: Source::Primary(PrimarySource::PpuClockPhase1),
+            source: Source::Primary(PrimarySource::PclkHigh),
             sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(DLatch0, 'E')),
                 Sink::Internal(SinkTerminal::from_raw(DLatch2, 'E')),
@@ -37,7 +37,7 @@ pub static READ_2007_COMPONENTS: LazyLock<ComponentGraph<Read2007ComponentName, 
             ],
         })
         .signal(Signal {
-            source: Source::Primary(PrimarySource::PpuClockPhase2),
+            source: Source::Primary(PrimarySource::PclkLow),
             sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(DLatch1, 'E')),
                 Sink::Internal(SinkTerminal::from_raw(DLatch3, 'E')),
@@ -176,7 +176,7 @@ pub static WRITE_2007_COMPONENTS: LazyLock<ComponentGraph<Write2007ComponentName
         .component(Component::new(NorAle, Box::new(Nor)))
         .component(Component::new(NorWrite, Box::new(Nor)))
         .signal(Signal {
-            source: Source::Primary(PrimarySource::PpuClockPhase1),
+            source: Source::Primary(PrimarySource::PclkHigh),
             sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(DLatch0, 'E')),
                 Sink::Internal(SinkTerminal::from_raw(DLatch2, 'E')),
@@ -184,7 +184,7 @@ pub static WRITE_2007_COMPONENTS: LazyLock<ComponentGraph<Write2007ComponentName
             ],
         })
         .signal(Signal {
-            source: Source::Primary(PrimarySource::PpuClockPhase2),
+            source: Source::Primary(PrimarySource::PclkLow),
             sinks: vec![
                 Sink::Internal(SinkTerminal::from_raw(DLatch1, 'E')),
                 Sink::Internal(SinkTerminal::from_raw(DLatch3, 'E')),
@@ -329,7 +329,7 @@ impl CircuitBoard {
             write_2007_components: WRITE_2007_COMPONENTS.clone(),
         };
         // This way the first PPU tick will start the first half of the PPU dot.
-        circuit_board.set_source(PrimarySource::PpuClockPhase2, true);
+        circuit_board.set_source(PrimarySource::PclkLow, true);
 
         circuit_board
     }

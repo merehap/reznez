@@ -7,10 +7,12 @@ use crate::mapper::mapper::Mapper;
 use crate::bus::Bus;
 use crate::master_clock::MasterClock;
 use crate::memory::cpu::cpu_address::FriendlyCpuAddress;
-use crate::memory::cpu::cpu_pinout::ReadWrite;
+use crate::memory::cpu::cpu_pinout::{CpuPinout, ReadWrite};
 use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
 use crate::memory::ppu::ppu_address::PpuAddress;
+use crate::memory::ppu::ppu_pinout::PpuPinout;
 use crate::memory::regions::secondary_oam::{SecondaryOam, SpriteField};
+use crate::memory::signal_level::SignalLevel;
 use crate::ppu::cycle_action::cycle_action::CycleAction;
 use crate::ppu::cycle_action::frame_actions::{FrameActions, NTSC_FRAME_ACTIONS};
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
@@ -30,6 +32,7 @@ use crate::ppu::sprite::oam_registers::OamRegisters;
 use crate::ppu::sprite::sprite_y::SpriteY;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
 use crate::ppu::tile_number::TileNumber;
+use crate::ppu::vblank_interrupt_handler::{VBlankInterruptHandler, VBlankInterruptInputSignals};
 use crate::signals::{ScanlineType, SpriteRenderingDotType};
 
 use super::palette::bank_color_assigner::BankColorAssigner;
@@ -56,6 +59,11 @@ pub struct Ppu {
     oam_row_corruption_target: Option<u5>,
 
     next_fetch_cadence_addr: PpuAddress,
+
+    start_vblank: SignalLevel, // Active high
+    end_vblank: SignalLevel, // Active high
+    pub vblank_interrupt_handler: VBlankInterruptHandler,
+    pub dummy_cpu_pinout: CpuPinout,
 
     frame_actions: FrameActions,
 
@@ -90,6 +98,11 @@ impl Ppu {
             oam_row_corruption_target: None,
 
             next_fetch_cadence_addr: PpuAddress::ZERO,
+
+            start_vblank: SignalLevel::Low,
+            end_vblank: SignalLevel::Low,
+            vblank_interrupt_handler: VBlankInterruptHandler::new(),
+            dummy_cpu_pinout: CpuPinout::new(),
 
             frame_actions: NTSC_FRAME_ACTIONS.clone(),
 
@@ -143,6 +156,9 @@ impl Ppu {
                 }
 
                 ppu_regs.set_nmi_enabled(&mut bus.cpu_pinout, fields.n);
+                let input_signals = bus.ppu.vblank_interrupt_input_signals_from_components(&mut bus.ppu_pinout, ppu_regs);
+                bus.ppu.vblank_interrupt_handler.maybe_clear(&mut bus.ppu.dummy_cpu_pinout, input_signals);
+
                 ppu_regs.ext_pin_role              = [ExtPinRole::Read       , ExtPinRole::Write      ][fields.e as usize];
                 ppu_regs.sprite_height             = [SpriteHeight::Normal   , SpriteHeight::Tall     ][fields.h as usize];
                 ppu_regs.background_table_side     = [PatternTableSide::Left , PatternTableSide::Right][fields.b as usize];
@@ -162,8 +178,11 @@ impl Ppu {
         }
     }
 
-    pub fn step_phase_1(bus: &mut Bus, mapper: &mut dyn Mapper, frame: &mut Frame) {
-        bus.signals.start_ppu_clock_phase_1(&mut bus.ppu_pinout);
+    pub fn step_pclk_high(bus: &mut Bus, mapper: &mut dyn Mapper, frame: &mut Frame) {
+        bus.signals.start_pclk_high(&mut bus.ppu_pinout);
+
+        let input_signals = Ppu::vblank_interrupt_input_signals(bus);
+        bus.ppu.vblank_interrupt_handler.step_pclk_high(&mut bus.ppu.dummy_cpu_pinout, input_signals);
 
         let tick_result = bus.ppu_regs.tick(&mut bus.signals, bus.master_clock.ppu_clock());
         if tick_result.rendering_toggled == Some(Toggle::Disable) {
@@ -222,14 +241,41 @@ impl Ppu {
         if bus.ppu_regs.read_2002 {
             //log::info!("\t{} Suppressed VBlank active.", bus.ppu_clock());
             bus.ppu_regs.read_2002 = false;
+            let input_signals = Ppu::vblank_interrupt_input_signals(bus);
+            bus.ppu.vblank_interrupt_handler.maybe_clear(&mut bus.ppu.dummy_cpu_pinout, input_signals);
             bus.ppu_regs.set_vblank_active(&mut bus.cpu_pinout, false);
         }
 
         mapper.on_end_of_ppu_cycle();
     }
 
-    pub fn step_phase_2(Bus { ppu, ppu_regs, ppu_pinout, master_clock, signals, secondary_oam, oam_buffer, secondary_oam_buffer, .. }: &mut Bus) {
-        signals.start_ppu_clock_phase_2(ppu_pinout);
+    pub fn step_pclk_low(Bus { ppu, ppu_regs, ppu_pinout, master_clock, signals, secondary_oam, oam_buffer, secondary_oam_buffer, .. }: &mut Bus) {
+        signals.start_pclk_low(ppu_pinout);
+
+        if ppu.start_vblank.is_high() || ppu.end_vblank.is_high() {
+            ppu.start_vblank = SignalLevel::Low;
+            ppu.end_vblank = SignalLevel::Low;
+            let input_signals = ppu.vblank_interrupt_input_signals_from_components(ppu_pinout, ppu_regs);
+            ppu.vblank_interrupt_handler.maybe_clear(&mut ppu.dummy_cpu_pinout, input_signals);
+        }
+
+        if master_clock.ppu_clock().cycle() == 1 {
+            match master_clock.ppu_clock().scanline() {
+                241 => {
+                    ppu.start_vblank = SignalLevel::High;
+                    let input_signals = ppu.vblank_interrupt_input_signals_from_components(ppu_pinout, ppu_regs);
+                    ppu.vblank_interrupt_handler.maybe_clear(&mut ppu.dummy_cpu_pinout, input_signals);
+                }
+                261 => {
+                    ppu.end_vblank = SignalLevel::High;
+                    let input_signals = ppu.vblank_interrupt_input_signals_from_components(ppu_pinout, ppu_regs);
+                    ppu.vblank_interrupt_handler.maybe_clear(&mut ppu.dummy_cpu_pinout, input_signals);
+                }
+                _ => { /* Do nothing. */ }
+            }
+        }
+
+        ppu.vblank_interrupt_handler.step_pclk_low();
 
         if ppu_regs.background_enabled() || ppu_regs.sprites_enabled() {
             if signals.scanline_type() == ScanlineType::Visible {
@@ -688,6 +734,8 @@ impl Ppu {
 
             StartVblank => {
                 ppu_regs.set_vblank_active(cpu_pinout, true);
+                // start_vblank is set during PCLK low. This is PCLK high.
+
                 // "During VBlank ... the value on the PPU address bus is the current value of the v register."
                 ppu.next_fetch_cadence_addr = ppu_regs.current_address;
             }
@@ -707,11 +755,26 @@ impl Ppu {
                 ppu_regs.set_vblank_active(cpu_pinout, false);
                 ppu_regs.sprite0_hit = false;
                 ppu_regs.sprite_overflow = false;
+                // end_vblank is set during PCLK low. This is PCLK high.
 
                 // At startup, CIRAM writes are disabled until the PPU has been running for a while.
                 // TODO: Determine the correct place to call this.
                 ciram.enable_writes();
             }
+        }
+    }
+
+    pub fn vblank_interrupt_input_signals(bus: &Bus) -> VBlankInterruptInputSignals {
+        bus.ppu.vblank_interrupt_input_signals_from_components(&bus.ppu_pinout, &bus.ppu_regs)
+    }
+
+    pub fn vblank_interrupt_input_signals_from_components(&self, ppu_pinout: &PpuPinout, ppu_regs: &PpuRegisters) -> VBlankInterruptInputSignals {
+        VBlankInterruptInputSignals {
+            vset: self.start_vblank,
+            vbl: if ppu_regs.nmi_enabled() { SignalLevel::High } else { SignalLevel::Low },
+            vclr: self.end_vblank,
+            r2: if ppu_regs.read_2002 { SignalLevel::Low } else { SignalLevel::High },
+            dbe: ppu_pinout.data_bus_enabled,
         }
     }
 

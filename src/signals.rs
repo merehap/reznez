@@ -22,8 +22,8 @@ pub struct Signals {
 
 impl Signals {
     pub fn new() -> Self {
-        let read_2007_nodes = READ_2007_COMPONENTS.to_node_graph(&[PrimarySource::PpuClockPhase1, PrimarySource::PpuClockPhase2, PrimarySource::Read2007]);
-        let write_2007_nodes = WRITE_2007_COMPONENTS.to_node_graph(&[PrimarySource::PpuClockPhase1, PrimarySource::PpuClockPhase2, PrimarySource::Write2007]);
+        let read_2007_nodes = READ_2007_COMPONENTS.to_node_graph(&[PrimarySource::PclkHigh, PrimarySource::PclkLow, PrimarySource::Read2007]);
+        let write_2007_nodes = WRITE_2007_COMPONENTS.to_node_graph(&[PrimarySource::PclkHigh, PrimarySource::PclkLow, PrimarySource::Write2007]);
         Self {
             rendering_enabled: false,
 
@@ -41,10 +41,10 @@ impl Signals {
         }
     }
 
-    pub fn start_ppu_clock_phase_1(&mut self, ppu_pinout: &mut PpuPinout) {
-        assert!(self.circuit_board.source(PrimarySource::PpuClockPhase2));
-        self.circuit_board.set_source(PrimarySource::PpuClockPhase1, true);
-        self.circuit_board.set_source(PrimarySource::PpuClockPhase2, false);
+    pub fn start_pclk_high(&mut self, ppu_pinout: &mut PpuPinout) {
+        assert!(self.circuit_board.source(PrimarySource::PclkLow));
+        self.circuit_board.set_source(PrimarySource::PclkHigh, true);
+        self.circuit_board.set_source(PrimarySource::PclkLow, false);
 
         let read_sources = [true, false, self.read_2007];
         if self.read_2007_active {
@@ -72,10 +72,10 @@ impl Signals {
         */
     }
 
-    pub fn start_ppu_clock_phase_2(&mut self, ppu_pinout: &mut PpuPinout) {
-        assert!(self.circuit_board.source(PrimarySource::PpuClockPhase1));
-        self.circuit_board.set_source(PrimarySource::PpuClockPhase1, false);
-        self.circuit_board.set_source(PrimarySource::PpuClockPhase2, true);
+    pub fn start_pclk_low(&mut self, ppu_pinout: &mut PpuPinout) {
+        assert!(self.circuit_board.source(PrimarySource::PclkHigh));
+        self.circuit_board.set_source(PrimarySource::PclkHigh, false);
+        self.circuit_board.set_source(PrimarySource::PclkLow, true);
 
         if self.read_2007_active {
             let read_sources = [false, true, self.read_2007];

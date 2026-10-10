@@ -19,6 +19,7 @@ use crate::memory::cpu::cpu_address::{CpuAddress, FriendlyCpuAddress};
 use crate::bus::{AddressBusType, Bus, IRQ_VECTOR_HIGH, IRQ_VECTOR_LOW, NMI_VECTOR_HIGH, NMI_VECTOR_LOW, RESET_VECTOR_HIGH, RESET_VECTOR_LOW};
 use crate::memory::cpu::cpu_pinout::{CpuPinout, ReadWrite};
 use crate::memory::signal_level::SignalLevel;
+use crate::ppu::ppu::Ppu;
 
 pub struct Cpu {
     // Accumulator
@@ -228,6 +229,9 @@ impl Cpu {
     }
 
     pub fn step_chip_selected(bus: &mut Bus) {
+        // Assume that the PPU is selected until its proven that its not.
+        bus.ppu_pinout.data_bus_enabled = SignalLevel::Low;
+
         use ReadWrite::*;
         use FriendlyCpuAddress::*;
         match (bus.cpu_pinout.read_write, bus.cpu_address_bus().to_friendly()) {
@@ -239,7 +243,10 @@ impl Cpu {
             (Read, OamData) => { /* Nothing to do until the end of the read. */ }
             (Read, PpuData) => { /* TODO */ }
             (Read, PpuControl | PpuMask | OamAddress | PpuScroll) => { /* Write-only */ }
-            (Read, _) => { /* Do nothing. */ }
+            (Read, _) => {
+                // Deselect the PPU since reading is not occurring from a PPU register.
+                bus.ppu_pinout.data_bus_enabled = SignalLevel::High;
+            }
 
             (Write, PpuControl) => { /* TODO */ }
             (Write, PpuMask) => { /* TODO */ }
@@ -248,8 +255,14 @@ impl Cpu {
             (Write, PpuScroll) => { /* TODO */ }
             (Write, PpuData) => { /* TODO */ }
             (Write, PpuStatus) => { /* Read-only */ }
-            (Write, _) => { /* Do nothing. */ }
+            (Write, _) => {
+                // Deselect the PPU since writing is not occurring to a PPU register.
+                bus.ppu_pinout.data_bus_enabled = SignalLevel::High;
+            }
         }
+
+        let input_signals = Ppu::vblank_interrupt_input_signals(bus);
+        bus.ppu.vblank_interrupt_handler.maybe_clear(&mut bus.ppu.dummy_cpu_pinout, input_signals);
     }
 
     pub fn step_phi2_rise(bus: &mut Bus) {
@@ -367,7 +380,7 @@ impl Cpu {
         // TODO: Implement this once DMA step selection can be moved here.
     }
 
-    pub fn step_end_of_low(Bus { cpu, cpu_pinout, dmc_dma, oam_dma, .. }: &mut Bus) {
+    pub fn step_end_of_low(Bus {..}: &mut Bus) {
 
     }
 

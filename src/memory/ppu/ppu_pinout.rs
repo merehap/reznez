@@ -1,10 +1,12 @@
 use crate::memory::ppu::ppu_address::PpuAddress;
+use crate::memory::signal_level::SignalLevel;
 use crate::util::edge_detector::EdgeDetector;
 
 pub struct PpuPinout {
     // cpu_data_bus: u8, // D0-D8
     // cpu_address_bus: u3, // A2-A0
-    // /CS
+    // /CS or /DBE. Active low.
+    pub data_bus_enabled: SignalLevel,
     // EXT: u4,
     // CLK
     // /INT // Connected to the CPU's NMI pin
@@ -30,6 +32,7 @@ pub struct PpuPinout {
 impl PpuPinout {
     pub fn new() -> Self {
         Self {
+            data_bus_enabled: SignalLevel::High,
             ppu_data_write: false,
             fetch_cadence_read: false,
             ppu_data_read: false,

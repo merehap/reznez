@@ -21,8 +21,8 @@ impl <Name: ConstParamTy_ + fmt::Display> fmt::Display for Source<Name> {
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
 pub enum PrimarySource {
-    PpuClockPhase1,
-    PpuClockPhase2,
+    PclkHigh,
+    PclkLow,
     Read2007,
     Write2007,
 }
