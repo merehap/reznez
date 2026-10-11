@@ -236,7 +236,7 @@ impl Cpu {
         use FriendlyCpuAddress::*;
         match (bus.cpu_pinout.read_write, bus.cpu_address_bus().to_friendly()) {
             (Read, PpuStatus) => {
-                bus.cpu_pinout.data_bus = ((bus.ppu_regs.vblank_active() as u8) << 7) | (bus.cpu_pinout.data_bus & 0b0111_1111);
+                //bus.cpu_pinout.data_bus = ((bus.ppu_regs.vblank_active() as u8) << 7) | (bus.cpu_pinout.data_bus & 0b0111_1111);
                 bus.ppu_regs.read_2002 = true;
                 //log::info!("\t{} Pending suppresson of VBlank active.", bus.ppu_clock());
             }
@@ -262,7 +262,7 @@ impl Cpu {
         }
 
         let input_signals = Ppu::vblank_interrupt_input_signals(bus);
-        bus.ppu.vblank_interrupt_handler.maybe_clear(&mut bus.ppu.dummy_cpu_pinout, input_signals);
+        bus.ppu.vblank_interrupt_handler.maybe_clear(&mut bus.cpu_pinout, input_signals);
     }
 
     pub fn step_phi2_rise(bus: &mut Bus) {

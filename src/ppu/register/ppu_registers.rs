@@ -5,7 +5,6 @@ use crate::memory::cpu::cpu_pinout::CpuPinout;
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll};
 use crate::memory::read_result::ReadResult;
 use crate::memory::regions::palette_ram::PaletteRam;
-use crate::memory::signal_level::SignalLevel;
 use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::ppu::ppu_clock::PpuClock;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
@@ -118,16 +117,17 @@ impl PpuRegisters {
         self.vblank_active
     }
 
-    pub fn set_nmi_enabled(&mut self, cpu_pinout: &mut CpuPinout, value: bool) {
+    pub fn set_nmi_enabled(&mut self, _cpu_pinout: &mut CpuPinout, value: bool) {
         self.nmi_enabled = value;
-        cpu_pinout.nmi = self.nmi_signal_level();
+        //cpu_pinout.nmi = self.nmi_signal_level();
     }
 
-    pub fn set_vblank_active(&mut self, cpu_pinout: &mut CpuPinout, value: bool) {
-        self.vblank_active = value;
-        cpu_pinout.nmi = self.nmi_signal_level();
+    pub fn set_vblank_active(&mut self, _cpu_pinout: &mut CpuPinout, _value: bool) {
+        //self.vblank_active = value;
+        //cpu_pinout.nmi = self.nmi_signal_level();
     }
 
+    /*
     fn nmi_signal_level(&self) -> SignalLevel {
         if self.nmi_enabled && self.vblank_active {
             SignalLevel::Low
@@ -135,6 +135,7 @@ impl PpuRegisters {
             SignalLevel::High
         }
     }
+    */
 
     // PPUCTRL sub-registers
     //pub fn nmi_enabled(&self) -> bool { self.nmi_enabled }
