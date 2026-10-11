@@ -37,6 +37,10 @@ impl VBlankInterruptHandler {
                 log::info!("VIH PCLK int_ff went {:?}", self.int_ff);
             }
 
+            // If the SR latch (int_ff) is put into the "invalid" state, the reset wins, because the "Q" output returns Low,
+            // even though in normal circumstances a set would result in High.
+            self.maybe_reset(cpu_pinout, input_signals);
+
             let old_nmi = cpu_pinout.nmi;
             // "INT" on the diagram. TODO: Const propagate.
             cpu_pinout.nmi = !nor(!input_signals.vbl, !self.int_ff);
@@ -64,7 +68,7 @@ impl VBlankInterruptHandler {
         self.vset_2 = !self.vset_1;
     }
 
-    pub fn maybe_clear(&mut self, cpu_pinout: &mut CpuPinout, input_signals: VBlankInterruptInputSignals) {
+    pub fn maybe_reset(&mut self, cpu_pinout: &mut CpuPinout, input_signals: VBlankInterruptInputSignals) {
         let read_enabled = input_signals.r2.is_low() && input_signals.dbe.is_low();
         if input_signals.vclr.is_high() || read_enabled {
             let old_int_ff = self.int_ff;

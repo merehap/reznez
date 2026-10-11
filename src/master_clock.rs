@@ -93,7 +93,7 @@ impl MasterClock {
             25.. => unreachable!(),
         };
 
-        log::info!("Master clock half cycle {}", self.cpu_offset);
+        //log::info!("Master clock half cycle {}", self.cpu_offset);
 
         match self.ppu_offset {
             8 => {

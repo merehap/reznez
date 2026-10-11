@@ -157,7 +157,7 @@ impl Ppu {
 
                 ppu_regs.set_nmi_enabled(&mut bus.cpu_pinout, fields.n);
                 let input_signals = bus.ppu.vblank_interrupt_input_signals_from_components(&mut bus.ppu_pinout, ppu_regs);
-                bus.ppu.vblank_interrupt_handler.maybe_clear(&mut bus.cpu_pinout, input_signals);
+                bus.ppu.vblank_interrupt_handler.maybe_reset(&mut bus.cpu_pinout, input_signals);
 
                 ppu_regs.ext_pin_role              = [ExtPinRole::Read       , ExtPinRole::Write      ][fields.e as usize];
                 ppu_regs.sprite_height             = [SpriteHeight::Normal   , SpriteHeight::Tall     ][fields.h as usize];
@@ -242,7 +242,7 @@ impl Ppu {
             //log::info!("\t{} Suppressed VBlank active.", bus.ppu_clock());
             bus.ppu_regs.read_2002 = false;
             let input_signals = Ppu::vblank_interrupt_input_signals(bus);
-            bus.ppu.vblank_interrupt_handler.maybe_clear(&mut bus.cpu_pinout, input_signals);
+            bus.ppu.vblank_interrupt_handler.maybe_reset(&mut bus.cpu_pinout, input_signals);
             bus.ppu_regs.set_vblank_active(&mut bus.cpu_pinout, false);
         }
 
@@ -257,7 +257,7 @@ impl Ppu {
             ppu.start_vblank = SignalLevel::High;
             ppu.end_vblank = SignalLevel::Low;
             let input_signals = ppu.vblank_interrupt_input_signals_from_components(ppu_pinout, ppu_regs);
-            ppu.vblank_interrupt_handler.maybe_clear(cpu_pinout, input_signals);
+            ppu.vblank_interrupt_handler.maybe_reset(cpu_pinout, input_signals);
         }
 
         if master_clock.ppu_clock().cycle() == 1 {
@@ -270,7 +270,7 @@ impl Ppu {
                     log::info!("Ending vblank");
                     ppu.end_vblank = SignalLevel::High;
                     let input_signals = ppu.vblank_interrupt_input_signals_from_components(ppu_pinout, ppu_regs);
-                    ppu.vblank_interrupt_handler.maybe_clear(cpu_pinout, input_signals);
+                    ppu.vblank_interrupt_handler.maybe_reset(cpu_pinout, input_signals);
                 }
                 _ => { /* Do nothing. */ }
             }
