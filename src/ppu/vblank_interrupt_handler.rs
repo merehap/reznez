@@ -78,13 +78,13 @@ impl VBlankInterruptHandler {
             if old_int_ff != self.int_ff {
                 log::info!("VIH ASYNC int_ff went {:?}", self.int_ff);
             }
+        }
 
-            let old_nmi = cpu_pinout.nmi;
-            // "INT" on the diagram. TODO: Const propagate.
-            cpu_pinout.nmi = !nor(!input_signals.vbl, !self.int_ff);
-            if old_nmi != cpu_pinout.nmi {
-                log::info!("VIH ASYNC NMI went {:?}", cpu_pinout.nmi);
-            }
+        let old_nmi = cpu_pinout.nmi;
+        // "INT" on the diagram. TODO: Const propagate.
+        cpu_pinout.nmi = !nor(!input_signals.vbl, !self.int_ff);
+        if old_nmi != cpu_pinout.nmi {
+            log::info!("VIH ASYNC NMI went {:?}", cpu_pinout.nmi);
         }
 
         if read_enabled {

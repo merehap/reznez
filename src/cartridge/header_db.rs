@@ -16,6 +16,8 @@ const OVERRIDE_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
 
 // Submapper numbers for ROMs that aren't in the NES Header DB (mostly test ROMs).
 const MISSING_ROM_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
+    // ppu_vbl_nmi/ppu_vbl_nmi.nes
+    (0x48D08692, 0xEEA20263, 1, 0),
     // ppu_read_buffer/test_ppu_read_buffer.nes
     (0x672D3D63, 0xB5AA2FE2, 3, 1),
     // cpu_dummy_reads.nes
