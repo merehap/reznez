@@ -36,21 +36,14 @@ impl VBlankInterruptHandler {
             if old_int_ff != self.int_ff {
                 log::info!("VIH PCLK int_ff went {:?}", self.int_ff);
             }
-
-            // If the SR latch (int_ff) is put into the "invalid" state, the reset wins, because the "Q" output returns Low,
-            // even though in normal circumstances a set would result in High.
-            self.maybe_reset(cpu_pinout, input_signals);
-
-            let old_nmi = cpu_pinout.nmi;
-            // "INT" on the diagram. TODO: Const propagate.
-            cpu_pinout.nmi = !nor(!input_signals.vbl, !self.int_ff);
-            if old_nmi != cpu_pinout.nmi {
-                log::info!("VIH PCLK NMI went {:?}", cpu_pinout.nmi);
-            }
         }
 
         let read_enabled = input_signals.r2.is_low() && input_signals.dbe.is_low();
         if read_enabled {
+            // If the SR latch (int_ff) is put into the "invalid" state, the reset wins, because the "Q" output returns Low,
+            // even though in normal circumstances a set would result in High.
+            self.maybe_reset(cpu_pinout, input_signals);
+
             // "DB7_Out" on the diagram. Set the top bit of the CPU data bus.
             let v = self.db.is_low();
             cpu_pinout.data_bus = replacebits!(cpu_pinout.data_bus, "v... ....");
@@ -61,6 +54,13 @@ impl VBlankInterruptHandler {
             if old_db != self.db {
                 log::info!("VIH PCLK DB changed to {:?}", self.db);
             }
+        }
+
+        let old_nmi = cpu_pinout.nmi;
+        // "INT" on the diagram. TODO: Const propagate.
+        cpu_pinout.nmi = !nor(!input_signals.vbl, !self.int_ff);
+        if old_nmi != cpu_pinout.nmi {
+            log::info!("VIH PCLK NMI went {:?}", cpu_pinout.nmi);
         }
     }
 
