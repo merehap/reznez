@@ -49,6 +49,7 @@ pub fn execute_frame(nes: &mut Nes, config: &Config, mut events: Events, frame: 
     if events.should_quit || Some(frame_index) == config.stop_frame {
         std::process::exit(0);
     }
+
 }
 
 fn dump_frame(frame: &Frame, frame_index: i64) {

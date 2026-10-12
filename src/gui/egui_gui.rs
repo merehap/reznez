@@ -225,6 +225,7 @@ impl EguiWindow {
         event_loop: &ActiveEventLoop,
         scale_factor: f64,
         initial_position: Position,
+        start_visible: bool,
         renderer: Box<dyn WindowRenderer>,
     ) -> Self {
         let window = {
@@ -238,7 +239,7 @@ impl EguiWindow {
                 .with_inner_size(size)
                 .with_min_inner_size(size)
                 .with_resizable(false)
-                .with_visible(false)
+                .with_visible(start_visible)
                 .with_position(initial_position);
             event_loop.create_window(window_attributes).unwrap()
         };
@@ -416,7 +417,7 @@ impl WindowManager {
 
         self.window_names.insert(name.clone());
 
-        let window = EguiWindow::from_active_event_loop(event_loop, scale, position, renderer);
+        let window = EguiWindow::from_active_event_loop(event_loop, scale, position, is_primary, renderer);
         if is_primary {
             self.primary_window_id = window.window.id();
         }
