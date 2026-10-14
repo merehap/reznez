@@ -9,6 +9,7 @@ pub struct PpuPinout {
     pub data_bus_enabled: SignalLevel,
     // EXT: u4,
     // CLK
+    pub pclk: SignalLevel,
     // /INT // Connected to the CPU's NMI pin
     // GND
     // VOUT
@@ -33,6 +34,7 @@ impl PpuPinout {
     pub fn new() -> Self {
         Self {
             data_bus_enabled: SignalLevel::High,
+            pclk: SignalLevel::High, // FIXME: This needs to be determined by the schedule.
             ppu_data_write: false,
             fetch_cadence_read: false,
             ppu_data_read: false,

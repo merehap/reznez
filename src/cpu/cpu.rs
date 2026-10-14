@@ -262,7 +262,8 @@ impl Cpu {
         }
 
         let input_signals = Ppu::vblank_interrupt_input_signals(bus);
-        bus.ppu.vblank_interrupt_handler.maybe_reset(&mut bus.cpu_pinout, input_signals);
+        log::info!("Updating from chip select");
+        bus.ppu.vblank_interrupt_handler.update(&mut bus.cpu_pinout, input_signals);
     }
 
     pub fn step_phi2_rise(bus: &mut Bus) {

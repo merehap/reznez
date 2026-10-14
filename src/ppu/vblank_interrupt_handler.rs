@@ -1,8 +1,12 @@
 use splitbits::replacebits;
 
-use crate::memory::{cpu::cpu_pinout::CpuPinout, signal_level::{SignalLevel, nor}};
+use crate::memory::cpu::cpu_pinout::CpuPinout;
+use crate::memory::signal_level::{SignalLevel, nor, nor3};
 
-// Reference:
+// Reference: https://github.com/emu-russia/breaks/blob/master/BreakingNESWiki_DeepL/PPU/fsm.md#vblank-interrupt-handling
+// FIXME: VCLR actually triggers off PCLK high
+
+/*
 pub struct VBlankInterruptHandler {
     // D latches
     vset_1: SignalLevel,
@@ -109,4 +113,151 @@ pub struct VBlankInterruptInputSignals {
     pub vclr: SignalLevel,
     pub r2: SignalLevel,
     pub dbe: SignalLevel,
+}
+*/
+
+pub struct VBlankInterruptHandler {
+    vset_1: DLatch,
+    vset_2: DLatch,
+    db: DLatch,
+    int_ff: SRLatch,
+}
+
+impl VBlankInterruptHandler {
+    pub fn new() -> Self {
+        Self {
+            vset_1: DLatch::new(SignalLevel::High),
+            vset_2: DLatch::new(SignalLevel::Low),
+            db: DLatch::new(SignalLevel::High),
+            int_ff: SRLatch::new(SignalLevel::Low),
+        }
+    }
+
+    pub fn update(&mut self, cpu_pinout: &mut CpuPinout, VbihInputs { pclk, vset, vbl, vclr, r2, dbe }: VbihInputs) {
+        self.vset_1.update(DLInputs {
+            e: pclk,
+            d: vset,
+        });
+        self.vset_2.update(DLInputs {
+            e: !pclk,
+            d: self.vset_1.nq(),
+        });
+        let set = nor3(!pclk, vset, self.vset_2.q());
+
+        let read_enabled = nor(r2, dbe);
+        let reset = vclr | read_enabled;
+
+        self.int_ff.update(SRInputs {
+            s: set,
+            r: reset,
+        });
+
+        let int = nor(!vbl, !self.int_ff.q());
+        cpu_pinout.nmi = !int;
+
+        let old_db_q = self.db.q();
+        self.db.update(DLInputs {
+            e: !read_enabled,
+            d: !self.int_ff.q(),
+        });
+
+        if old_db_q != self.db.q() {
+            log::info!("DB NQ changed to {:?}", self.db.q());
+        }
+
+        if read_enabled.is_high() {
+            // "DB7_Out" on the diagram. Set the top bit of the CPU data bus.
+            let v = self.db.nq().is_high();
+            log::info!("Updating top bit of data bus to {v}");
+            cpu_pinout.data_bus = replacebits!(cpu_pinout.data_bus, "v... ....");
+        }
+    }
+}
+
+pub struct VbihInputs {
+    pub pclk: SignalLevel,
+    pub vset: SignalLevel,
+    pub vbl: SignalLevel,
+    pub vclr: SignalLevel,
+    pub r2: SignalLevel,
+    pub dbe: SignalLevel,
+}
+
+pub struct DLatch {
+    q: SignalLevel,
+}
+
+impl DLatch {
+    pub fn new(initial_q: SignalLevel) -> Self {
+        Self { q: initial_q }
+    }
+
+    pub fn q(&self) -> SignalLevel {
+        self.q
+    }
+
+    pub fn nq(&self) -> SignalLevel {
+        !self.q
+    }
+
+    pub fn update(&mut self, inputs: DLInputs) {
+        if inputs.e.is_high() {
+            self.q = inputs.d;
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct DLInputs {
+    pub e: SignalLevel,
+    pub d: SignalLevel,
+}
+
+// NOR-based
+pub struct SRLatch {
+    q: SignalLevel,
+    nq: SignalLevel,
+}
+
+impl SRLatch {
+    // Starting in the "invalid" state is currently unsupported.
+    pub fn new(initial_q: SignalLevel) -> Self {
+        Self {
+            q: initial_q,
+            nq: !initial_q,
+        }
+    }
+
+    pub fn q(&self) -> SignalLevel {
+        self.q
+    }
+
+    #[allow(dead_code)]
+    pub fn nq(&self) -> SignalLevel {
+        self.nq
+    }
+
+    pub fn update(&mut self, SRInputs { s, r }: SRInputs) {
+        if s.is_high() {
+            log::info!("Setting SR latch");
+        }
+
+        if r.is_high() {
+            log::info!("Resetting SR latch");
+        }
+
+        if s.is_high() || r.is_high() {
+            if s == r {
+                log::info!("SR Invalid State!");
+            }
+            self.q = s & !r;
+            self.nq = !s & r;
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct SRInputs {
+    pub s: SignalLevel,
+    pub r: SignalLevel,
 }
