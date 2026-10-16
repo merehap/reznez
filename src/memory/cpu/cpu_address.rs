@@ -34,6 +34,11 @@ impl CpuAddress {
         FriendlyCpuAddress::from_cpu_address(self)
     }
 
+    pub fn is_ppu_mapped(self) -> bool {
+        use FriendlyCpuAddress::*;
+        matches!(self.to_friendly(), PpuControl | PpuMask | PpuStatus | OamAddress | OamData | PpuScroll | PpuAddress | PpuData)
+    }
+
     pub fn to_mesen_string(self) -> String {
         let basic_string = &format!("${:04X}", self.0);
         match self.0 {

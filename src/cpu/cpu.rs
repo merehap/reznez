@@ -15,7 +15,7 @@ use crate::cpu::status;
 use crate::cpu::status::Status;
 use crate::cpu::step::*;
 use crate::mapper::mapper::Mapper;
-use crate::memory::cpu::cpu_address::{CpuAddress, FriendlyCpuAddress};
+use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::bus::{AddressBusType, Bus, IRQ_VECTOR_HIGH, IRQ_VECTOR_LOW, NMI_VECTOR_HIGH, NMI_VECTOR_LOW, RESET_VECTOR_HIGH, RESET_VECTOR_LOW};
 use crate::memory::cpu::cpu_pinout::{CpuPinout, ReadWrite};
 use crate::memory::signal_level::SignalLevel;
@@ -232,39 +232,13 @@ impl Cpu {
     }
 
     pub fn step_chip_selected(bus: &mut Bus) {
-        // Assume that the PPU is selected until its proven that its not.
-        bus.ppu_pinout.data_bus_enabled = SignalLevel::Low;
-
-        use ReadWrite::*;
-        use FriendlyCpuAddress::*;
-        match (bus.cpu_pinout.read_write, bus.cpu_address_bus().to_friendly()) {
-            (Read, PpuStatus) => {
-                //bus.cpu_pinout.data_bus = ((bus.ppu_regs.vblank_active() as u8) << 7) | (bus.cpu_pinout.data_bus & 0b0111_1111);
-                //log::info!("\t{} Pending suppresson of VBlank active.", bus.ppu_clock());
-            }
-            (Read, OamData) => { /* Nothing to do until the end of the read. */ }
-            (Read, PpuData) => { /* TODO */ }
-            (Read, PpuControl | PpuMask | OamAddress | PpuScroll) => { /* Write-only */ }
-            (Read, _) => {
-                // Deselect the PPU since reading is not occurring from a PPU register.
-                bus.ppu_pinout.data_bus_enabled = SignalLevel::High;
-            }
-
-            (Write, PpuControl) => { /* TODO */ }
-            (Write, PpuMask) => { /* TODO */ }
-            (Write, OamAddress) => { /* TODO */ }
-            (Write, OamData) => { /* TODO */ }
-            (Write, PpuScroll) => { /* TODO */ }
-            (Write, PpuData) => { /* TODO */ }
-            (Write, PpuStatus) => { /* Read-only */ }
-            (Write, _) => {
-                // Deselect the PPU since writing is not occurring to a PPU register.
-                bus.ppu_pinout.data_bus_enabled = SignalLevel::High;
-            }
-        }
+        bus.ppu_pinout.data_bus_enabled = if bus.cpu_address_bus().is_ppu_mapped() {
+            SignalLevel::Low
+        } else {
+            SignalLevel::High
+        };
 
         let input_signals = Ppu::vblank_interrupt_input_signals(bus);
-        //log::info!("Updating from chip select");
         bus.ppu.vblank_interrupt_handler.update(&mut bus.cpu_pinout, input_signals);
     }
 
