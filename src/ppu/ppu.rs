@@ -183,6 +183,25 @@ impl Ppu {
         bus.ppu_pinout.pclk = SignalLevel::High;
         bus.signals.start_pclk_high(&mut bus.ppu_pinout);
 
+        if bus.ppu.end_vblank.is_high() {
+            //log::info!("Clearing end_vblank.");
+            bus.ppu.end_vblank = SignalLevel::Low;
+        }
+
+        if bus.master_clock.ppu_clock().cycle() == 2 {
+            match bus.master_clock.ppu_clock().scanline() {
+                241 => {
+                    //log::info!("Starting vblank");
+                }
+                261 => {
+                    //log::info!("Ending vblank");
+                    bus.ppu.end_vblank = SignalLevel::High;
+                    //log::info!("Updating from ending vblank");
+                }
+                _ => { /* Do nothing. */ }
+            }
+        }
+
         let input_signals = Ppu::vblank_interrupt_input_signals(bus);
         //bus.ppu.vblank_interrupt_handler.step_pclk_high(&mut bus.cpu_pinout, input_signals);
 
@@ -258,10 +277,9 @@ impl Ppu {
         ppu_pinout.pclk = SignalLevel::Low;
         signals.start_pclk_low(ppu_pinout);
 
-        if ppu.start_vblank.is_low() || ppu.end_vblank.is_high() {
+        if ppu.start_vblank.is_low() {
             //log::info!("Clearing start_ or end_vblank.");
             ppu.start_vblank = SignalLevel::High;
-            ppu.end_vblank = SignalLevel::Low;
         }
 
         if master_clock.ppu_clock().cycle() == 1 {
@@ -272,7 +290,6 @@ impl Ppu {
                 }
                 261 => {
                     //log::info!("Ending vblank");
-                    ppu.end_vblank = SignalLevel::High;
                     //log::info!("Updating from ending vblank");
                 }
                 _ => { /* Do nothing. */ }
