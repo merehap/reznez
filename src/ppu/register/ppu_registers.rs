@@ -33,7 +33,6 @@ pub struct PpuRegisters {
 
     // PPUSTATUS (0x2002) sub-registers
     vblank_active: bool,
-    pub read_2002: bool,
     pub sprite0_hit: bool,
     pub sprite0_hit_pending: bool,
     pub sprite_overflow: bool,
@@ -81,7 +80,6 @@ impl PpuRegisters {
 
             // PPUSTATUS (0x2002)
             vblank_active: false,
-            read_2002: false,
             sprite0_hit: false,
             sprite0_hit_pending: false,
             sprite_overflow: false,

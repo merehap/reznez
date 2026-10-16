@@ -20,7 +20,7 @@ use crate::memory::ppu::chr_memory::{ChrMemory, PeekSource, PpuPeek};
 use crate::memory::regions::palette_ram::PaletteRam;
 use crate::memory::regions::ciram::{Ciram, CiramSide};
 use crate::memory::ppu::ppu_address::{PpuAddress, PpuAddressSection};
-use crate::memory::ppu::ppu_pinout::PpuPinout;
+use crate::memory::ppu::ppu_pinout::{PpuPinout, PpuRegisterType};
 use crate::memory::read_result::ReadResult;
 use crate::memory::regions::small_page::SmallPage;
 use crate::memory::window::{ChrSource, PrgSource};
@@ -182,6 +182,21 @@ impl Bus {
             AddressBusType::OamDma => self.oam_dma_address_bus = address,
             AddressBusType::DmcDma => self.dmc_dma_address_bus = address,
         }
+
+        self.ppu_pinout.selected_register = match address.low_byte() & 0b111 {
+            0 => PpuRegisterType::Ctrl,
+            1 => PpuRegisterType::Mask,
+            2 => PpuRegisterType::Status,
+            3 => PpuRegisterType::OamAddr,
+            4 => PpuRegisterType::OamData,
+            5 => PpuRegisterType::Scroll,
+            6 => PpuRegisterType::PpuAddr,
+            7 => PpuRegisterType::PpuData,
+            _ => unreachable!()
+        };
+
+        let input_signals = Ppu::vblank_interrupt_input_signals(self);
+        self.ppu.vblank_interrupt_handler.update(&mut self.cpu_pinout, input_signals);
     }
 
     pub fn set_name_table_mirroring(&mut self, mirroring_index: u8) {

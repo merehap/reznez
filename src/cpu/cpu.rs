@@ -211,6 +211,9 @@ impl Cpu {
         } else {
             ReadWrite::Write
         };
+        bus.ppu_pinout.read_write = bus.cpu_pinout.read_write;
+        let input_signals = Ppu::vblank_interrupt_input_signals(bus);
+        bus.ppu.vblank_interrupt_handler.update(&mut bus.cpu_pinout, input_signals);
 
         let current_address_bus_type = bus.cpu.step.address_bus_type();
         let address = bus.cpu.lookup_step_address(bus, bus.cpu.step);
@@ -237,7 +240,6 @@ impl Cpu {
         match (bus.cpu_pinout.read_write, bus.cpu_address_bus().to_friendly()) {
             (Read, PpuStatus) => {
                 //bus.cpu_pinout.data_bus = ((bus.ppu_regs.vblank_active() as u8) << 7) | (bus.cpu_pinout.data_bus & 0b0111_1111);
-                bus.ppu_regs.read_2002 = true;
                 //log::info!("\t{} Pending suppresson of VBlank active.", bus.ppu_clock());
             }
             (Read, OamData) => { /* Nothing to do until the end of the read. */ }
@@ -262,7 +264,7 @@ impl Cpu {
         }
 
         let input_signals = Ppu::vblank_interrupt_input_signals(bus);
-        log::info!("Updating from chip select");
+        //log::info!("Updating from chip select");
         bus.ppu.vblank_interrupt_handler.update(&mut bus.cpu_pinout, input_signals);
     }
 
@@ -276,17 +278,6 @@ impl Cpu {
         if bus.cpu_pinout.reset.current_value() == SignalLevel::Low {
             // The CPU doesn't do anything while the RESET button is held down.
             return None;
-        }
-
-        if bus.ppu_regs.read_2002 {
-            /*
-            let value = bus.ppu_regs.peek_status().unmasked_value();
-            bus.cpu_pinout.data_bus &= 0b1000_0000;
-            bus.cpu_pinout.data_bus |= value & 0b0111_1111;
-            bus.ppu_regs.ppu_io_bus.update_from_status_read(bus.cpu_pinout.data_bus);
-
-            bus.ppu_regs.write_toggle = WriteToggle::FirstByte;
-            */
         }
 
         if bus.cpu.step.is_read() {
@@ -363,6 +354,10 @@ impl Cpu {
         if bus.cpu.mode_state.is_jammed() {
             return;
         }
+
+        bus.ppu_pinout.data_bus_enabled = SignalLevel::High;
+        let input_signals = Ppu::vblank_interrupt_input_signals(bus);
+        bus.ppu.vblank_interrupt_handler.update(&mut bus.cpu_pinout, input_signals);
 
         bus.cpu.interrupt_cycle_detector.step_phi1(bus.cpu.ready);
         bus.cpu.nmi_edge_detector.step_phi1(&bus.cpu.interrupt_cycle_detector, bus.cpu_pinout.nmi, bus.cpu.ready);

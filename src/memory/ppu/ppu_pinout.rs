@@ -1,10 +1,14 @@
+use crate::memory::cpu::cpu_pinout::ReadWrite;
 use crate::memory::ppu::ppu_address::PpuAddress;
-use crate::memory::signal_level::SignalLevel;
+use crate::memory::signal_level::{SignalLevel, nor};
 use crate::util::edge_detector::EdgeDetector;
 
 pub struct PpuPinout {
+    // R/W, from the CPU pinout
+    pub read_write: ReadWrite,
     // cpu_data_bus: u8, // D0-D8
     // cpu_address_bus: u3, // A2-A0
+    pub selected_register: PpuRegisterType,
     // /CS or /DBE. Active low.
     pub data_bus_enabled: SignalLevel,
     // EXT: u4,
@@ -33,6 +37,8 @@ pub struct PpuPinout {
 impl PpuPinout {
     pub fn new() -> Self {
         Self {
+            read_write: ReadWrite::Read,
+            selected_register: PpuRegisterType::Ctrl,
             data_bus_enabled: SignalLevel::High,
             pclk: SignalLevel::High, // FIXME: This needs to be determined by the schedule.
             ppu_data_write: false,
@@ -77,4 +83,30 @@ impl PpuPinout {
     pub fn ale(&self) -> bool {
         self.fetch_cadence_ale || self.ppu_data_read_ale || self.ppu_data_write_ale
     }
+
+    // Active high
+    pub fn r2_enabled(&self) -> SignalLevel {
+        nor(self.r2(), self.data_bus_enabled)
+    }
+
+    // Active Low
+    pub fn r2(&self) -> SignalLevel {
+        if self.read_write == ReadWrite::Read && self.selected_register == PpuRegisterType::Status {
+            SignalLevel::Low
+        } else {
+            SignalLevel::High
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy)]
+pub enum PpuRegisterType {
+    Ctrl,    // 0x2000
+    Mask,    // 0x2001
+    Status,  // 0x2002
+    OamAddr, // 0x2003
+    OamData, // 0x2004
+    Scroll,  // 0x2005
+    PpuAddr, // 0x2006
+    PpuData, // 0x2007
 }

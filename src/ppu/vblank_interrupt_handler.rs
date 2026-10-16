@@ -145,6 +145,9 @@ impl VBlankInterruptHandler {
         let set = nor3(!pclk, vset, self.vset_2.q());
 
         let read_enabled = nor(r2, dbe);
+        if read_enabled.is_high() {
+            log::info!("Read enabled.");
+        }
         let reset = vclr | read_enabled;
 
         self.int_ff.update(SRInputs {
@@ -155,14 +158,14 @@ impl VBlankInterruptHandler {
         let int = nor(!vbl, !self.int_ff.q());
         cpu_pinout.nmi = !int;
 
-        let old_db_q = self.db.q();
+        let old_db_nq = self.db.nq();
         self.db.update(DLInputs {
             e: !read_enabled,
             d: !self.int_ff.q(),
         });
 
-        if old_db_q != self.db.q() {
-            log::info!("DB NQ changed to {:?}", self.db.q());
+        if old_db_nq != self.db.nq() {
+            log::info!("DB NQ changed to {:?}", self.db.nq());
         }
 
         if read_enabled.is_high() {
@@ -239,11 +242,11 @@ impl SRLatch {
 
     pub fn update(&mut self, SRInputs { s, r }: SRInputs) {
         if s.is_high() {
-            log::info!("Setting SR latch");
+            //log::info!("Setting SR latch");
         }
 
         if r.is_high() {
-            log::info!("Resetting SR latch");
+            //log::info!("Resetting SR latch");
         }
 
         if s.is_high() || r.is_high() {
