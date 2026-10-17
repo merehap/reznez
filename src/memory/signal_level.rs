@@ -1,11 +1,78 @@
 use std::marker::ConstParamTy;
-use std::ops::{Not, BitAnd, BitOr, BitOrAssign};
+use std::ops::{BitAnd, BitOr, BitOrAssign, Deref, Not};
 
+#[repr(u8)]
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Default, ConstParamTy)]
 pub enum SignalLevel {
+    Low = 0,
     #[default]
-    High,
-    Low,
+    High = 1,
+}
+
+#[repr(u8)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum ActiveHigh {
+    Inactive = 0,
+    Active = 1,
+}
+
+#[repr(u8)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum ActiveLow {
+    Active = 0,
+    Inactive = 1,
+}
+
+impl Deref for ActiveHigh {
+    type Target = SignalLevel;
+
+    fn deref(&self) -> &Self::Target {
+        match *self {
+            ActiveHigh::Inactive => &SignalLevel::Low,
+            ActiveHigh::Active => &SignalLevel::High,
+        }
+    }
+}
+
+impl Deref for ActiveLow {
+    type Target = SignalLevel;
+
+    fn deref(&self) -> &Self::Target {
+        match *self {
+            ActiveLow::Inactive => &SignalLevel::High,
+            ActiveLow::Active => &SignalLevel::Low,
+        }
+    }
+}
+
+impl From<SignalLevel> for ActiveHigh {
+    fn from(value: SignalLevel) -> Self {
+        match value {
+            SignalLevel::Low => ActiveHigh::Inactive,
+            SignalLevel::High => ActiveHigh::Active,
+        }
+    }
+}
+
+impl From<ActiveLow> for ActiveHigh {
+    fn from(value: ActiveLow) -> Self {
+        (*value).into()
+    }
+}
+
+impl From<SignalLevel> for ActiveLow {
+    fn from(value: SignalLevel) -> Self {
+        match value {
+            SignalLevel::Low => ActiveLow::Active,
+            SignalLevel::High => ActiveLow::Inactive,
+        }
+    }
+}
+
+impl From<ActiveHigh> for ActiveLow {
+    fn from(value: ActiveHigh) -> Self {
+        (*value).into()
+    }
 }
 
 impl SignalLevel {
@@ -15,6 +82,36 @@ impl SignalLevel {
 
     pub fn is_low(self) -> bool {
         self == Self::Low
+    }
+}
+
+#[allow(dead_code)]
+impl ActiveHigh {
+    pub fn is_inactive(self) -> bool {
+        self == Self::Inactive
+    }
+
+    pub fn is_active(self) -> bool {
+        self == Self::Active
+    }
+
+    pub fn and(self, other: impl Into<Self>) -> Self {
+        (*self & *other.into()).into()
+    }
+
+    pub fn nor(self, other: impl Into<Self>) -> Self {
+        nor(*self, *other.into()).into()
+    }
+}
+
+#[allow(dead_code)]
+impl ActiveLow {
+    pub fn and(self, other: impl Into<Self>) -> Self {
+        (*self & *other.into()).into()
+    }
+
+    pub fn nor(self, other: impl Into<Self>) -> Self {
+        nor(*self, *other.into()).into()
     }
 }
 
@@ -37,6 +134,28 @@ impl Not for SignalLevel {
         match self {
             Self::High => Self::Low,
             Self::Low => Self::High,
+        }
+    }
+}
+
+impl Not for ActiveHigh {
+    type Output = ActiveHigh;
+
+    fn not(self) -> Self::Output {
+        match self {
+            Self::Inactive => Self::Active,
+            Self::Active => Self::Inactive,
+        }
+    }
+}
+
+impl Not for ActiveLow {
+    type Output = ActiveLow;
+
+    fn not(self) -> Self::Output {
+        match self {
+            Self::Inactive => Self::Active,
+            Self::Active => Self::Inactive,
         }
     }
 }

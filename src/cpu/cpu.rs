@@ -18,7 +18,7 @@ use crate::mapper::mapper::Mapper;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::bus::{AddressBusType, Bus, IRQ_VECTOR_HIGH, IRQ_VECTOR_LOW, NMI_VECTOR_HIGH, NMI_VECTOR_LOW, RESET_VECTOR_HIGH, RESET_VECTOR_LOW};
 use crate::memory::cpu::cpu_pinout::{CpuPinout, ReadWrite};
-use crate::memory::signal_level::SignalLevel;
+use crate::memory::signal_level::{ActiveHigh, ActiveLow, SignalLevel};
 use crate::ppu::ppu::Ppu;
 
 pub struct Cpu {
@@ -39,8 +39,8 @@ pub struct Cpu {
     mode_state: CpuModeState,
     step: Step,
 
-    // High when a DMA is running, low during normal CPU operation.
-    ready: SignalLevel,
+    // High (Inactive) when a DMA is running, Low (Active) during normal CPU operation.
+    ready: ActiveLow,
     interrupt_cycle_detector: InterruptCycleDetector,
     nmi_edge_detector: NmiEdgeDetector,
     nmi_falling_edge_detected: bool,
@@ -82,7 +82,7 @@ impl Cpu {
             // TODO: Figure out the right value.
             step: Step::Read(From::ProgramCounterTarget, &[]),
 
-            ready: SignalLevel::Low,
+            ready: ActiveLow::Active,
             interrupt_cycle_detector: InterruptCycleDetector::new(),
             nmi_edge_detector: NmiEdgeDetector::new(),
             nmi_falling_edge_detected: false,
@@ -200,9 +200,9 @@ impl Cpu {
         };
 
         bus.cpu.ready = if bus.dmc_dma.latest_action() == DmcDmaAction::DoNothing && bus.oam_dma.latest_action() == OamDmaAction::DoNothing {
-            SignalLevel::Low
+            ActiveLow::Active
         } else {
-            SignalLevel::High
+            ActiveLow::Inactive
         };
 
         // FIXME: This placement is wrong. It should be earlier: during the ReadWrite step.
@@ -243,7 +243,7 @@ impl Cpu {
     }
 
     pub fn step_phi2_rise(bus: &mut Bus) {
-        let brk5 = if bus.cpu.step.has(StepAction::Brk5) { SignalLevel::High } else { SignalLevel::Low };
+        let brk5 = if bus.cpu.step.has(StepAction::Brk5) { ActiveHigh::Active } else { ActiveHigh::Inactive };
         bus.cpu.interrupt_cycle_detector.step_phi2(brk5, bus.cpu.ready);
         bus.cpu.nmi_edge_detector.step_phi2(&bus.cpu.interrupt_cycle_detector, brk5, bus.cpu.ready);
     }

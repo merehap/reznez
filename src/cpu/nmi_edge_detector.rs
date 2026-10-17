@@ -1,4 +1,4 @@
-use crate::{cpu::interrupt_cycle_detector::InterruptCycleDetector, memory::signal_level::{SignalLevel, nor, nor3}};
+use crate::{cpu::interrupt_cycle_detector::InterruptCycleDetector, memory::signal_level::{ActiveHigh, ActiveLow, SignalLevel, nor, nor3}};
 
 // Questions:
 // * Should this all be processed right on the clock transition?
@@ -34,7 +34,7 @@ impl NmiEdgeDetector {
         nor(self.donmi, nor(self.ff1, self.brk6e))
     }
 
-    pub fn step_phi1(&mut self, cycle_detector: &InterruptCycleDetector, nmip_signal: SignalLevel, ready_signal: SignalLevel) {
+    pub fn step_phi1(&mut self, cycle_detector: &InterruptCycleDetector, nmip_signal: SignalLevel, ready_signal: ActiveLow) {
         self.nmip = nmip_signal;
         self.brk6e = cycle_detector.brk6e_signal(ready_signal);
         self.delay2 = !self.delay1;
@@ -43,7 +43,7 @@ impl NmiEdgeDetector {
         self.donmi = nor3(!self.brk7, nmip_signal, last_source);
     }
 
-    pub fn step_phi2(&mut self, cycle_detector: &InterruptCycleDetector, brk5_signal: SignalLevel, ready_signal: SignalLevel) {
+    pub fn step_phi2(&mut self, cycle_detector: &InterruptCycleDetector, brk5_signal: ActiveHigh, ready_signal: ActiveLow) {
         self.brk7 = cycle_detector.brk7_signal(brk5_signal, ready_signal);
 
         let donmi_low = self.donmi_signal();
