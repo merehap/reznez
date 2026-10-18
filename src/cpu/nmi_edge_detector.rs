@@ -34,13 +34,13 @@ impl NmiEdgeDetector {
         nor(self.donmi, nor(self.ff1, self.brk6e))
     }
 
-    pub fn step_phi1(&mut self, cycle_detector: &InterruptCycleDetector, nmip_signal: SignalLevel, ready_signal: ActiveLow) {
-        self.nmip = nmip_signal;
+    pub fn step_phi1(&mut self, cycle_detector: &InterruptCycleDetector, nmip_signal: ActiveLow, ready_signal: ActiveLow) {
+        self.nmip = *nmip_signal;
         self.brk6e = *cycle_detector.brk6e_signal(ready_signal);
         self.delay2 = !self.delay1;
 
         let last_source = nor(self.nmip, nor(self.ff2, self.delay2));
-        self.donmi = nor3(!self.brk7, nmip_signal, last_source);
+        self.donmi = nor3(!self.brk7, *nmip_signal, last_source);
     }
 
     pub fn step_phi2(&mut self, cycle_detector: &InterruptCycleDetector, brk5_signal: ActiveHigh, ready_signal: ActiveLow) {

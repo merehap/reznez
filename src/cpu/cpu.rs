@@ -49,6 +49,7 @@ pub struct Cpu {
     pub interrupt_cycle_detector: InterruptCycleDetector,
     pub rst_latch: RstLatch,
     pub reset_flip_flop: ResetFlipFlop,
+
     nmi_edge_detector: NmiEdgeDetector,
     nmi_falling_edge_detected: bool,
     nmi_pending: bool,
@@ -94,6 +95,7 @@ impl Cpu {
             interrupt_cycle_detector: InterruptCycleDetector::new(),
             rst_latch: RstLatch::new(),
             reset_flip_flop: ResetFlipFlop::new(),
+
             nmi_edge_detector: NmiEdgeDetector::new(),
             nmi_falling_edge_detected: false,
             nmi_pending: false,
@@ -354,7 +356,7 @@ impl Cpu {
 
         bus.cpu.rst_latch.update(RstInputs::new(bus));
         bus.cpu.reset_flip_flop.update(ResetInputs::new(bus));
-        bus.cpu.nmi_edge_detector.step_phi1(&bus.cpu.interrupt_cycle_detector, bus.cpu_pinout.nmi, bus.cpu.ready);
+        bus.cpu.nmi_edge_detector.step_phi1(&bus.cpu.interrupt_cycle_detector, bus.ppu.vblank_interrupt_handler.nmip(), bus.cpu.ready);
 
         bus.cpu.nmi_falling_edge_detected = bus.cpu.nmi_edge_detector.donmi_signal().is_low();
 

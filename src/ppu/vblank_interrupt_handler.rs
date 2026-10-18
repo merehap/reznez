@@ -3,7 +3,7 @@ use splitbits::replacebits;
 use crate::circuit::d_latch::{DLInputs, DLatch};
 use crate::circuit::sr_latch::{SRInputs, SRLatch};
 use crate::memory::cpu::cpu_pinout::CpuPinout;
-use crate::memory::signal_level::{SignalLevel, nor, nor3};
+use crate::memory::signal_level::{ActiveHigh, ActiveLow, SignalLevel, nor, nor3};
 
 // Reference: https://github.com/emu-russia/breaks/blob/master/BreakingNESWiki_DeepL/PPU/fsm.md#vblank-interrupt-handling
 pub struct VBlankInterruptHandler {
@@ -11,6 +11,10 @@ pub struct VBlankInterruptHandler {
     vset_2: DLatch,
     db: DLatch,
     int_ff: SRLatch,
+
+    // Added here for convenience. Should maybe be split off.
+    // TODO: No test ROMs exist for the nmip half-cycle delay.
+    nmip: DLatch,
 }
 
 impl VBlankInterruptHandler {
@@ -20,10 +24,16 @@ impl VBlankInterruptHandler {
             vset_2: DLatch::new(SignalLevel::Low),
             db: DLatch::new(SignalLevel::High),
             int_ff: SRLatch::new(SignalLevel::Low),
+
+            nmip: DLatch::new(SignalLevel::High),
         }
     }
 
-    pub fn update(&mut self, cpu_pinout: &mut CpuPinout, VbihInputs { pclk, vset, vbl, vclr, r2, dbe }: VbihInputs) {
+    pub fn nmip(&self) -> ActiveLow {
+        self.nmip.q().into()
+    }
+
+    pub fn update(&mut self, cpu_pinout: &mut CpuPinout, VbihInputs { pclk, vset, vbl, vclr, r2, dbe, phi2 }: VbihInputs) {
         self.vset_1.update(DLInputs {
             e: pclk,
             d: vset,
@@ -44,6 +54,10 @@ impl VBlankInterruptHandler {
 
         let int = nor(!vbl, !self.int_ff.q());
         cpu_pinout.nmi = !int;
+        self.nmip.update(DLInputs {
+            e: *phi2,
+            d: cpu_pinout.nmi,
+        });
 
         self.db.update(DLInputs {
             e: !read_enabled,
@@ -65,4 +79,7 @@ pub struct VbihInputs {
     pub vclr: SignalLevel,
     pub r2: SignalLevel,
     pub dbe: SignalLevel,
+
+    // Added here because it's being use for the separate circuit nmip circuit.
+    pub phi2: ActiveHigh,
 }

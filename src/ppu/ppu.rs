@@ -3,6 +3,7 @@ use log::Level::Info;
 use splitbits::splitbits;
 use ux::u5;
 
+use crate::cpu::cpu::Cpu;
 use crate::mapper::mapper::Mapper;
 use crate::bus::Bus;
 use crate::master_clock::MasterClock;
@@ -152,7 +153,7 @@ impl Ppu {
             (Write, PpuControl) => {
                 let fields = splitbits!(ppu_regs.ppu_io_bus.value(), "nehb siqq");
                 ppu_regs.set_nmi_enabled(&mut bus.cpu_pinout, fields.n);
-                let input_signals = bus.ppu.vblank_interrupt_input_signals_from_components(&mut bus.ppu_pinout, ppu_regs);
+                let input_signals = bus.ppu.vblank_interrupt_input_signals_from_components(&mut bus.ppu_pinout, ppu_regs, &bus.cpu);
                 //log::info!("Updating from PPUCTRL write");
                 bus.ppu.vblank_interrupt_handler.update(&mut bus.cpu_pinout, input_signals);
 
@@ -253,7 +254,7 @@ impl Ppu {
         mapper.on_end_of_ppu_cycle();
     }
 
-    pub fn step_pclk_low(Bus { ppu, ppu_regs, ppu_pinout, cpu_pinout, master_clock, signals, secondary_oam, oam_buffer, secondary_oam_buffer, .. }: &mut Bus) {
+    pub fn step_pclk_low(Bus { ppu, ppu_regs, ppu_pinout, cpu, cpu_pinout, master_clock, signals, secondary_oam, oam_buffer, secondary_oam_buffer, .. }: &mut Bus) {
         ppu_pinout.pclk = SignalLevel::Low;
         signals.start_pclk_low(ppu_pinout);
 
@@ -265,7 +266,7 @@ impl Ppu {
             ppu.start_vblank = SignalLevel::Low;
         }
 
-        let input_signals = ppu.vblank_interrupt_input_signals_from_components(ppu_pinout, ppu_regs);
+        let input_signals = ppu.vblank_interrupt_input_signals_from_components(ppu_pinout, ppu_regs, cpu);
         ppu.vblank_interrupt_handler.update(cpu_pinout, input_signals);
 
         if ppu_regs.background_enabled() || ppu_regs.sprites_enabled() {
@@ -756,10 +757,10 @@ impl Ppu {
     }
 
     pub fn vblank_interrupt_input_signals(bus: &Bus) -> VbihInputs {
-        bus.ppu.vblank_interrupt_input_signals_from_components(&bus.ppu_pinout, &bus.ppu_regs)
+        bus.ppu.vblank_interrupt_input_signals_from_components(&bus.ppu_pinout, &bus.ppu_regs, &bus.cpu)
     }
 
-    pub fn vblank_interrupt_input_signals_from_components(&self, ppu_pinout: &PpuPinout, ppu_regs: &PpuRegisters) -> VbihInputs {
+    pub fn vblank_interrupt_input_signals_from_components(&self, ppu_pinout: &PpuPinout, ppu_regs: &PpuRegisters, cpu: &Cpu) -> VbihInputs {
         VbihInputs {
             pclk: ppu_pinout.pclk,
             vset: self.start_vblank,
@@ -767,6 +768,8 @@ impl Ppu {
             vclr: self.end_vblank,
             r2: ppu_pinout.r2(),
             dbe: ppu_pinout.data_bus_enabled,
+
+            phi2: cpu.phi2,
         }
     }
 
