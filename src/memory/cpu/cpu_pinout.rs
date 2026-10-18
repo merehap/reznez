@@ -1,12 +1,11 @@
 use crate::memory::cpu::cpu_address::CpuAddress;
-use crate::memory::signal_level::SignalLevel;
-use crate::util::edge_detector::EdgeDetector;
+use crate::memory::signal_level::{ActiveLow, SignalLevel};
 
 pub struct CpuPinout {
     // AD1 (Audio Pinout: Both pulse waves)
     // AD2 (Audio Pinout: Triangle, Noise, DPCM)
-    // RST (CPU Reset). Triggers when the signal goes high.
-    pub reset: EdgeDetector<SignalLevel>,
+    // RST (CPU Reset). A reset is triggered when this signal rises.
+    pub reset: ActiveLow,
     // Axx
     pub address_bus: CpuAddress,
     // GND (Ground)
@@ -32,7 +31,7 @@ pub struct CpuPinout {
 impl CpuPinout {
     pub fn new() -> Self {
         Self {
-            reset: EdgeDetector::target_value(SignalLevel::High),
+            reset: ActiveLow::Active,
             address_bus: CpuAddress::ZERO,
             data_bus: 0,
             nmi: SignalLevel::High,

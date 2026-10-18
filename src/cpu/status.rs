@@ -41,6 +41,7 @@ impl Status {
         status
     }
 
+    // TODO: Unify the three to_X() methods?
     pub fn to_register_byte(self) -> u8 {
         pack_bools([
             self.negative,

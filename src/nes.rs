@@ -18,10 +18,12 @@ use crate::cartridge::header_db::HeaderDb;
 use crate::cartridge::resolved_metadata::{MetadataResolver, ResolvedMetadata};
 use crate::config::Config;
 use crate::counter::irq_counter_info::IrqCounterInfo;
-use crate::cpu::cpu::{Cpu, IrqStatus, ResetStatus};
+use crate::cpu::cpu::{Cpu, IrqStatus};
 use crate::cpu::cpu_mode::CpuMode;
 use crate::cpu::dmc_dma::{DmcDmaAction, DmcDmaState};
 use crate::cpu::oam_dma::{OamDmaAction, OamDmaState};
+use crate::cpu::rst_latch::RstInputs;
+use crate::cpu::reset_flip_flop::ResetInputs;
 use crate::cpu::step::Step;
 use crate::gui::gui::Events;
 use crate::logging::formatter;
@@ -33,7 +35,7 @@ use crate::memory::raw_memory::RawData;
 use crate::memory::bank::bank_number::{BankNumber, ReadStatus, WriteStatus};
 use crate::bus::Bus;
 use crate::memory::register_ids::bank::{ChrBankRegisterId, PrgBankRegisterId};
-use crate::memory::signal_level::SignalLevel;
+use crate::memory::signal_level::{ActiveHigh, ActiveLow, SignalLevel};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::ppu_clock::PpuClock;
 use crate::ppu::palette::bank_color_assigner::BankColorAssigner;
@@ -211,12 +213,14 @@ impl Nes {
     }
 
     pub fn set_reset_signal(&mut self) {
-        self.bus.cpu_pinout.reset.set_value(SignalLevel::Low);
+        self.bus.cpu_pinout.reset = ActiveLow::Active;
+        self.bus.cpu.rst_latch.update(RstInputs::new(&self.bus));
+        self.bus.cpu.reset_flip_flop.update(ResetInputs::new(&self.bus));
     }
 
     pub fn step_frame(&mut self, frame: &mut Frame) {
         loop {
-            if self.bus.cpu_pinout.reset.detect() {
+            if self.bus.cpu_pinout.reset.is_active() {
                 // Complete the CPU reset, if one is in progress and nearing completion.
                 self.bus.cpu.reset();
                 self.bus.apu_regs.reset(self.bus.master_clock.apu_clock(), &mut self.bus.cpu_pinout);
@@ -229,7 +233,10 @@ impl Nes {
             if step_result.is_last_cycle_of_frame {
                 // Release the RESET button on the console after some time has passed,
                 // allowing the PPU to run while the RESET button was still held down.
-                self.bus.cpu_pinout.reset.set_value(SignalLevel::High);
+                self.bus.cpu_pinout.reset = ActiveLow::Inactive;
+                //log::info!("Update from reset inactive");)
+                self.bus.cpu.rst_latch.update(RstInputs::new(&self.bus));
+                self.bus.cpu.reset_flip_flop.update(ResetInputs::new(&self.bus));
 
                 if self.bus.cpu.mode_state().is_jammed() {
                     info!("CPU is jammed!");
@@ -430,8 +437,8 @@ impl Nes {
             if latest.nmi_signal_detector.set_value_then_detect(self.bus.cpu_pinout.nmi) {
                 info!("NMI signal went {:?}.", self.bus.cpu_pinout.nmi);
             }
-            if latest.reset_signal_detector.set_value_then_detect(self.bus.cpu_pinout.reset.current_value()) {
-                info!("RESET signal went {:?}.", self.bus.cpu_pinout.reset.current_value());
+            if latest.reset_signal_detector.set_value_then_detect(self.bus.cpu_pinout.reset) {
+                info!("RESET signal went {:?}.", self.bus.cpu_pinout.reset);
             }
         }
 
@@ -656,11 +663,11 @@ struct LatestValues {
     mapper_irq_asserted_detector: EdgeDetector<bool>,
 
     nmi_signal_detector: EdgeDetector<SignalLevel>,
-    reset_signal_detector: EdgeDetector<SignalLevel>,
+    reset_signal_detector: EdgeDetector<ActiveLow>,
 
     irq_status_detector: EdgeDetector<IrqStatus>,
     nmi_status_detector: EdgeDetector<bool>,
-    reset_status_detector: EdgeDetector<ResetStatus>,
+    reset_status_detector: EdgeDetector<ActiveHigh>,
 
     extended_cpu_mode: ExtendedCpuMode,
     dmc_cpu_halt_detector: EdgeDetector<bool>,

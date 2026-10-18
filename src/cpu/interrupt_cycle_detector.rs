@@ -12,8 +12,8 @@ impl InterruptCycleDetector {
     pub fn new() -> Self {
         Self {
             brk5: ActiveHigh::Inactive,
-            brk6_1: SignalLevel::Low,
-            brk6_2: SignalLevel::High,
+            brk6_1: SignalLevel::High,
+            brk6_2: SignalLevel::Low,
         }
     }
 
@@ -21,8 +21,8 @@ impl InterruptCycleDetector {
         brk5_signal.and(!ready_signal)
     }
 
-    pub fn brk6e_signal(self, ready_signal: ActiveLow) -> SignalLevel {
-        nor(!self.brk6_2, *ready_signal)
+    pub fn brk6e_signal(self, ready_signal: ActiveLow) -> ActiveHigh {
+        nor(!self.brk6_2, *ready_signal).into()
     }
 
     pub fn brk7_signal(self, brk5_signal: ActiveHigh, ready_signal: ActiveLow) -> SignalLevel {

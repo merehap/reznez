@@ -10,16 +10,18 @@ pub enum SignalLevel {
 }
 
 #[repr(u8)]
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Default, ConstParamTy)]
 pub enum ActiveHigh {
+    #[default]
     Inactive = 0,
     Active = 1,
 }
 
 #[repr(u8)]
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Default, ConstParamTy)]
 pub enum ActiveLow {
     Active = 0,
+    #[default]
     Inactive = 1,
 }
 
@@ -83,6 +85,10 @@ impl SignalLevel {
     pub fn is_low(self) -> bool {
         self == Self::Low
     }
+
+    pub fn negate(self) -> SignalLevel {
+        !self
+    }
 }
 
 #[allow(dead_code)]
@@ -106,6 +112,14 @@ impl ActiveHigh {
 
 #[allow(dead_code)]
 impl ActiveLow {
+    pub fn is_inactive(self) -> bool {
+        self == Self::Inactive
+    }
+
+    pub fn is_active(self) -> bool {
+        self == Self::Active
+    }
+
     pub fn and(self, other: impl Into<Self>) -> Self {
         (*self & *other.into()).into()
     }

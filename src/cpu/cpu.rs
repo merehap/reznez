@@ -8,6 +8,8 @@ use crate::cpu::cpu_mode::{CpuModeState, InterruptType};
 use crate::cpu::dmc_dma::DmcDmaAction;
 use crate::cpu::interrupt_cycle_detector::InterruptCycleDetector;
 use crate::cpu::nmi_edge_detector::NmiEdgeDetector;
+use crate::cpu::rst_latch::{RstInputs, RstLatch};
+use crate::cpu::reset_flip_flop::{ResetFlipFlop, ResetInputs};
 use crate::cpu::step_action::{StepAction, From, To, Field};
 use crate::cpu::instruction::{Instruction, AccessMode, OpCode};
 use crate::cpu::oam_dma::OamDmaAction;
@@ -39,14 +41,18 @@ pub struct Cpu {
     mode_state: CpuModeState,
     step: Step,
 
-    // High (Inactive) when a DMA is running, Low (Active) during normal CPU operation.
-    ready: ActiveLow,
-    interrupt_cycle_detector: InterruptCycleDetector,
+    // The initial button power-on button press is very short so not CPU cycles are wasted for counting purposes.
+    just_powered_on: bool,
+    pub phi2: ActiveHigh,
+    // High when a DMA is running, low during normal CPU operation.
+    pub ready: ActiveLow,
+    pub interrupt_cycle_detector: InterruptCycleDetector,
+    pub rst_latch: RstLatch,
+    pub reset_flip_flop: ResetFlipFlop,
     nmi_edge_detector: NmiEdgeDetector,
     nmi_falling_edge_detected: bool,
     nmi_pending: bool,
     irq_status: IrqStatus,
-    reset_status: ResetStatus,
 
     current_interrupt_vector: Option<InterruptType>,
 
@@ -82,16 +88,18 @@ impl Cpu {
             // TODO: Figure out the right value.
             step: Step::Read(From::ProgramCounterTarget, &[]),
 
+            just_powered_on: true,
+            phi2: ActiveHigh::Inactive,
             ready: ActiveLow::Active,
             interrupt_cycle_detector: InterruptCycleDetector::new(),
+            rst_latch: RstLatch::new(),
+            reset_flip_flop: ResetFlipFlop::new(),
             nmi_edge_detector: NmiEdgeDetector::new(),
             nmi_falling_edge_detected: false,
             nmi_pending: false,
             irq_status: IrqStatus::Inactive,
-            reset_status: ResetStatus::Active,
 
-            // The initial value probably doesn't matter.
-            current_interrupt_vector: None,
+            current_interrupt_vector: Some(InterruptType::Reset),
 
             pending_address_low: 0,
             pending_address_high: 0,
@@ -109,8 +117,6 @@ impl Cpu {
 
     // From https://wiki.nesdev.org/w/index.php?title=CPU_power_up_state
     pub fn reset(&mut self) {
-        self.reset_status = ResetStatus::Ready;
-
         self.mode_state = CpuModeState::startup();
         // TODO: Figure out the right right thing to do here.
         self.step = Step::Read(From::ProgramCounterTarget, &[]);
@@ -118,7 +124,6 @@ impl Cpu {
         self.address_carry = 0;
         self.nmi_pending = false;
         self.irq_status = IrqStatus::Inactive;
-        self.current_interrupt_vector = None;
     }
 
     pub fn accumulator(&self) -> u8 {
@@ -153,8 +158,8 @@ impl Cpu {
         self.irq_status
     }
 
-    pub fn reset_status(&self) -> ResetStatus {
-        self.reset_status
+    pub fn reset_status(&self) -> ActiveHigh {
+        self.reset_flip_flop.dores()
     }
 
     pub fn nmi_pending(&self) -> bool {
@@ -166,7 +171,10 @@ impl Cpu {
     }
 
     pub fn step_m2_rise(bus: &mut Bus, mapper: &mut dyn Mapper) {
-        if bus.cpu_pinout.reset.current_value() == SignalLevel::Low {
+        bus.cpu.rst_latch.update(RstInputs::new(bus));
+        bus.cpu.reset_flip_flop.update(ResetInputs::new(bus));
+
+        if bus.cpu_pinout.reset.is_active() {
             // The CPU doesn't do anything while the RESET button is held down.
             return;
         }
@@ -204,6 +212,9 @@ impl Cpu {
         } else {
             ActiveLow::Inactive
         };
+        bus.cpu.interrupt_cycle_detector.step_phi1(bus.cpu.ready);
+        // TODO Add NMI detector update here too.
+        bus.cpu.reset_flip_flop.update(ResetInputs::new(bus));
 
         // FIXME: This placement is wrong. It should be earlier: during the ReadWrite step.
         bus.cpu_pinout.read_write = if bus.cpu.step.is_read() {
@@ -243,13 +254,22 @@ impl Cpu {
     }
 
     pub fn step_phi2_rise(bus: &mut Bus) {
+        bus.cpu.phi2 = ActiveHigh::Active;
+
         let brk5 = if bus.cpu.step.has(StepAction::Brk5) { ActiveHigh::Active } else { ActiveHigh::Inactive };
         bus.cpu.interrupt_cycle_detector.step_phi2(brk5, bus.cpu.ready);
+        bus.cpu.rst_latch.update(RstInputs::new(bus));
+        if bus.cpu.just_powered_on {
+            bus.cpu.just_powered_on = false;
+            bus.cpu_pinout.reset = ActiveLow::Inactive;
+        }
+
+        bus.cpu.reset_flip_flop.update(ResetInputs::new(bus));
         bus.cpu.nmi_edge_detector.step_phi2(&bus.cpu.interrupt_cycle_detector, brk5, bus.cpu.ready);
     }
 
     pub fn step_m2_middle_of_high(bus: &mut Bus, mapper: &mut dyn Mapper) -> Option<Step> {
-        if bus.cpu_pinout.reset.current_value() == SignalLevel::Low {
+        if bus.cpu_pinout.reset.is_active() {
             // The CPU doesn't do anything while the RESET button is held down.
             return None;
         }
@@ -325,19 +345,16 @@ impl Cpu {
     }
 
     pub fn step_m2_falling(bus: &mut Bus, mapper: &mut dyn Mapper) {
-        if bus.cpu.mode_state.is_jammed() {
-            return;
-        }
-
+        bus.cpu.phi2 = ActiveHigh::Inactive;
         bus.ppu_pinout.data_bus_enabled = SignalLevel::High;
         let input_signals = Ppu::vblank_interrupt_input_signals(bus);
         bus.ppu.vblank_interrupt_handler.update(&mut bus.cpu_pinout, input_signals);
 
         bus.cpu.interrupt_cycle_detector.step_phi1(bus.cpu.ready);
+
+        bus.cpu.rst_latch.update(RstInputs::new(bus));
+        bus.cpu.reset_flip_flop.update(ResetInputs::new(bus));
         bus.cpu.nmi_edge_detector.step_phi1(&bus.cpu.interrupt_cycle_detector, bus.cpu_pinout.nmi, bus.cpu.ready);
-        if !bus.cpu.nmi_falling_edge_detected && bus.cpu.nmi_edge_detector.donmi_signal().is_low() {
-            log::info!("{} Falling edge detected", bus.ppu_clock());
-        }
 
         bus.cpu.nmi_falling_edge_detected = bus.cpu.nmi_edge_detector.donmi_signal().is_low();
 
@@ -361,12 +378,11 @@ impl Cpu {
                     return;
                 }
 
-                if cpu.reset_status == ResetStatus::Ready {
-                    cpu.reset_status = ResetStatus::Active;
+                if cpu.reset_flip_flop.dores().is_active() {
+                    log::info!("DORES forcing data bus to 0x00");
                     cpu_pinout.data_bus = 0x00;
                     cpu.mode_state.interrupt_sequence(InterruptType::Reset);
                 } else if cpu.nmi_pending {
-                    //cpu.nmi_falling_edge_detected = false;
                     cpu_pinout.data_bus = 0x00;
                     cpu.mode_state.interrupt_sequence(InterruptType::Nmi);
                 } else if cpu.irq_status == IrqStatus::Active && !cpu.nmi_pending {
@@ -541,7 +557,7 @@ impl Cpu {
             StepAction::DisableInterrupts => cpu.status.interrupts_disabled = true,
             StepAction::SetInterruptVector => {
                 cpu.current_interrupt_vector =
-                    if cpu.reset_status != ResetStatus::Inactive {
+                    if cpu.reset_flip_flop.dores().is_active() {
                         info!(target: "cpuflowcontrol", "Setting interrupt vector to RESET.");
                         Some(InterruptType::Reset)
                     } else if cpu.nmi_pending {
@@ -561,7 +577,6 @@ impl Cpu {
                 // Clear interrupt statuses now that the vector is set.
                 cpu.nmi_pending = false;
                 cpu.irq_status = IrqStatus::Inactive;
-                cpu.reset_status = ResetStatus::Inactive;
             }
             StepAction::ClearInterruptVector => cpu.current_interrupt_vector = None,
             StepAction::PollInterrupts => {
@@ -843,14 +858,6 @@ pub enum IrqStatus {
     #[default]
     Inactive,
     Pending,
-    Ready,
-    Active,
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug, Default, ConstParamTy)]
-pub enum ResetStatus {
-    #[default]
-    Inactive,
     Ready,
     Active,
 }

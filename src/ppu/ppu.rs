@@ -151,10 +151,6 @@ impl Ppu {
 
             (Write, PpuControl) => {
                 let fields = splitbits!(ppu_regs.ppu_io_bus.value(), "nehb siqq");
-                if !ppu_regs.nmi_enabled() && fields.n {
-                    log::info!("{} NMI enabled", bus.master_clock.ppu_clock());
-                }
-
                 ppu_regs.set_nmi_enabled(&mut bus.cpu_pinout, fields.n);
                 let input_signals = bus.ppu.vblank_interrupt_input_signals_from_components(&mut bus.ppu_pinout, ppu_regs);
                 //log::info!("Updating from PPUCTRL write");

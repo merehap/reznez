@@ -40,16 +40,8 @@ impl <V: PartialEq + Eq + Clone + Copy + Default + ConstParamTy_> EdgeDetector<V
         self.value
     }
 
-    pub fn matches_target(&self, value: V) -> bool {
-        self.target_value.unwrap() == value
-    }
-
     pub fn set_value(&mut self, value: V) {
         self.value = value;
-    }
-
-    pub fn modify_value<F>(&mut self, mut f: F) where F: FnMut(&mut V) {
-        f(&mut self.value)
     }
 
     pub fn detect(&mut self) -> bool {

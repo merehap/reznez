@@ -1,6 +1,8 @@
 pub mod cpu;
 pub mod cpu_mode;
 pub mod dmc_dma;
+pub mod rst_latch;
+pub mod reset_flip_flop;
 pub mod instruction;
 pub mod interrupt_cycle_detector;
 pub mod nmi_edge_detector;

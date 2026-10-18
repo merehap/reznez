@@ -36,7 +36,7 @@ impl NmiEdgeDetector {
 
     pub fn step_phi1(&mut self, cycle_detector: &InterruptCycleDetector, nmip_signal: SignalLevel, ready_signal: ActiveLow) {
         self.nmip = nmip_signal;
-        self.brk6e = cycle_detector.brk6e_signal(ready_signal);
+        self.brk6e = *cycle_detector.brk6e_signal(ready_signal);
         self.delay2 = !self.delay1;
 
         let last_source = nor(self.nmip, nor(self.ff2, self.delay2));
