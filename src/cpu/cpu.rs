@@ -39,7 +39,7 @@ pub struct Cpu {
     h: u8,
 
     mode_state: CpuModeState,
-    step: Step,
+    pub step: Step,
 
     // The initial button power-on button press is very short so not CPU cycles are wasted for counting purposes.
     just_powered_on: bool,
@@ -50,7 +50,7 @@ pub struct Cpu {
     pub rst_latch: RstLatch,
     pub reset_flip_flop: ResetFlipFlop,
 
-    nmi_edge_detector: NmiEdgeDetector,
+    pub nmi_edge_detector: NmiEdgeDetector,
     nmi_falling_edge_detected: bool,
     nmi_pending: bool,
     irq_status: IrqStatus,
@@ -258,8 +258,7 @@ impl Cpu {
     pub fn step_phi2_rise(bus: &mut Bus) {
         bus.cpu.phi2 = ActiveHigh::Active;
 
-        let brk5 = if bus.cpu.step.has(StepAction::Brk5) { ActiveHigh::Active } else { ActiveHigh::Inactive };
-        bus.cpu.interrupt_cycle_detector.step_phi2(brk5, bus.cpu.ready);
+        bus.cpu.interrupt_cycle_detector.step_phi2(bus.cpu.step.brk5(), bus.cpu.ready);
         bus.cpu.rst_latch.update(RstInputs::new(bus));
         if bus.cpu.just_powered_on {
             bus.cpu.just_powered_on = false;
@@ -267,7 +266,7 @@ impl Cpu {
         }
 
         bus.cpu.reset_flip_flop.update(ResetInputs::new(bus));
-        bus.cpu.nmi_edge_detector.step_phi2(&bus.cpu.interrupt_cycle_detector, brk5, bus.cpu.ready);
+        NmiEdgeDetector::step_phi2(bus);
     }
 
     pub fn step_m2_middle_of_high(bus: &mut Bus, mapper: &mut dyn Mapper) -> Option<Step> {
@@ -356,7 +355,7 @@ impl Cpu {
 
         bus.cpu.rst_latch.update(RstInputs::new(bus));
         bus.cpu.reset_flip_flop.update(ResetInputs::new(bus));
-        bus.cpu.nmi_edge_detector.step_phi1(&bus.cpu.interrupt_cycle_detector, bus.ppu.vblank_interrupt_handler.nmip(), bus.cpu.ready);
+        NmiEdgeDetector::step_phi1(bus);
 
         bus.cpu.nmi_falling_edge_detected = bus.cpu.nmi_edge_detector.donmi_signal().is_low();
 

@@ -5,6 +5,7 @@ use crate::cpu::step_action::StepAction;
 use crate::cpu::step_action::StepAction::*;
 use crate::cpu::step::Step::{Read, ReadField, WriteField, OamRead, OamWrite, DmcRead};
 use crate::bus::{AddressBusType, Bus};
+use crate::memory::signal_level::ActiveHigh;
 
 pub static OAM_READ_STEP: Step = OamRead(From::OamDmaAddressTarget, &[]);
 pub static OAM_WRITE_STEP: Step = OamWrite(To::OAM_DATA, &[IncrementOamDmaAddress]);
@@ -352,6 +353,10 @@ impl Step {
 
     pub fn is_dma(&self) -> bool {
         matches!(*self, Self::OamRead(..) | Self::OamWrite(..) | Self::DmcRead(..))
+    }
+
+    pub fn brk5(&self) -> ActiveHigh {
+        if self.has(StepAction::Brk5) { ActiveHigh::Active } else { ActiveHigh::Inactive }
     }
 
     pub fn has(&self, target: StepAction) -> bool {

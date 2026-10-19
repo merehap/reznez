@@ -1,4 +1,7 @@
-use crate::{cpu::interrupt_cycle_detector::InterruptCycleDetector, memory::signal_level::{ActiveHigh, ActiveLow, SignalLevel, nor, nor3}};
+use crate::bus::Bus;
+use crate::cpu::cpu::Cpu;
+use crate::memory::signal_level::{SignalLevel, nor, nor3};
+use crate::ppu::ppu::Ppu;
 
 // Questions:
 // * Should this all be processed right on the clock transition?
@@ -34,22 +37,27 @@ impl NmiEdgeDetector {
         nor(self.donmi, nor(self.ff1, self.brk6e))
     }
 
-    pub fn step_phi1(&mut self, cycle_detector: &InterruptCycleDetector, nmip_signal: ActiveLow, ready_signal: ActiveLow) {
-        self.nmip = *nmip_signal;
-        self.brk6e = *cycle_detector.brk6e_signal(ready_signal);
-        self.delay2 = !self.delay1;
+    pub fn step_phi1(bus: &mut Bus) {
+        let Cpu { nmi_edge_detector: ned, interrupt_cycle_detector, ready, ..} = &mut bus.cpu;
+        let Ppu { vblank_interrupt_handler, ..} = &mut bus.ppu;
 
-        let last_source = nor(self.nmip, nor(self.ff2, self.delay2));
-        self.donmi = nor3(!self.brk7, *nmip_signal, last_source);
+        ned.nmip = *vblank_interrupt_handler.nmip();
+        ned.brk6e = *interrupt_cycle_detector.brk6e_signal(*ready);
+        ned.delay2 = !ned.delay1;
+
+        let last_source = nor(ned.nmip, nor(ned.ff2, ned.delay2));
+        ned.donmi = nor3(!ned.brk7, ned.nmip, last_source);
     }
 
-    pub fn step_phi2(&mut self, cycle_detector: &InterruptCycleDetector, brk5_signal: ActiveHigh, ready_signal: ActiveLow) {
-        self.brk7 = cycle_detector.brk7_signal(brk5_signal, ready_signal);
+    pub fn step_phi2(bus: &mut Bus) {
+        let Cpu { nmi_edge_detector: ned, interrupt_cycle_detector, ready, step, ..} = &mut bus.cpu;
 
-        let donmi_low = self.donmi_signal();
-        self.ff1 = donmi_low;
-        self.delay1 = donmi_low;
+        ned.brk7 = interrupt_cycle_detector.brk7_signal(step.brk5(), *ready);
 
-        self.ff2 = nor(self.nmip, nor(self.ff2, self.delay2));
+        let donmi_low = ned.donmi_signal();
+        ned.ff1 = donmi_low;
+        ned.delay1 = donmi_low;
+
+        ned.ff2 = nor(ned.nmip, nor(ned.ff2, ned.delay2));
     }
 }
