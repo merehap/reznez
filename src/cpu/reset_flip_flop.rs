@@ -20,36 +20,18 @@ impl ResetFlipFlop {
         (self.res_1.q() | self.res_2.q()).into()
     }
 
-    pub fn update(&mut self, ResetInputs { resp, phi2, brk6e }: ResetInputs) {
-        self.res_1.update(DLInputs {
-            e: *phi2,
-            d: *resp,
+    pub fn update(bus: &mut Bus) {
+        let Cpu { reset_flip_flop: rff, interrupt_cycle_detector, rst_latch, phi2, ready, ..} = &mut bus.cpu;
+
+        rff.res_1.update(DLInputs {
+            e: **phi2,
+            d: *rst_latch.resp(),
         });
 
-        let not_dores = nor(self.res_1.q(), self.res_2.q());
-        self.res_2.update(DLInputs {
-            e: !*phi2,
-            d: nor(not_dores, *brk6e),
+        let not_dores = nor(rff.res_1.q(), rff.res_2.q());
+        rff.res_2.update(DLInputs {
+            e: !**phi2,
+            d: nor(not_dores, *interrupt_cycle_detector.brk6e_signal(*ready)),
         });
-    }
-}
-
-pub struct ResetInputs {
-    resp: ActiveHigh,
-    phi2: ActiveHigh,
-    brk6e: ActiveHigh,
-}
-
-impl ResetInputs {
-    pub fn new(Bus { cpu, ..}: &Bus) -> Self {
-        Self::from_components(cpu)
-    }
-
-    pub fn from_components(cpu: &Cpu) -> Self {
-        Self {
-            resp: cpu.rst_latch.resp(),
-            phi2: cpu.phi2,
-            brk6e: cpu.interrupt_cycle_detector.brk6e_signal(cpu.ready),
-        }
     }
 }

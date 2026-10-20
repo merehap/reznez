@@ -8,8 +8,8 @@ use crate::cpu::cpu_mode::{CpuModeState, InterruptType};
 use crate::cpu::dmc_dma::DmcDmaAction;
 use crate::cpu::interrupt_cycle_detector::InterruptCycleDetector;
 use crate::cpu::nmi_edge_detector::NmiEdgeDetector;
-use crate::cpu::rst_latch::{RstInputs, RstLatch};
-use crate::cpu::reset_flip_flop::{ResetFlipFlop, ResetInputs};
+use crate::cpu::rst_latch::RstLatch;
+use crate::cpu::reset_flip_flop::ResetFlipFlop;
 use crate::cpu::step_action::{StepAction, From, To, Field};
 use crate::cpu::instruction::{Instruction, AccessMode, OpCode};
 use crate::cpu::oam_dma::OamDmaAction;
@@ -21,7 +21,7 @@ use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::bus::{AddressBusType, Bus, IRQ_VECTOR_HIGH, IRQ_VECTOR_LOW, NMI_VECTOR_HIGH, NMI_VECTOR_LOW, RESET_VECTOR_HIGH, RESET_VECTOR_LOW};
 use crate::memory::cpu::cpu_pinout::{CpuPinout, ReadWrite};
 use crate::memory::signal_level::{ActiveHigh, ActiveLow, SignalLevel};
-use crate::ppu::ppu::Ppu;
+use crate::ppu::vblank_interrupt_handler::VBlankInterruptHandler;
 
 pub struct Cpu {
     // Accumulator
@@ -173,8 +173,8 @@ impl Cpu {
     }
 
     pub fn step_m2_rise(bus: &mut Bus, mapper: &mut dyn Mapper) {
-        bus.cpu.rst_latch.update(RstInputs::new(bus));
-        bus.cpu.reset_flip_flop.update(ResetInputs::new(bus));
+        RstLatch::update(bus);
+        ResetFlipFlop::update(bus);
 
         if bus.cpu_pinout.reset.is_active() {
             // The CPU doesn't do anything while the RESET button is held down.
@@ -214,9 +214,9 @@ impl Cpu {
         } else {
             ActiveLow::Inactive
         };
-        bus.cpu.interrupt_cycle_detector.step_phi1(bus.cpu.ready);
+        InterruptCycleDetector::step_phi1(bus);
         // TODO Add NMI detector update here too.
-        bus.cpu.reset_flip_flop.update(ResetInputs::new(bus));
+        ResetFlipFlop::update(bus);
 
         // FIXME: This placement is wrong. It should be earlier: during the ReadWrite step.
         bus.cpu_pinout.read_write = if bus.cpu.step.is_read() {
@@ -225,8 +225,7 @@ impl Cpu {
             ReadWrite::Write
         };
         bus.ppu_pinout.read_write = bus.cpu_pinout.read_write;
-        let input_signals = Ppu::vblank_interrupt_input_signals(bus);
-        bus.ppu.vblank_interrupt_handler.update(&mut bus.cpu_pinout, input_signals);
+        VBlankInterruptHandler::update(bus);
 
         let current_address_bus_type = bus.cpu.step.address_bus_type();
         let address = bus.cpu.lookup_step_address(bus, bus.cpu.step);
@@ -251,21 +250,20 @@ impl Cpu {
             SignalLevel::High
         };
 
-        let input_signals = Ppu::vblank_interrupt_input_signals(bus);
-        bus.ppu.vblank_interrupt_handler.update(&mut bus.cpu_pinout, input_signals);
+        VBlankInterruptHandler::update(bus);
     }
 
     pub fn step_phi2_rise(bus: &mut Bus) {
         bus.cpu.phi2 = ActiveHigh::Active;
 
         bus.cpu.interrupt_cycle_detector.step_phi2(bus.cpu.step.brk5(), bus.cpu.ready);
-        bus.cpu.rst_latch.update(RstInputs::new(bus));
+        RstLatch::update(bus);
         if bus.cpu.just_powered_on {
             bus.cpu.just_powered_on = false;
             bus.cpu_pinout.reset = ActiveLow::Inactive;
         }
 
-        bus.cpu.reset_flip_flop.update(ResetInputs::new(bus));
+        ResetFlipFlop::update(bus);
         NmiEdgeDetector::step_phi2(bus);
     }
 
@@ -348,13 +346,12 @@ impl Cpu {
     pub fn step_m2_falling(bus: &mut Bus, mapper: &mut dyn Mapper) {
         bus.cpu.phi2 = ActiveHigh::Inactive;
         bus.ppu_pinout.data_bus_enabled = SignalLevel::High;
-        let input_signals = Ppu::vblank_interrupt_input_signals(bus);
-        bus.ppu.vblank_interrupt_handler.update(&mut bus.cpu_pinout, input_signals);
+        VBlankInterruptHandler::update(bus);
 
-        bus.cpu.interrupt_cycle_detector.step_phi1(bus.cpu.ready);
+        InterruptCycleDetector::step_phi1(bus);
 
-        bus.cpu.rst_latch.update(RstInputs::new(bus));
-        bus.cpu.reset_flip_flop.update(ResetInputs::new(bus));
+        RstLatch::update(bus);
+        ResetFlipFlop::update(bus);
         NmiEdgeDetector::step_phi1(bus);
 
         bus.cpu.nmi_falling_edge_detected = bus.cpu.nmi_edge_detector.donmi_signal().is_low();

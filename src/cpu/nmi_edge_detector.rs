@@ -1,6 +1,6 @@
 use crate::bus::Bus;
 use crate::cpu::cpu::Cpu;
-use crate::memory::signal_level::{SignalLevel, nor, nor3};
+use crate::memory::signal_level::{ActiveLow, SignalLevel, nor, nor3};
 use crate::ppu::ppu::Ppu;
 
 // Questions:
@@ -33,8 +33,8 @@ impl NmiEdgeDetector {
         }
     }
 
-    pub fn donmi_signal(self) -> SignalLevel {
-        nor(self.donmi, nor(self.ff1, self.brk6e))
+    pub fn donmi_signal(self) -> ActiveLow {
+        nor(self.donmi, nor(self.ff1, self.brk6e)).into()
     }
 
     pub fn step_phi1(bus: &mut Bus) {
@@ -54,9 +54,9 @@ impl NmiEdgeDetector {
 
         ned.brk7 = interrupt_cycle_detector.brk7_signal(step.brk5(), *ready);
 
-        let donmi_low = ned.donmi_signal();
-        ned.ff1 = donmi_low;
-        ned.delay1 = donmi_low;
+        let donmi = *ned.donmi_signal();
+        ned.ff1 = donmi;
+        ned.delay1 = donmi;
 
         ned.ff2 = nor(ned.nmip, nor(ned.ff2, ned.delay2));
     }

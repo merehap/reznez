@@ -34,6 +34,7 @@ use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::ppu::Ppu;
 use crate::ppu::register::ppu_registers::{PpuRegisters, WriteToggle};
 use crate::memory::regions::oam::Oam;
+use crate::ppu::vblank_interrupt_handler::VBlankInterruptHandler;
 use crate::signals::{ScanlineType, Signals};
 use crate::util::unit::KIBIBYTE;
 
@@ -195,8 +196,7 @@ impl Bus {
             _ => unreachable!()
         };
 
-        let input_signals = Ppu::vblank_interrupt_input_signals(self);
-        self.ppu.vblank_interrupt_handler.update(&mut self.cpu_pinout, input_signals);
+        VBlankInterruptHandler::update(self);
     }
 
     pub fn set_name_table_mirroring(&mut self, mirroring_index: u8) {

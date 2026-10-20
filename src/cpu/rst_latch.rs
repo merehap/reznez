@@ -1,6 +1,7 @@
 use crate::bus::Bus;
 use crate::circuit::d_latch::{DLInputs, DLatch};
-use crate::memory::signal_level::{ActiveHigh, ActiveLow, SignalLevel};
+use crate::cpu::cpu::Cpu;
+use crate::memory::signal_level::{ActiveHigh, SignalLevel};
 
 pub struct RstLatch {
     rst_1: DLatch,
@@ -19,29 +20,16 @@ impl RstLatch {
         self.rst_2.q().into()
     }
 
-    pub fn update(&mut self, RstInputs { rst: res, phi2 }: RstInputs) {
-        self.rst_1.update(DLInputs {
-            e: *phi2,
-            d: !*res,
+    pub fn update(Bus { cpu, cpu_pinout, .. }: &mut Bus) {
+        let Cpu { rst_latch, phi2, .. } = cpu;
+        rst_latch.rst_1.update(DLInputs {
+            e: **phi2,
+            d: !*cpu_pinout.reset,
         });
 
-        self.rst_2.update(DLInputs {
-            e: *phi2,
-            d: self.rst_1.q(),
+        rst_latch.rst_2.update(DLInputs {
+            e: **phi2,
+            d: rst_latch.rst_1.q(),
         });
-    }
-}
-
-pub struct RstInputs {
-    rst: ActiveLow,
-    phi2: ActiveHigh,
-}
-
-impl RstInputs {
-    pub fn new(Bus { cpu, cpu_pinout, ..}: &Bus) -> Self {
-        Self {
-            rst: cpu_pinout.reset,
-            phi2: cpu.phi2,
-        }
     }
 }

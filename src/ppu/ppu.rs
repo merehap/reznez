@@ -3,7 +3,6 @@ use log::Level::Info;
 use splitbits::splitbits;
 use ux::u5;
 
-use crate::cpu::cpu::Cpu;
 use crate::mapper::mapper::Mapper;
 use crate::bus::Bus;
 use crate::master_clock::MasterClock;
@@ -11,7 +10,6 @@ use crate::memory::cpu::cpu_address::FriendlyCpuAddress;
 use crate::memory::cpu::cpu_pinout::ReadWrite;
 use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
 use crate::memory::ppu::ppu_address::PpuAddress;
-use crate::memory::ppu::ppu_pinout::PpuPinout;
 use crate::memory::regions::secondary_oam::{SecondaryOam, SpriteField};
 use crate::memory::signal_level::SignalLevel;
 use crate::ppu::cycle_action::cycle_action::CycleAction;
@@ -33,7 +31,7 @@ use crate::ppu::sprite::oam_registers::OamRegisters;
 use crate::ppu::sprite::sprite_y::SpriteY;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
 use crate::ppu::tile_number::TileNumber;
-use crate::ppu::vblank_interrupt_handler::{VBlankInterruptHandler, VbihInputs};
+use crate::ppu::vblank_interrupt_handler::VBlankInterruptHandler;
 use crate::signals::{ScanlineType, SpriteRenderingDotType};
 
 use super::palette::bank_color_assigner::BankColorAssigner;
@@ -61,8 +59,8 @@ pub struct Ppu {
 
     next_fetch_cadence_addr: PpuAddress,
 
-    start_vblank: SignalLevel, // Active low
-    end_vblank: SignalLevel, // Active high
+    pub start_vblank: SignalLevel, // Active low
+    pub end_vblank: SignalLevel, // Active high
     pub vblank_interrupt_handler: VBlankInterruptHandler,
     //pub dummy_cpu_pinout: CpuPinout,
 
@@ -139,8 +137,6 @@ impl Ppu {
         let friendly_cpu_addr = bus.cpu_address_bus().to_friendly();
         let read_write = bus.cpu_pinout.read_write;
 
-        let ppu_regs = &mut bus.ppu_regs;
-
         use ReadWrite::*;
         use FriendlyCpuAddress::*;
         match (read_write, friendly_cpu_addr) {
@@ -151,12 +147,11 @@ impl Ppu {
             (Read, _) => { /* Do nothing. */ }
 
             (Write, PpuControl) => {
-                let fields = splitbits!(ppu_regs.ppu_io_bus.value(), "nehb siqq");
-                ppu_regs.set_nmi_enabled(&mut bus.cpu_pinout, fields.n);
-                let input_signals = bus.ppu.vblank_interrupt_input_signals_from_components(&mut bus.ppu_pinout, ppu_regs, &bus.cpu);
-                //log::info!("Updating from PPUCTRL write");
-                bus.ppu.vblank_interrupt_handler.update(&mut bus.cpu_pinout, input_signals);
+                let fields = splitbits!(bus.ppu_regs.ppu_io_bus.value(), "nehb siqq");
+                bus.ppu_regs.set_nmi_enabled(&mut bus.cpu_pinout, fields.n);
+                VBlankInterruptHandler::update(bus);
 
+                let ppu_regs = &mut bus.ppu_regs;
                 ppu_regs.ext_pin_role              = [ExtPinRole::Read       , ExtPinRole::Write      ][fields.e as usize];
                 ppu_regs.sprite_height             = [SpriteHeight::Normal   , SpriteHeight::Tall     ][fields.h as usize];
                 ppu_regs.background_table_side     = [PatternTableSide::Left , PatternTableSide::Right][fields.b as usize];
@@ -188,8 +183,7 @@ impl Ppu {
             bus.ppu.end_vblank = SignalLevel::High;
         }
 
-        let input_signals = Ppu::vblank_interrupt_input_signals(bus);
-        bus.ppu.vblank_interrupt_handler.update(&mut bus.cpu_pinout, input_signals);
+        VBlankInterruptHandler::update(bus);
 
         let tick_result = bus.ppu_regs.tick(&mut bus.signals, bus.master_clock.ppu_clock());
         if tick_result.rendering_toggled == Some(Toggle::Disable) {
@@ -246,28 +240,28 @@ impl Ppu {
         }
 
         if bus.ppu_pinout.r2_enabled().is_high() {
-            let input_signals = Ppu::vblank_interrupt_input_signals(bus);
-            bus.ppu.vblank_interrupt_handler.update(&mut bus.cpu_pinout, input_signals);
+            VBlankInterruptHandler::update(bus);
             bus.ppu_regs.set_vblank_active(&mut bus.cpu_pinout, false);
         }
 
         mapper.on_end_of_ppu_cycle();
     }
 
-    pub fn step_pclk_low(Bus { ppu, ppu_regs, ppu_pinout, cpu, cpu_pinout, master_clock, signals, secondary_oam, oam_buffer, secondary_oam_buffer, .. }: &mut Bus) {
-        ppu_pinout.pclk = SignalLevel::Low;
-        signals.start_pclk_low(ppu_pinout);
+    pub fn step_pclk_low(bus: &mut Bus) {
+        bus.ppu_pinout.pclk = SignalLevel::Low;
+        bus.signals.start_pclk_low(&mut bus.ppu_pinout);
 
-        if ppu.start_vblank.is_low() {
-            ppu.start_vblank = SignalLevel::High;
+        if bus.ppu.start_vblank.is_low() {
+            bus.ppu.start_vblank = SignalLevel::High;
         }
 
-        if master_clock.ppu_clock().scanline() == 241 && master_clock.ppu_clock().cycle() == 1 {
-            ppu.start_vblank = SignalLevel::Low;
+        if bus.master_clock.ppu_clock().scanline() == 241 && bus.master_clock.ppu_clock().cycle() == 1 {
+            bus.ppu.start_vblank = SignalLevel::Low;
         }
 
-        let input_signals = ppu.vblank_interrupt_input_signals_from_components(ppu_pinout, ppu_regs, cpu);
-        ppu.vblank_interrupt_handler.update(cpu_pinout, input_signals);
+        VBlankInterruptHandler::update(bus);
+
+        let Bus { ppu, ppu_regs, master_clock, signals, secondary_oam, oam_buffer, secondary_oam_buffer, .. } = bus;
 
         if ppu_regs.background_enabled() || ppu_regs.sprites_enabled() {
             if signals.scanline_type() == ScanlineType::Visible {
@@ -753,23 +747,6 @@ impl Ppu {
                 // TODO: Determine the correct place to call this.
                 ciram.enable_writes();
             }
-        }
-    }
-
-    pub fn vblank_interrupt_input_signals(bus: &Bus) -> VbihInputs {
-        bus.ppu.vblank_interrupt_input_signals_from_components(&bus.ppu_pinout, &bus.ppu_regs, &bus.cpu)
-    }
-
-    pub fn vblank_interrupt_input_signals_from_components(&self, ppu_pinout: &PpuPinout, ppu_regs: &PpuRegisters, cpu: &Cpu) -> VbihInputs {
-        VbihInputs {
-            pclk: ppu_pinout.pclk,
-            vset: self.start_vblank,
-            vbl: if ppu_regs.nmi_enabled() { SignalLevel::High } else { SignalLevel::Low },
-            vclr: self.end_vblank,
-            r2: ppu_pinout.r2(),
-            dbe: ppu_pinout.data_bus_enabled,
-
-            phi2: cpu.phi2,
         }
     }
 

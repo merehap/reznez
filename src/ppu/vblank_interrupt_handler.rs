@@ -1,9 +1,11 @@
 use splitbits::replacebits;
 
+use crate::bus::Bus;
 use crate::circuit::d_latch::{DLInputs, DLatch};
 use crate::circuit::sr_latch::{SRInputs, SRLatch};
-use crate::memory::cpu::cpu_pinout::CpuPinout;
-use crate::memory::signal_level::{ActiveHigh, ActiveLow, SignalLevel, nor, nor3};
+use crate::memory::ppu::ppu_pinout::PpuPinout;
+use crate::memory::signal_level::{ActiveLow, SignalLevel, nor, nor3};
+use crate::ppu::ppu::Ppu;
 
 // Reference: https://github.com/emu-russia/breaks/blob/master/BreakingNESWiki_DeepL/PPU/fsm.md#vblank-interrupt-handling
 pub struct VBlankInterruptHandler {
@@ -33,53 +35,47 @@ impl VBlankInterruptHandler {
         self.nmip.q().into()
     }
 
-    pub fn update(&mut self, cpu_pinout: &mut CpuPinout, VbihInputs { pclk, vset, vbl, vclr, r2, dbe, phi2 }: VbihInputs) {
-        self.vset_1.update(DLInputs {
-            e: pclk,
-            d: vset,
-        });
-        self.vset_2.update(DLInputs {
-            e: !pclk,
-            d: self.vset_1.nq(),
-        });
-        let set = nor3(!pclk, vset, self.vset_2.q());
+    pub fn update(Bus { ppu_pinout, ppu_regs, ppu, cpu_pinout, cpu, ..}: &mut Bus) {
+        let r2 = ppu_pinout.r2();
+        let Ppu { vblank_interrupt_handler: vih, start_vblank: vset, end_vblank: vclr, .. } = ppu;
+        let PpuPinout { pclk, data_bus_enabled: dbe, .. } = ppu_pinout;
+        let vbl = if ppu_regs.nmi_enabled() { SignalLevel::High } else { SignalLevel::Low };
+        let phi2 = *cpu.phi2;
 
-        let read_enabled = nor(r2, dbe);
-        let reset = vclr | read_enabled;
+        vih.vset_1.update(DLInputs {
+            e: *pclk,
+            d: *vset,
+        });
+        vih.vset_2.update(DLInputs {
+            e: !*pclk,
+            d: vih.vset_1.nq(),
+        });
+        let set = nor3(!*pclk, *vset, vih.vset_2.q());
 
-        self.int_ff.update(SRInputs {
+        let read_enabled = nor(r2, *dbe);
+        let reset = *vclr | read_enabled;
+
+        vih.int_ff.update(SRInputs {
             s: set,
             r: reset,
         });
 
-        let int = nor(!vbl, !self.int_ff.q());
+        let int = nor(!vbl, !vih.int_ff.q());
         cpu_pinout.nmi = !int;
-        self.nmip.update(DLInputs {
-            e: *phi2,
+        vih.nmip.update(DLInputs {
+            e: phi2,
             d: cpu_pinout.nmi,
         });
 
-        self.db.update(DLInputs {
+        vih.db.update(DLInputs {
             e: !read_enabled,
-            d: !self.int_ff.q(),
+            d: !vih.int_ff.q(),
         });
 
         if read_enabled.is_high() {
             // "DB7_Out" on the diagram. Set the top bit of the CPU data bus.
-            let v = self.db.nq().is_high();
+            let v = vih.db.nq().is_high();
             cpu_pinout.data_bus = replacebits!(cpu_pinout.data_bus, "v... ....");
         }
     }
-}
-
-pub struct VbihInputs {
-    pub pclk: SignalLevel,
-    pub vset: SignalLevel,
-    pub vbl: SignalLevel,
-    pub vclr: SignalLevel,
-    pub r2: SignalLevel,
-    pub dbe: SignalLevel,
-
-    // Added here because it's being use for the separate circuit nmip circuit.
-    pub phi2: ActiveHigh,
 }
