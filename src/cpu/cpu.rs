@@ -43,14 +43,17 @@ pub struct Cpu {
 
     // The initial button power-on button press is very short so not CPU cycles are wasted for counting purposes.
     just_powered_on: bool,
-    pub phi2: ActiveHigh,
-    // High when a DMA is running, low during normal CPU operation.
-    pub ready: ActiveLow,
+
+    // CPU-internal signals (TODO: make these pub-in-this-directory)
+    pub phi2: ActiveHigh, // Internal clock with a 50/50 duty cycle (M2 is a modified form of it)
+    pub ready: ActiveLow, // High when a DMA is running, low during normal CPU operation.
+
+    // CPU circuits (TODO: make these most of these pub-in-this-directory)
     pub interrupt_cycle_detector: InterruptCycleDetector,
     pub rst_latch: RstLatch,
     pub reset_flip_flop: ResetFlipFlop,
-
     pub nmi_edge_detector: NmiEdgeDetector,
+
     nmi_falling_edge_detected: bool,
     nmi_pending: bool,
     irq_status: IrqStatus,
@@ -174,7 +177,6 @@ impl Cpu {
 
     pub fn step_m2_rise(bus: &mut Bus, mapper: &mut dyn Mapper) {
         RstLatch::update(bus);
-        ResetFlipFlop::update(bus);
 
         if bus.cpu_pinout.reset.is_active() {
             // The CPU doesn't do anything while the RESET button is held down.
@@ -351,7 +353,6 @@ impl Cpu {
         InterruptCycleDetector::step_phi1(bus);
 
         RstLatch::update(bus);
-        ResetFlipFlop::update(bus);
         NmiEdgeDetector::step_phi1(bus);
 
         bus.cpu.nmi_falling_edge_detected = bus.cpu.nmi_edge_detector.donmi_signal().is_low();

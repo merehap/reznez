@@ -22,7 +22,6 @@ use crate::cpu::cpu::{Cpu, IrqStatus};
 use crate::cpu::cpu_mode::CpuMode;
 use crate::cpu::dmc_dma::{DmcDmaAction, DmcDmaState};
 use crate::cpu::oam_dma::{OamDmaAction, OamDmaState};
-use crate::cpu::reset_flip_flop::ResetFlipFlop;
 use crate::cpu::rst_latch::RstLatch;
 use crate::cpu::step::Step;
 use crate::gui::gui::Events;
@@ -215,7 +214,6 @@ impl Nes {
     pub fn set_reset_signal(&mut self) {
         self.bus.cpu_pinout.reset = ActiveLow::Active;
         RstLatch::update(&mut self.bus);
-        ResetFlipFlop::update(&mut self.bus);
     }
 
     pub fn step_frame(&mut self, frame: &mut Frame) {
@@ -234,9 +232,7 @@ impl Nes {
                 // Release the RESET button on the console after some time has passed,
                 // allowing the PPU to run while the RESET button was still held down.
                 self.bus.cpu_pinout.reset = ActiveLow::Inactive;
-                //log::info!("Update from reset inactive");)
                 RstLatch::update(&mut self.bus);
-                ResetFlipFlop::update(&mut self.bus);
 
                 if self.bus.cpu.mode_state().is_jammed() {
                     info!("CPU is jammed!");

@@ -21,7 +21,7 @@ impl ResetFlipFlop {
     }
 
     pub fn update(bus: &mut Bus) {
-        let Cpu { reset_flip_flop: rff, interrupt_cycle_detector, rst_latch, phi2, ready, ..} = &mut bus.cpu;
+        let Cpu { reset_flip_flop: rff, interrupt_cycle_detector, rst_latch, phi2, ready, .. } = &mut bus.cpu;
 
         rff.res_1.update(DLInputs {
             e: **phi2,
