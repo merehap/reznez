@@ -8,6 +8,7 @@ use crate::cpu::cpu_mode::{CpuModeState, InterruptType};
 use crate::cpu::dmc_dma::DmcDmaAction;
 use crate::cpu::interrupt_cycle_detector::InterruptCycleDetector;
 use crate::cpu::nmi_edge_detector::NmiEdgeDetector;
+use crate::cpu::nmi_latch::NmiLatch;
 use crate::cpu::rst_latch::RstLatch;
 use crate::cpu::reset_flip_flop::ResetFlipFlop;
 use crate::cpu::step_action::{StepAction, From, To, Field};
@@ -55,6 +56,7 @@ pub struct Cpu {
     pub interrupt_cycle_detector: InterruptCycleDetector,
     pub rst_latch: RstLatch,
     pub reset_flip_flop: ResetFlipFlop,
+    pub nmi_latch: NmiLatch, // TODO: No test ROMs exist for the nmip half-cycle delay.
     pub nmi_edge_detector: NmiEdgeDetector,
 
     nmi_falling_edge_detected: bool,
@@ -106,6 +108,7 @@ impl Cpu {
             rst_latch: RstLatch::new(),
             reset_flip_flop: ResetFlipFlop::new(),
 
+            nmi_latch: NmiLatch::new(),
             nmi_edge_detector: NmiEdgeDetector::new(),
             nmi_falling_edge_detected: false,
             nmi_pending: false,

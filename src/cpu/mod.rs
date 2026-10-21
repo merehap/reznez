@@ -6,6 +6,7 @@ pub mod reset_flip_flop;
 pub mod instruction;
 pub mod interrupt_cycle_detector;
 pub mod nmi_edge_detector;
+pub mod nmi_latch;
 pub mod oam_dma;
 pub mod status;
 pub mod step;

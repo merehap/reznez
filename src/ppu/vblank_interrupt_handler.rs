@@ -4,7 +4,7 @@ use crate::bus::Bus;
 use crate::circuit::d_latch::{DLInputs, DLatch};
 use crate::circuit::sr_latch::{SRInputs, SRLatch};
 use crate::memory::cpu::cpu_pinout::CpuPinout;
-use crate::memory::signal_level::{ActiveLow, SignalLevel, nor, nor3};
+use crate::memory::signal_level::{SignalLevel, nor, nor3};
 use crate::ppu::ppu::Ppu;
 
 // Reference: https://github.com/emu-russia/breaks/blob/master/BreakingNESWiki_DeepL/PPU/fsm.md#vblank-interrupt-handling
@@ -13,10 +13,6 @@ pub struct VBlankInterruptHandler {
     vset_2: DLatch,
     db: DLatch,
     int_ff: SRLatch,
-
-    // Added here for convenience. Should maybe be split off.
-    // TODO: No test ROMs exist for the nmip half-cycle delay.
-    nmip: DLatch,
 }
 
 impl VBlankInterruptHandler {
@@ -26,27 +22,15 @@ impl VBlankInterruptHandler {
             vset_2: DLatch::new(SignalLevel::Low),
             db: DLatch::new(SignalLevel::High),
             int_ff: SRLatch::new(SignalLevel::Low),
-
-            nmip: DLatch::new(SignalLevel::High),
         }
-    }
-
-    pub fn nmip(&self) -> ActiveLow {
-        self.nmip.q().into()
     }
 
     pub fn update(bus: &mut Bus) {
         Self::update_latches(bus);
 
-        let phi2 = *bus.cpu.phi2;
         let vbl = if bus.ppu_regs.nmi_enabled() { SignalLevel::High } else { SignalLevel::Low };
         let int = nor(!vbl, !bus.ppu.vblank_interrupt_handler.int_ff.q());
         CpuPinout::set_nmi(bus, (!int).into());
-        bus.ppu.vblank_interrupt_handler.nmip.update(DLInputs {
-            e: phi2,
-            d: *bus.cpu_pinout.nmi(),
-        });
-
     }
 
     fn update_latches(Bus { ppu_pinout, ppu, cpu_pinout, ..}: &mut Bus) {

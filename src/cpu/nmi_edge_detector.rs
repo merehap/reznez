@@ -1,7 +1,6 @@
 use crate::bus::Bus;
 use crate::cpu::cpu::Cpu;
 use crate::memory::signal_level::{ActiveLow, SignalLevel, nor, nor3};
-use crate::ppu::ppu::Ppu;
 
 // Questions:
 // * Should this all be processed right on the clock transition?
@@ -48,10 +47,9 @@ impl NmiEdgeDetector {
 
             ned.ff2 = nor(ned.nmip, nor(ned.ff2, ned.delay2));
         } else {
-            let Cpu { nmi_edge_detector: ned, brk6e, ..} = &mut bus.cpu;
-            let Ppu { vblank_interrupt_handler, ..} = &mut bus.ppu;
+            let Cpu { nmi_edge_detector: ned, nmi_latch, brk6e, ..} = &mut bus.cpu;
 
-            ned.nmip = *vblank_interrupt_handler.nmip();
+            ned.nmip = *nmi_latch.nmip();
             ned.brk6e = **brk6e;
             ned.delay2 = !ned.delay1;
 

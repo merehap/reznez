@@ -1,4 +1,5 @@
 use crate::bus::Bus;
+use crate::cpu::nmi_latch::NmiLatch;
 use crate::cpu::rst_latch::RstLatch;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::signal_level::ActiveLow;
@@ -61,6 +62,7 @@ impl CpuPinout {
 
     pub fn set_nmi(bus: &mut Bus, value: ActiveLow) {
         bus.cpu_pinout.nmi = value;
+        NmiLatch::update(bus);
     }
 
     pub fn read_write(&self) -> ReadWrite {
