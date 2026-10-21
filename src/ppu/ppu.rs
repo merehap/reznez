@@ -148,8 +148,7 @@ impl Ppu {
 
             (Write, PpuControl) => {
                 let fields = splitbits!(bus.ppu_regs.ppu_io_bus.value(), "nehb siqq");
-                bus.ppu_regs.set_nmi_enabled(&mut bus.cpu_pinout, fields.n);
-                VBlankInterruptHandler::update(bus);
+                PpuRegisters::set_nmi_enabled(bus, fields.n);
 
                 let ppu_regs = &mut bus.ppu_regs;
                 ppu_regs.ext_pin_role              = [ExtPinRole::Read       , ExtPinRole::Write      ][fields.e as usize];
@@ -241,7 +240,6 @@ impl Ppu {
 
         if bus.ppu_pinout.r2_enabled().is_high() {
             VBlankInterruptHandler::update(bus);
-            bus.ppu_regs.set_vblank_active(&mut bus.cpu_pinout, false);
         }
 
         mapper.on_end_of_ppu_cycle();
@@ -323,7 +321,7 @@ impl Ppu {
     }
 
     fn execute_cycle_action(
-        Bus { ppu, ppu_regs, ppu_pinout, cpu_pinout, master_clock, signals, palette_ram, ciram, oam,
+        Bus { ppu, ppu_regs, ppu_pinout, master_clock, signals, palette_ram, ciram, oam,
             secondary_oam, secondary_oam_buffer, composite_decoders, .. }: &mut Bus,
         frame: &mut Frame,
         cycle_action: CycleAction
@@ -719,9 +717,6 @@ impl Ppu {
             }
 
             StartVblank => {
-                ppu_regs.set_vblank_active(cpu_pinout, true);
-                // start_vblank is set during PCLK low. This is PCLK high.
-
                 // "During VBlank ... the value on the PPU address bus is the current value of the v register."
                 ppu.next_fetch_cadence_addr = ppu_regs.current_address;
             }
@@ -738,7 +733,6 @@ impl Ppu {
             }
 
             ClearFlags => {
-                ppu_regs.set_vblank_active(cpu_pinout, false);
                 ppu_regs.sprite0_hit = false;
                 ppu_regs.sprite_overflow = false;
                 // end_vblank is set during PCLK low. This is PCLK high.

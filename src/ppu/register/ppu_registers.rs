@@ -1,7 +1,7 @@
 use log::{Level, info, log_enabled};
 use splitbits::{splitbits, replacebits};
 
-use crate::memory::cpu::cpu_pinout::CpuPinout;
+use crate::bus::Bus;
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll};
 use crate::memory::read_result::ReadResult;
 use crate::memory::regions::palette_ram::PaletteRam;
@@ -13,6 +13,7 @@ use crate::ppu::register::ppu_io_bus::PpuIoBus;
 use crate::memory::regions::oam::Oam;
 use crate::ppu::sprite::oam_address::OamAddress;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
+use crate::ppu::vblank_interrupt_handler::VBlankInterruptHandler;
 use crate::signals::{ScanlineType, Signals};
 
 pub struct PpuRegisters {
@@ -115,25 +116,10 @@ impl PpuRegisters {
         self.vblank_active
     }
 
-    pub fn set_nmi_enabled(&mut self, _cpu_pinout: &mut CpuPinout, value: bool) {
-        self.nmi_enabled = value;
-        //cpu_pinout.nmi = self.nmi_signal_level();
+    pub fn set_nmi_enabled(bus: &mut Bus, value: bool) {
+        bus.ppu_regs.nmi_enabled = value;
+        VBlankInterruptHandler::update(bus);
     }
-
-    pub fn set_vblank_active(&mut self, _cpu_pinout: &mut CpuPinout, _value: bool) {
-        //self.vblank_active = value;
-        //cpu_pinout.nmi = self.nmi_signal_level();
-    }
-
-    /*
-    fn nmi_signal_level(&self) -> SignalLevel {
-        if self.nmi_enabled && self.vblank_active {
-            SignalLevel::Low
-        } else {
-            SignalLevel::High
-        }
-    }
-    */
 
     // PPUCTRL sub-registers
     //pub fn nmi_enabled(&self) -> bool { self.nmi_enabled }
