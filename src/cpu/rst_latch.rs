@@ -29,7 +29,7 @@ impl RstLatch {
     fn update_latches(&mut self, cpu_pinout: &mut CpuPinout, phi2: ActiveHigh) {
         self.rst_1.update(DLInputs {
             e: *phi2,
-            d: !*cpu_pinout.reset,
+            d: !*cpu_pinout.reset(),
         });
 
         self.rst_2.update(DLInputs {

@@ -176,7 +176,7 @@ impl Cpu {
     }
 
     pub fn step_m2_rise(bus: &mut Bus, mapper: &mut dyn Mapper) {
-        if bus.cpu_pinout.reset.is_active() {
+        if bus.cpu_pinout.reset().is_active() {
             // The CPU doesn't do anything while the RESET button is held down.
             return;
         }
@@ -260,7 +260,7 @@ impl Cpu {
         RstLatch::update(bus);
         if bus.cpu.just_powered_on {
             bus.cpu.just_powered_on = false;
-            bus.cpu_pinout.reset = ActiveLow::Inactive;
+            CpuPinout::set_reset(bus, ActiveLow::Inactive);
         }
 
         ResetFlipFlop::update(bus);
@@ -268,7 +268,7 @@ impl Cpu {
     }
 
     pub fn step_m2_middle_of_high(bus: &mut Bus, mapper: &mut dyn Mapper) -> Option<Step> {
-        if bus.cpu_pinout.reset.is_active() {
+        if bus.cpu_pinout.reset().is_active() {
             // The CPU doesn't do anything while the RESET button is held down.
             return None;
         }

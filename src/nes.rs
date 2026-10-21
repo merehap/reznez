@@ -30,6 +30,7 @@ use crate::logging::formatter::*;
 use crate::mapper::mapper::Mapper;
 use crate::mapper::mapper_list;
 use crate::master_clock::{M2Event, MasterClock};
+use crate::memory::cpu::cpu_pinout::CpuPinout;
 use crate::memory::raw_memory::RawData;
 use crate::memory::bank::bank_number::{BankNumber, ReadStatus, WriteStatus};
 use crate::bus::Bus;
@@ -212,13 +213,13 @@ impl Nes {
     }
 
     pub fn set_reset_signal(&mut self) {
-        self.bus.cpu_pinout.reset = ActiveLow::Active;
+        CpuPinout::set_reset(&mut self.bus, ActiveLow::Active);
         RstLatch::update(&mut self.bus);
     }
 
     pub fn step_frame(&mut self, frame: &mut Frame) {
         loop {
-            if self.bus.cpu_pinout.reset.is_active() {
+            if self.bus.cpu_pinout.reset().is_active() {
                 // Complete the CPU reset, if one is in progress and nearing completion.
                 self.bus.cpu.reset();
                 self.bus.apu_regs.reset(self.bus.master_clock.apu_clock(), &mut self.bus.cpu_pinout);
@@ -231,7 +232,7 @@ impl Nes {
             if step_result.is_last_cycle_of_frame {
                 // Release the RESET button on the console after some time has passed,
                 // allowing the PPU to run while the RESET button was still held down.
-                self.bus.cpu_pinout.reset = ActiveLow::Inactive;
+                CpuPinout::set_reset(&mut self.bus, ActiveLow::Inactive);
                 RstLatch::update(&mut self.bus);
 
                 if self.bus.cpu.mode_state().is_jammed() {
@@ -433,8 +434,8 @@ impl Nes {
             if latest.nmi_signal_detector.set_value_then_detect(self.bus.cpu_pinout.nmi) {
                 info!("NMI signal went {:?}.", self.bus.cpu_pinout.nmi);
             }
-            if latest.reset_signal_detector.set_value_then_detect(self.bus.cpu_pinout.reset) {
-                info!("RESET signal went {:?}.", self.bus.cpu_pinout.reset);
+            if latest.reset_signal_detector.set_value_then_detect(self.bus.cpu_pinout.reset()) {
+                info!("RESET signal went {:?}.", self.bus.cpu_pinout.reset());
             }
         }
 

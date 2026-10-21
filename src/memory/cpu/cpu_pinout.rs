@@ -1,3 +1,4 @@
+use crate::bus::Bus;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::signal_level::{ActiveLow, SignalLevel};
 
@@ -5,7 +6,7 @@ pub struct CpuPinout {
     // AD1 (Audio Pinout: Both pulse waves)
     // AD2 (Audio Pinout: Triangle, Noise, DPCM)
     // RST (CPU Reset). A reset is triggered when this signal rises.
-    pub reset: ActiveLow,
+    reset: ActiveLow,
     // Axx
     pub address_bus: CpuAddress,
     // GND (Ground)
@@ -41,6 +42,14 @@ impl CpuPinout {
             frame_irq_asserted: false,
             dmc_irq_asserted: false,
         }
+    }
+
+    pub fn reset(&self) -> ActiveLow {
+        self.reset
+    }
+
+    pub fn set_reset(bus: &mut Bus, value: ActiveLow) {
+        bus.cpu_pinout.reset = value;
     }
 
     pub fn irq_asserted(&self) -> bool {
