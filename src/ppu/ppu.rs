@@ -115,7 +115,7 @@ impl Ppu {
     pub fn ppusel(bus: &mut Bus) {
         use ReadWrite::*;
         use FriendlyCpuAddress::*;
-        match (bus.cpu_pinout.read_write, bus.cpu_address_bus().to_friendly()) {
+        match (bus.cpu_pinout.read_write(), bus.cpu_address_bus().to_friendly()) {
             (Read, PpuStatus) => { /* TODO */ }
             (Read, OamData) => { /* Nothing to do until the end of the read. */ }
             (Read, PpuData) => { /* TODO */ }
@@ -135,11 +135,10 @@ impl Ppu {
 
     pub fn cpu_data_bus_ready(bus: &mut Bus) {
         let friendly_cpu_addr = bus.cpu_address_bus().to_friendly();
-        let read_write = bus.cpu_pinout.read_write;
 
         use ReadWrite::*;
         use FriendlyCpuAddress::*;
-        match (read_write, friendly_cpu_addr) {
+        match (bus.cpu_pinout.read_write(), friendly_cpu_addr) {
             (Read, PpuStatus) => { /* TODO */ }
             (Read, OamData) => { /* Nothing to do until the end of the read. */ }
             (Read, PpuData) => { /* TODO */ }

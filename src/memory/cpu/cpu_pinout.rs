@@ -2,6 +2,7 @@ use crate::bus::Bus;
 use crate::cpu::rst_latch::RstLatch;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::signal_level::{ActiveLow, SignalLevel};
+use crate::ppu::vblank_interrupt_handler::VBlankInterruptHandler;
 
 pub struct CpuPinout {
     // AD1 (Audio Pinout: Both pulse waves)
@@ -20,7 +21,7 @@ pub struct CpuPinout {
     // NMI. Triggers when the signal goes low.
     pub nmi: SignalLevel,
     // R/W (Read/Write signal)
-    pub read_write: ReadWrite,
+    read_write: ReadWrite,
     // OE2 (Controller 2 enable)
     // OE1 (Controller 1 enable)
     // OUT0..OUT2 (Controller outputs)
@@ -52,6 +53,16 @@ impl CpuPinout {
     pub fn set_reset(bus: &mut Bus, value: ActiveLow) {
         bus.cpu_pinout.reset = value;
         RstLatch::update(bus); // Reset (RST) changed.
+    }
+
+    pub fn read_write(&self) -> ReadWrite {
+        self.read_write
+    }
+
+    pub fn set_read_write(bus: &mut Bus, value: ReadWrite) {
+        bus.cpu_pinout.read_write = value;
+        bus.ppu_pinout.read_write = value;
+        VBlankInterruptHandler::update(bus);
     }
 
     pub fn irq_asserted(&self) -> bool {

@@ -22,7 +22,6 @@ use crate::bus::{AddressBusType, Bus, IRQ_VECTOR_HIGH, IRQ_VECTOR_LOW, NMI_VECTO
 use crate::memory::cpu::cpu_pinout::{CpuPinout, ReadWrite};
 use crate::memory::ppu::ppu_pinout::PpuPinout;
 use crate::memory::signal_level::{ActiveHigh, ActiveLow};
-use crate::ppu::vblank_interrupt_handler::VBlankInterruptHandler;
 
 pub struct Cpu {
     // Accumulator
@@ -220,13 +219,12 @@ impl Cpu {
         Cpu::set_ready_and_brk5(bus);
 
         // FIXME: This placement is wrong. It should be earlier: during the ReadWrite step.
-        bus.cpu_pinout.read_write = if bus.cpu.step.is_read() {
+        let rw = if bus.cpu.step.is_read() {
             ReadWrite::Read
         } else {
             ReadWrite::Write
         };
-        bus.ppu_pinout.read_write = bus.cpu_pinout.read_write;
-        VBlankInterruptHandler::update(bus);
+        CpuPinout::set_read_write(bus, rw);
 
         let current_address_bus_type = bus.cpu.step.address_bus_type();
         let address = bus.cpu.lookup_step_address(bus, bus.cpu.step);
