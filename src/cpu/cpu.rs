@@ -47,6 +47,9 @@ pub struct Cpu {
     // CPU-internal signals (TODO: make these pub-in-this-directory)
     pub phi2: ActiveHigh, // Internal clock with a 50/50 duty cycle (M2 is a modified form of it)
     pub ready: ActiveLow, // High when a DMA is running, low during normal CPU operation.
+    pub brk5: ActiveHigh,
+    pub brk6e: ActiveHigh,
+    pub brk7: ActiveHigh,
 
     // CPU circuits (TODO: make these most of these pub-in-this-directory)
     pub interrupt_cycle_detector: InterruptCycleDetector,
@@ -95,6 +98,10 @@ impl Cpu {
             just_powered_on: true,
             phi2: ActiveHigh::Inactive,
             ready: ActiveLow::Active,
+            brk5: ActiveHigh::Inactive,
+            brk6e: ActiveHigh::Inactive,
+            brk7: ActiveHigh::Inactive,
+
             interrupt_cycle_detector: InterruptCycleDetector::new(),
             rst_latch: RstLatch::new(),
             reset_flip_flop: ResetFlipFlop::new(),
@@ -209,14 +216,7 @@ impl Cpu {
             OamDmaAction::Write => OAM_WRITE_STEP,
         };
 
-        bus.cpu.ready = if bus.dmc_dma.latest_action() == DmcDmaAction::DoNothing && bus.oam_dma.latest_action() == OamDmaAction::DoNothing {
-            ActiveLow::Active
-        } else {
-            ActiveLow::Inactive
-        };
-        InterruptCycleDetector::update(bus);
-        // TODO Add NMI detector update here too.
-        ResetFlipFlop::update(bus);
+        Cpu::set_ready_and_brk5(bus);
 
         // FIXME: This placement is wrong. It should be earlier: during the ReadWrite step.
         bus.cpu_pinout.read_write = if bus.cpu.step.is_read() {
@@ -256,9 +256,9 @@ impl Cpu {
     pub fn step_phi2_rise(bus: &mut Bus) {
         bus.cpu.phi2 = ActiveHigh::Active;
 
-        InterruptCycleDetector::update(bus);
+        InterruptCycleDetector::update(bus); // phi2 changed.
         RstLatch::update(bus); // phi2 changed
-        NmiEdgeDetector::step_phi2(bus);
+        NmiEdgeDetector::update(bus);
     }
 
     pub fn step_m2_middle_of_high(bus: &mut Bus, mapper: &mut dyn Mapper) -> Option<Step> {
@@ -320,6 +320,7 @@ impl Cpu {
         }
 
         bus.cpu.step = bus.cpu.mode_state.current_step();
+        InterruptCycleDetector::update(bus); // Relies on step.brk5()
 
         // Keep irq_pending and irq_status in sync
         if bus.cpu_pinout.irq_asserted() {
@@ -347,9 +348,9 @@ impl Cpu {
         bus.ppu_pinout.data_bus_enabled = SignalLevel::High;
         VBlankInterruptHandler::update(bus);
 
-        InterruptCycleDetector::update(bus);
-        RstLatch::update(bus); // phi2 changed
-        NmiEdgeDetector::step_phi1(bus);
+        InterruptCycleDetector::update(bus); // phi2 changed
+        RstLatch::update(bus); // phi2 changed.
+        NmiEdgeDetector::update(bus);
 
         bus.cpu.nmi_falling_edge_detected = bus.cpu.nmi_edge_detector.donmi_signal().is_low();
 
@@ -841,6 +842,18 @@ impl Cpu {
             let (low, high) = cpu_pinout.address_bus.to_low_high();
             cpu_pinout.address_bus = CpuAddress::from_low_high(low, high & value);
         }
+    }
+
+    fn set_ready_and_brk5(bus: &mut Bus) {
+        bus.cpu.brk5 = bus.cpu.step.brk5();
+        bus.cpu.ready = if bus.dmc_dma.latest_action() == DmcDmaAction::DoNothing && bus.oam_dma.latest_action() == OamDmaAction::DoNothing {
+            ActiveLow::Active
+        } else {
+            ActiveLow::Inactive
+        };
+        InterruptCycleDetector::update(bus); // Relies on BRK5 and RDY
+        // TODO Add NMI detector update here too.
+        ResetFlipFlop::update(bus); // Relies on BRK6E from ICD
     }
 }
 

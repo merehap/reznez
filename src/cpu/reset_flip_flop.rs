@@ -21,7 +21,7 @@ impl ResetFlipFlop {
     }
 
     pub fn update(bus: &mut Bus) {
-        let Cpu { reset_flip_flop: rff, interrupt_cycle_detector, rst_latch, phi2, ready, .. } = &mut bus.cpu;
+        let Cpu { reset_flip_flop: rff, rst_latch, phi2, brk6e, .. } = &mut bus.cpu;
 
         rff.res_1.update(DLInputs {
             e: **phi2,
@@ -31,7 +31,7 @@ impl ResetFlipFlop {
         let not_dores = nor(rff.res_1.q(), rff.res_2.q());
         rff.res_2.update(DLInputs {
             e: !**phi2,
-            d: nor(not_dores, *interrupt_cycle_detector.brk6e_signal(*ready)),
+            d: nor(not_dores, **brk6e),
         });
     }
 }

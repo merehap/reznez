@@ -51,7 +51,7 @@ impl CpuPinout {
 
     pub fn set_reset(bus: &mut Bus, value: ActiveLow) {
         bus.cpu_pinout.reset = value;
-        RstLatch::update(bus);
+        RstLatch::update(bus); // Reset (RST) changed.
     }
 
     pub fn irq_asserted(&self) -> bool {

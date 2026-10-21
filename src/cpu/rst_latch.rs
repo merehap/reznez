@@ -23,7 +23,7 @@ impl RstLatch {
 
     pub fn update(bus: &mut Bus) {
         bus.cpu.rst_latch.update_latches(&mut bus.cpu_pinout, bus.cpu.phi2);
-        ResetFlipFlop::update(bus);
+        ResetFlipFlop::update(bus); // RESP changed
     }
 
     fn update_latches(&mut self, cpu_pinout: &mut CpuPinout, phi2: ActiveHigh) {

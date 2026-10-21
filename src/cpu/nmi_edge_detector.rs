@@ -37,27 +37,26 @@ impl NmiEdgeDetector {
         nor(self.donmi, nor(self.ff1, self.brk6e)).into()
     }
 
-    pub fn step_phi1(bus: &mut Bus) {
-        let Cpu { nmi_edge_detector: ned, interrupt_cycle_detector, ready, ..} = &mut bus.cpu;
-        let Ppu { vblank_interrupt_handler, ..} = &mut bus.ppu;
+    pub fn update(bus: &mut Bus) {
+        if bus.cpu.phi2.is_active() {
+            let Cpu { nmi_edge_detector: ned, brk7, ..} = &mut bus.cpu;
+            ned.brk7 = **brk7;
 
-        ned.nmip = *vblank_interrupt_handler.nmip();
-        ned.brk6e = *interrupt_cycle_detector.brk6e_signal(*ready);
-        ned.delay2 = !ned.delay1;
+            let donmi = *ned.donmi_signal();
+            ned.ff1 = donmi;
+            ned.delay1 = donmi;
 
-        let last_source = nor(ned.nmip, nor(ned.ff2, ned.delay2));
-        ned.donmi = nor3(!ned.brk7, ned.nmip, last_source);
-    }
+            ned.ff2 = nor(ned.nmip, nor(ned.ff2, ned.delay2));
+        } else {
+            let Cpu { nmi_edge_detector: ned, brk6e, ..} = &mut bus.cpu;
+            let Ppu { vblank_interrupt_handler, ..} = &mut bus.ppu;
 
-    pub fn step_phi2(bus: &mut Bus) {
-        let Cpu { nmi_edge_detector: ned, interrupt_cycle_detector, ready, step, ..} = &mut bus.cpu;
+            ned.nmip = *vblank_interrupt_handler.nmip();
+            ned.brk6e = **brk6e;
+            ned.delay2 = !ned.delay1;
 
-        ned.brk7 = interrupt_cycle_detector.brk7_signal(step.brk5(), *ready);
-
-        let donmi = *ned.donmi_signal();
-        ned.ff1 = donmi;
-        ned.delay1 = donmi;
-
-        ned.ff2 = nor(ned.nmip, nor(ned.ff2, ned.delay2));
+            let last_source = nor(ned.nmip, nor(ned.ff2, ned.delay2));
+            ned.donmi = nor3(!ned.brk7, ned.nmip, last_source);
+        }
     }
 }
