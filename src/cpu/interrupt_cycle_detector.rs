@@ -1,4 +1,5 @@
-use crate::{bus::Bus, cpu::cpu::Cpu, memory::signal_level::{ActiveHigh, ActiveLow, SignalLevel, nand, nor}};
+use crate::bus::Bus;
+use crate::memory::signal_level::{ActiveHigh, ActiveLow, SignalLevel, nand, nor};
 
 #[derive(Clone, Copy)]
 pub struct InterruptCycleDetector {
@@ -29,13 +30,13 @@ impl InterruptCycleDetector {
         nor(!self.brk6_1, *self.brk5_rdy_signal(brk5_signal, ready_signal))
     }
 
-    pub fn step_phi1(bus: &mut Bus) {
-        let Cpu { interrupt_cycle_detector: icd, ready, .. } = &mut bus.cpu;
-        icd.brk6_1 = !*icd.brk5 & nand(**ready, !icd.brk6_1);
-    }
-
-    pub fn step_phi2(&mut self, brk5_signal: ActiveHigh, ready_signal: ActiveLow) {
-        self.brk5 = self.brk5_rdy_signal(brk5_signal, ready_signal);
-        self.brk6_2 = !self.brk6_1;
+    pub fn update(bus: &mut Bus) {
+        let icd = &mut bus.cpu.interrupt_cycle_detector;
+        if bus.cpu.phi2.is_active() {
+            icd.brk5 = icd.brk5_rdy_signal(bus.cpu.step.brk5(), bus.cpu.ready);
+            icd.brk6_2 = !icd.brk6_1;
+        } else {
+            icd.brk6_1 = !*icd.brk5 & nand(*bus.cpu.ready, !icd.brk6_1);
+        }
     }
 }

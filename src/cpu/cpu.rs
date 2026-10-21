@@ -216,7 +216,7 @@ impl Cpu {
         } else {
             ActiveLow::Inactive
         };
-        InterruptCycleDetector::step_phi1(bus);
+        InterruptCycleDetector::update(bus);
         // TODO Add NMI detector update here too.
         ResetFlipFlop::update(bus);
 
@@ -258,7 +258,7 @@ impl Cpu {
     pub fn step_phi2_rise(bus: &mut Bus) {
         bus.cpu.phi2 = ActiveHigh::Active;
 
-        bus.cpu.interrupt_cycle_detector.step_phi2(bus.cpu.step.brk5(), bus.cpu.ready);
+        InterruptCycleDetector::update(bus);
         RstLatch::update(bus);
         if bus.cpu.just_powered_on {
             bus.cpu.just_powered_on = false;
@@ -350,8 +350,7 @@ impl Cpu {
         bus.ppu_pinout.data_bus_enabled = SignalLevel::High;
         VBlankInterruptHandler::update(bus);
 
-        InterruptCycleDetector::step_phi1(bus);
-
+        InterruptCycleDetector::update(bus);
         RstLatch::update(bus);
         NmiEdgeDetector::step_phi1(bus);
 
