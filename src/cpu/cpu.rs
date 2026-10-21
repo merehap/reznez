@@ -254,7 +254,7 @@ impl Cpu {
     }
 
     pub fn step_phi2_rise(bus: &mut Bus) {
-        bus.cpu.phi2 = ActiveHigh::Active;
+        Cpu::set_phi2(bus, ActiveHigh::Active);
 
         InterruptCycleDetector::update(bus); // phi2 changed.
         RstLatch::update(bus); // phi2 changed
@@ -339,7 +339,7 @@ impl Cpu {
     }
 
     pub fn step_m2_falling(bus: &mut Bus, mapper: &mut dyn Mapper) {
-        bus.cpu.phi2 = ActiveHigh::Inactive;
+        Cpu::set_phi2(bus, ActiveHigh::Inactive);
         if bus.cpu.just_powered_on {
             bus.cpu.just_powered_on = false;
             CpuPinout::set_reset(bus, ActiveLow::Inactive);
@@ -842,6 +842,10 @@ impl Cpu {
             let (low, high) = cpu_pinout.address_bus.to_low_high();
             cpu_pinout.address_bus = CpuAddress::from_low_high(low, high & value);
         }
+    }
+
+    fn set_phi2(bus: &mut Bus, value: ActiveHigh) {
+        bus.cpu.phi2 = value;
     }
 
     fn set_ready_and_brk5(bus: &mut Bus) {
