@@ -255,10 +255,6 @@ impl Cpu {
 
     pub fn step_phi2_rise(bus: &mut Bus) {
         Cpu::set_phi2(bus, ActiveHigh::Active);
-
-        InterruptCycleDetector::update(bus); // phi2 changed.
-        RstLatch::update(bus); // phi2 changed
-        NmiEdgeDetector::update(bus);
     }
 
     pub fn step_m2_middle_of_high(bus: &mut Bus, mapper: &mut dyn Mapper) -> Option<Step> {
@@ -340,17 +336,6 @@ impl Cpu {
 
     pub fn step_m2_falling(bus: &mut Bus, mapper: &mut dyn Mapper) {
         Cpu::set_phi2(bus, ActiveHigh::Inactive);
-        if bus.cpu.just_powered_on {
-            bus.cpu.just_powered_on = false;
-            CpuPinout::set_reset(bus, ActiveLow::Inactive);
-        }
-
-        bus.ppu_pinout.data_bus_enabled = SignalLevel::High;
-        VBlankInterruptHandler::update(bus);
-
-        InterruptCycleDetector::update(bus); // phi2 changed
-        RstLatch::update(bus); // phi2 changed.
-        NmiEdgeDetector::update(bus);
 
         bus.cpu.nmi_falling_edge_detected = bus.cpu.nmi_edge_detector.donmi_signal().is_low();
 
@@ -846,6 +831,23 @@ impl Cpu {
 
     fn set_phi2(bus: &mut Bus, value: ActiveHigh) {
         bus.cpu.phi2 = value;
+        if bus.cpu.phi2.is_active() {
+            InterruptCycleDetector::update(bus);
+            RstLatch::update(bus);
+            NmiEdgeDetector::update(bus);
+        } else {
+            if bus.cpu.just_powered_on {
+                bus.cpu.just_powered_on = false;
+                CpuPinout::set_reset(bus, ActiveLow::Inactive);
+            }
+
+            bus.ppu_pinout.data_bus_enabled = SignalLevel::High;
+            VBlankInterruptHandler::update(bus);
+
+            InterruptCycleDetector::update(bus);
+            RstLatch::update(bus);
+            NmiEdgeDetector::update(bus);
+        }
     }
 
     fn set_ready_and_brk5(bus: &mut Bus) {
