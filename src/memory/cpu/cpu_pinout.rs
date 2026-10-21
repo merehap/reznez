@@ -1,4 +1,5 @@
 use crate::bus::Bus;
+use crate::cpu::rst_latch::RstLatch;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::signal_level::{ActiveLow, SignalLevel};
 
@@ -50,6 +51,7 @@ impl CpuPinout {
 
     pub fn set_reset(bus: &mut Bus, value: ActiveLow) {
         bus.cpu_pinout.reset = value;
+        RstLatch::update(bus);
     }
 
     pub fn irq_asserted(&self) -> bool {

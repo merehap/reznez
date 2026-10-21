@@ -257,13 +257,7 @@ impl Cpu {
         bus.cpu.phi2 = ActiveHigh::Active;
 
         InterruptCycleDetector::update(bus);
-        RstLatch::update(bus);
-        if bus.cpu.just_powered_on {
-            bus.cpu.just_powered_on = false;
-            CpuPinout::set_reset(bus, ActiveLow::Inactive);
-        }
-
-        ResetFlipFlop::update(bus);
+        RstLatch::update(bus); // phi2 changed
         NmiEdgeDetector::step_phi2(bus);
     }
 
@@ -345,11 +339,16 @@ impl Cpu {
 
     pub fn step_m2_falling(bus: &mut Bus, mapper: &mut dyn Mapper) {
         bus.cpu.phi2 = ActiveHigh::Inactive;
+        if bus.cpu.just_powered_on {
+            bus.cpu.just_powered_on = false;
+            CpuPinout::set_reset(bus, ActiveLow::Inactive);
+        }
+
         bus.ppu_pinout.data_bus_enabled = SignalLevel::High;
         VBlankInterruptHandler::update(bus);
 
         InterruptCycleDetector::update(bus);
-        RstLatch::update(bus);
+        RstLatch::update(bus); // phi2 changed
         NmiEdgeDetector::step_phi1(bus);
 
         bus.cpu.nmi_falling_edge_detected = bus.cpu.nmi_edge_detector.donmi_signal().is_low();
