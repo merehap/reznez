@@ -176,8 +176,6 @@ impl Cpu {
     }
 
     pub fn step_m2_rise(bus: &mut Bus, mapper: &mut dyn Mapper) {
-        RstLatch::update(bus);
-
         if bus.cpu_pinout.reset.is_active() {
             // The CPU doesn't do anything while the RESET button is held down.
             return;
