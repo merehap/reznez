@@ -3,6 +3,7 @@ use splitbits::replacebits;
 use crate::bus::Bus;
 use crate::circuit::d_latch::{DLInputs, DLatch};
 use crate::circuit::sr_latch::{SRInputs, SRLatch};
+use crate::memory::cpu::cpu_pinout::CpuPinout;
 use crate::memory::signal_level::{ActiveLow, SignalLevel, nor, nor3};
 use crate::ppu::ppu::Ppu;
 
@@ -34,13 +35,25 @@ impl VBlankInterruptHandler {
         self.nmip.q().into()
     }
 
-    pub fn update(Bus { ppu_pinout, ppu_regs, ppu, cpu_pinout, cpu, ..}: &mut Bus) {
+    pub fn update(bus: &mut Bus) {
+        Self::update_latches(bus);
+
+        let phi2 = *bus.cpu.phi2;
+        let vbl = if bus.ppu_regs.nmi_enabled() { SignalLevel::High } else { SignalLevel::Low };
+        let int = nor(!vbl, !bus.ppu.vblank_interrupt_handler.int_ff.q());
+        CpuPinout::set_nmi(bus, (!int).into());
+        bus.ppu.vblank_interrupt_handler.nmip.update(DLInputs {
+            e: phi2,
+            d: *bus.cpu_pinout.nmi(),
+        });
+
+    }
+
+    fn update_latches(Bus { ppu_pinout, ppu, cpu_pinout, ..}: &mut Bus) {
         let r2 = ppu_pinout.r2();
         let Ppu { vblank_interrupt_handler: vih, start_vblank: vset, end_vblank: vclr, .. } = ppu;
         let pclk = ppu_pinout.pclk;
         let dbe = ppu_pinout.data_bus_enabled();
-        let vbl = if ppu_regs.nmi_enabled() { SignalLevel::High } else { SignalLevel::Low };
-        let phi2 = *cpu.phi2;
 
         vih.vset_1.update(DLInputs {
             e: pclk,
@@ -58,13 +71,6 @@ impl VBlankInterruptHandler {
         vih.int_ff.update(SRInputs {
             s: set,
             r: reset,
-        });
-
-        let int = nor(!vbl, !vih.int_ff.q());
-        cpu_pinout.nmi = !int;
-        vih.nmip.update(DLInputs {
-            e: phi2,
-            d: cpu_pinout.nmi,
         });
 
         vih.db.update(DLInputs {

@@ -1,7 +1,7 @@
 use crate::bus::Bus;
 use crate::cpu::rst_latch::RstLatch;
 use crate::memory::cpu::cpu_address::CpuAddress;
-use crate::memory::signal_level::{ActiveLow, SignalLevel};
+use crate::memory::signal_level::ActiveLow;
 use crate::ppu::vblank_interrupt_handler::VBlankInterruptHandler;
 
 pub struct CpuPinout {
@@ -19,7 +19,7 @@ pub struct CpuPinout {
     // M2 (CPU phase)
     // IRQ - only available as a method, not a field.
     // NMI. Triggers when the signal goes low.
-    pub nmi: SignalLevel,
+    nmi: ActiveLow,
     // R/W (Read/Write signal)
     read_write: ReadWrite,
     // OE2 (Controller 2 enable)
@@ -37,7 +37,7 @@ impl CpuPinout {
             reset: ActiveLow::Active,
             address_bus: CpuAddress::ZERO,
             data_bus: 0,
-            nmi: SignalLevel::High,
+            nmi: ActiveLow::Inactive,
             read_write: ReadWrite::Read,
 
             mapper_irq_asserted: false,
@@ -53,6 +53,14 @@ impl CpuPinout {
     pub fn set_reset(bus: &mut Bus, value: ActiveLow) {
         bus.cpu_pinout.reset = value;
         RstLatch::update(bus); // Reset (RST) changed.
+    }
+
+    pub fn nmi(&self) -> ActiveLow {
+        self.nmi
+    }
+
+    pub fn set_nmi(bus: &mut Bus, value: ActiveLow) {
+        bus.cpu_pinout.nmi = value;
     }
 
     pub fn read_write(&self) -> ReadWrite {

@@ -34,7 +34,7 @@ use crate::memory::raw_memory::RawData;
 use crate::memory::bank::bank_number::{BankNumber, ReadStatus, WriteStatus};
 use crate::bus::Bus;
 use crate::memory::register_ids::bank::{ChrBankRegisterId, PrgBankRegisterId};
-use crate::memory::signal_level::{ActiveHigh, ActiveLow, SignalLevel};
+use crate::memory::signal_level::{ActiveHigh, ActiveLow};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::ppu_clock::PpuClock;
 use crate::ppu::palette::bank_color_assigner::BankColorAssigner;
@@ -428,8 +428,8 @@ impl Nes {
             if latest.oam_cpu_halt_detector.set_value_then_detect(self.bus.oam_dma.latest_action().cpu_should_be_halted()) {
                 info!("CPU halted for OAM DMA transfer at {}.", self.bus.oam_dma.address());
             }
-            if latest.nmi_signal_detector.set_value_then_detect(self.bus.cpu_pinout.nmi) {
-                info!("NMI signal went {:?}.", self.bus.cpu_pinout.nmi);
+            if latest.nmi_signal_detector.set_value_then_detect(self.bus.cpu_pinout.nmi()) {
+                info!("NMI signal went {:?}.", self.bus.cpu_pinout.nmi());
             }
             if latest.reset_signal_detector.set_value_then_detect(self.bus.cpu_pinout.reset()) {
                 info!("RESET signal went {:?}.", self.bus.cpu_pinout.reset());
@@ -656,7 +656,7 @@ struct LatestValues {
     dmc_irq_pending_detector: EdgeDetector<bool>,
     mapper_irq_asserted_detector: EdgeDetector<bool>,
 
-    nmi_signal_detector: EdgeDetector<SignalLevel>,
+    nmi_signal_detector: EdgeDetector<ActiveLow>,
     reset_signal_detector: EdgeDetector<ActiveLow>,
 
     irq_status_detector: EdgeDetector<IrqStatus>,
