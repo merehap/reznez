@@ -251,8 +251,6 @@ impl Cpu {
             ActiveLow::Inactive
         };
         PpuPinout::set_data_bus_enabled(bus, dbe);
-
-        VBlankInterruptHandler::update(bus);
     }
 
     pub fn step_phi2_rise(bus: &mut Bus) {
@@ -840,7 +838,6 @@ impl Cpu {
             }
 
             PpuPinout::set_data_bus_enabled(bus, ActiveLow::Inactive);
-            VBlankInterruptHandler::update(bus);
         }
 
         InterruptCycleDetector::update(bus);

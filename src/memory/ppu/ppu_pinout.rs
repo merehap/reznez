@@ -2,6 +2,7 @@ use crate::bus::Bus;
 use crate::memory::cpu::cpu_pinout::ReadWrite;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::signal_level::{ActiveHigh, ActiveLow, SignalLevel, nor};
+use crate::ppu::vblank_interrupt_handler::VBlankInterruptHandler;
 use crate::util::edge_detector::EdgeDetector;
 
 pub struct PpuPinout {
@@ -59,6 +60,7 @@ impl PpuPinout {
 
     pub fn set_data_bus_enabled(bus: &mut Bus, value: ActiveLow) {
         bus.ppu_pinout.data_bus_enabled = value;
+        VBlankInterruptHandler::update(bus);
     }
 
     pub fn read(&self) -> bool {
