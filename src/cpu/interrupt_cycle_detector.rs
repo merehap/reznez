@@ -1,5 +1,6 @@
 use crate::bus::Bus;
 use crate::cpu::cpu::Cpu;
+use crate::cpu::nmi_edge_detector::NmiEdgeDetector;
 use crate::memory::signal_level::{ActiveHigh, SignalLevel, nand, nor};
 
 #[derive(Clone, Copy)]
@@ -32,7 +33,8 @@ impl InterruptCycleDetector {
         }
 
         bus.cpu.brk6e = InterruptCycleDetector::brk6e_signal(&mut bus.cpu);
-        bus.cpu.brk7 = InterruptCycleDetector::brk7_signal(&bus.cpu)
+        bus.cpu.brk7 = InterruptCycleDetector::brk7_signal(&bus.cpu);
+        NmiEdgeDetector::update(bus); // Depends on BRK6E and BRK7
     }
 
     fn brk6e_signal(Cpu { interrupt_cycle_detector: icd, ready, ..}: &Cpu) -> ActiveHigh {

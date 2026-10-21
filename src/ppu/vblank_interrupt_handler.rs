@@ -3,7 +3,6 @@ use splitbits::replacebits;
 use crate::bus::Bus;
 use crate::circuit::d_latch::{DLInputs, DLatch};
 use crate::circuit::sr_latch::{SRInputs, SRLatch};
-use crate::memory::ppu::ppu_pinout::PpuPinout;
 use crate::memory::signal_level::{ActiveLow, SignalLevel, nor, nor3};
 use crate::ppu::ppu::Ppu;
 
@@ -38,19 +37,20 @@ impl VBlankInterruptHandler {
     pub fn update(Bus { ppu_pinout, ppu_regs, ppu, cpu_pinout, cpu, ..}: &mut Bus) {
         let r2 = ppu_pinout.r2();
         let Ppu { vblank_interrupt_handler: vih, start_vblank: vset, end_vblank: vclr, .. } = ppu;
-        let PpuPinout { pclk, data_bus_enabled: dbe, .. } = ppu_pinout;
+        let pclk = ppu_pinout.pclk;
+        let dbe = ppu_pinout.data_bus_enabled();
         let vbl = if ppu_regs.nmi_enabled() { SignalLevel::High } else { SignalLevel::Low };
         let phi2 = *cpu.phi2;
 
         vih.vset_1.update(DLInputs {
-            e: *pclk,
+            e: pclk,
             d: *vset,
         });
         vih.vset_2.update(DLInputs {
-            e: !*pclk,
+            e: !pclk,
             d: vih.vset_1.nq(),
         });
-        let set = nor3(!*pclk, *vset, vih.vset_2.q());
+        let set = nor3(!pclk, *vset, vih.vset_2.q());
 
         let read_enabled = nor(r2, *dbe);
         let reset = *vclr | read_enabled;

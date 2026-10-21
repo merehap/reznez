@@ -1,6 +1,7 @@
+use crate::bus::Bus;
 use crate::memory::cpu::cpu_pinout::ReadWrite;
 use crate::memory::ppu::ppu_address::PpuAddress;
-use crate::memory::signal_level::{SignalLevel, nor};
+use crate::memory::signal_level::{ActiveHigh, ActiveLow, SignalLevel, nor};
 use crate::util::edge_detector::EdgeDetector;
 
 pub struct PpuPinout {
@@ -10,7 +11,7 @@ pub struct PpuPinout {
     // cpu_address_bus: u3, // A2-A0
     pub selected_register: PpuRegisterType,
     // /CS or /DBE. Active low.
-    pub data_bus_enabled: SignalLevel,
+    data_bus_enabled: ActiveLow,
     // EXT: u4,
     // CLK
     pub pclk: SignalLevel,
@@ -39,7 +40,7 @@ impl PpuPinout {
         Self {
             read_write: ReadWrite::Read,
             selected_register: PpuRegisterType::Ctrl,
-            data_bus_enabled: SignalLevel::High,
+            data_bus_enabled: ActiveLow::Inactive,
             pclk: SignalLevel::High, // FIXME: This needs to be determined by the schedule.
             ppu_data_write: false,
             fetch_cadence_read: false,
@@ -50,6 +51,14 @@ impl PpuPinout {
             ppu_data_read_ale: false,
             ppu_data_write_ale: false,
         }
+    }
+
+    pub fn data_bus_enabled(&self) -> ActiveLow {
+        self.data_bus_enabled
+    }
+
+    pub fn set_data_bus_enabled(bus: &mut Bus, value: ActiveLow) {
+        bus.ppu_pinout.data_bus_enabled = value;
     }
 
     pub fn read(&self) -> bool {
@@ -84,9 +93,8 @@ impl PpuPinout {
         self.fetch_cadence_ale || self.ppu_data_read_ale || self.ppu_data_write_ale
     }
 
-    // Active high
-    pub fn r2_enabled(&self) -> SignalLevel {
-        nor(self.r2(), self.data_bus_enabled)
+    pub fn r2_enabled(&self) -> ActiveHigh {
+        nor(self.r2(), *self.data_bus_enabled).into()
     }
 
     // Active Low

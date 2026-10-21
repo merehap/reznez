@@ -20,7 +20,8 @@ use crate::mapper::mapper::Mapper;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::bus::{AddressBusType, Bus, IRQ_VECTOR_HIGH, IRQ_VECTOR_LOW, NMI_VECTOR_HIGH, NMI_VECTOR_LOW, RESET_VECTOR_HIGH, RESET_VECTOR_LOW};
 use crate::memory::cpu::cpu_pinout::{CpuPinout, ReadWrite};
-use crate::memory::signal_level::{ActiveHigh, ActiveLow, SignalLevel};
+use crate::memory::ppu::ppu_pinout::PpuPinout;
+use crate::memory::signal_level::{ActiveHigh, ActiveLow};
 use crate::ppu::vblank_interrupt_handler::VBlankInterruptHandler;
 
 pub struct Cpu {
@@ -244,11 +245,12 @@ impl Cpu {
     }
 
     pub fn step_chip_selected(bus: &mut Bus) {
-        bus.ppu_pinout.data_bus_enabled = if bus.cpu_address_bus().is_ppu_mapped() {
-            SignalLevel::Low
+        let dbe = if bus.cpu_address_bus().is_ppu_mapped() {
+            ActiveLow::Active
         } else {
-            SignalLevel::High
+            ActiveLow::Inactive
         };
+        PpuPinout::set_data_bus_enabled(bus, dbe);
 
         VBlankInterruptHandler::update(bus);
     }
@@ -831,23 +833,18 @@ impl Cpu {
 
     fn set_phi2(bus: &mut Bus, value: ActiveHigh) {
         bus.cpu.phi2 = value;
-        if bus.cpu.phi2.is_active() {
-            InterruptCycleDetector::update(bus);
-            RstLatch::update(bus);
-            NmiEdgeDetector::update(bus);
-        } else {
+        if bus.cpu.phi2.is_inactive() {
             if bus.cpu.just_powered_on {
                 bus.cpu.just_powered_on = false;
                 CpuPinout::set_reset(bus, ActiveLow::Inactive);
             }
 
-            bus.ppu_pinout.data_bus_enabled = SignalLevel::High;
+            PpuPinout::set_data_bus_enabled(bus, ActiveLow::Inactive);
             VBlankInterruptHandler::update(bus);
-
-            InterruptCycleDetector::update(bus);
-            RstLatch::update(bus);
-            NmiEdgeDetector::update(bus);
         }
+
+        InterruptCycleDetector::update(bus);
+        RstLatch::update(bus);
     }
 
     fn set_ready_and_brk5(bus: &mut Bus) {
