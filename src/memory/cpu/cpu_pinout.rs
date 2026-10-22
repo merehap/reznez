@@ -1,4 +1,5 @@
 use crate::bus::Bus;
+use crate::cpu::irq_latch::IrqLatch;
 use crate::cpu::nmi_latch::NmiLatch;
 use crate::cpu::rst_latch::RstLatch;
 use crate::memory::cpu::cpu_address::CpuAddress;
@@ -89,10 +90,12 @@ impl CpuPinout {
 
     pub fn acknowledge_mapper_irq(bus: &mut Bus) {
         bus.cpu_pinout.mapper_irq_asserted = false;
+        IrqLatch::update(bus);
     }
 
     pub fn assert_mapper_irq(bus: &mut Bus) {
         bus.cpu_pinout.mapper_irq_asserted = true;
+        IrqLatch::update(bus);
     }
 
     pub fn frame_irq_asserted(&self) -> bool {
@@ -101,10 +104,12 @@ impl CpuPinout {
 
     pub fn acknowledge_frame_irq(bus: &mut Bus) {
         bus.cpu_pinout.frame_irq_asserted = false;
+        IrqLatch::update(bus);
     }
 
     pub fn assert_frame_irq(bus: &mut Bus) {
         bus.cpu_pinout.frame_irq_asserted = true;
+        IrqLatch::update(bus);
     }
 
     pub fn dmc_irq_asserted(&self) -> bool {
@@ -113,10 +118,12 @@ impl CpuPinout {
 
     pub fn acknowledge_dmc_irq(bus: &mut Bus) {
         bus.cpu_pinout.dmc_irq_asserted = false;
+        IrqLatch::update(bus);
     }
 
     pub fn assert_dmc_irq(bus: &mut Bus) {
         bus.cpu_pinout.dmc_irq_asserted = true;
+        IrqLatch::update(bus);
     }
 }
 
