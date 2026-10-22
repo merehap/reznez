@@ -43,7 +43,7 @@ impl Mapper for Mapper040 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0x9FFF => {
-                bus.cpu_pinout.acknowledge_mapper_irq();
+                CpuPinout::acknowledge_mapper_irq(bus);
                 self.irq_counter.disable();
             }
             0xA000..=0xBFFF => {
@@ -61,12 +61,12 @@ impl Mapper for Mapper040 {
     fn on_m2_fall(&mut self, bus: &mut Bus) {
         let tick_result = self.irq_counter.tick();
         if tick_result.triggered {
-            bus.cpu_pinout.assert_mapper_irq();
+            CpuPinout::assert_mapper_irq(bus);
         }
 
         // TODO: Verify if this is correct.
         if tick_result.wrapped {
-            bus.cpu_pinout.acknowledge_mapper_irq();
+            CpuPinout::acknowledge_mapper_irq(bus);
         }
     }
 

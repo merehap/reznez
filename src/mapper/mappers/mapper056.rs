@@ -51,7 +51,7 @@ impl Mapper for Mapper056 {
             0xA000..=0xAFFF => self.irq_counter.set_reload_value_second_highest_nybble(u4::new(value & 0xF)),
             0xB000..=0xBFFF => self.irq_counter.set_reload_value_highest_nybble(u4::new(value & 0xF)),
             0xC000..=0xCFFF => {
-                bus.cpu_pinout.acknowledge_mapper_irq();
+                CpuPinout::acknowledge_mapper_irq(bus);
 
                 let enabled = value != 0;
                 self.irq_counter.set_enabled(enabled);
@@ -60,7 +60,7 @@ impl Mapper for Mapper056 {
                 }
             }
             0xD000..=0xDFFF => {
-                bus.cpu_pinout.acknowledge_mapper_irq();
+                CpuPinout::acknowledge_mapper_irq(bus);
             }
             0xE000..=0xEFFF => {
                 match value & 0b111 {

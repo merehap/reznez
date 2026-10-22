@@ -9,6 +9,7 @@ use rodio::{OutputStream, Sink};
 use rodio::source::Source;
 
 use crate::apu::apu_clock::CycleParity;
+use crate::apu::apu_registers::ApuRegisters;
 use crate::apu::mixer::{HighPassFilter, LowPassFilter, Mixer};
 use crate::bus::Bus;
 
@@ -92,15 +93,14 @@ impl Apu {
         let mixed_sample = bus.apu.mixer.mix(&bus.apu_regs);
         bus.apu_regs.mixed_samples[sample_index] = mixed_sample;
 
-        let clock = &mut bus.master_clock.apu_clock;
         match parity {
             CycleParity::Get => {
-                bus.apu_regs.tick_get(clock, &mut bus.cpu_pinout, &mut bus.dmc_dma);
+                ApuRegisters::tick_get(bus);
             }
             CycleParity::Put => {
                 bus.joypad1.tick();
                 bus.joypad2.tick();
-                bus.apu_regs.tick_put(clock, &mut bus.cpu_pinout, &mut bus.dmc_dma);
+                ApuRegisters::tick_put(bus);
 
                 bus.apu_regs.pulse1_volumes.push(u8::from(bus.apu_regs.pulse_1.sample_volume()).into());
                 bus.apu_regs.pulse2_volumes.push(u8::from(bus.apu_regs.pulse_2.sample_volume()).into());

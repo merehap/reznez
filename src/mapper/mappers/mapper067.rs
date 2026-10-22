@@ -45,7 +45,7 @@ impl Mapper for Mapper067 {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
-            0x8000..=0x87FF => bus.cpu_pinout.acknowledge_mapper_irq(),
+            0x8000..=0x87FF => CpuPinout::acknowledge_mapper_irq(bus),
             0x8800..=0x97FF => bus.set_chr_register(C, value & 0b0011_1111),
             0x9800..=0xA7FF => bus.set_chr_register(D, value & 0b0011_1111),
             0xA800..=0xB7FF => bus.set_chr_register(E, value & 0b0011_1111),
@@ -76,7 +76,7 @@ impl Mapper for Mapper067 {
     // TODO: Verify if the IRQ counter actually triggers on the falling edge.
     fn on_m2_fall(&mut self, bus: &mut Bus) {
         if self.irq_counter.tick().triggered {
-            bus.cpu_pinout.assert_mapper_irq();
+            CpuPinout::assert_mapper_irq(bus);
         }
     }
 

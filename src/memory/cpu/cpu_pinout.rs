@@ -53,7 +53,7 @@ impl CpuPinout {
 
     pub fn set_reset(bus: &mut Bus, value: ActiveLow) {
         bus.cpu_pinout.reset = value;
-        RstLatch::update(bus); // Reset (RST) changed.
+        RstLatch::update(bus);
     }
 
     pub fn nmi(&self) -> ActiveLow {
@@ -75,44 +75,48 @@ impl CpuPinout {
         VBlankInterruptHandler::update(bus);
     }
 
-    pub fn irq_asserted(&self) -> bool {
-        self.mapper_irq_asserted || self.frame_irq_asserted || self.dmc_irq_asserted
+    pub fn irq(&self) -> ActiveLow {
+        if self.mapper_irq_asserted || self.frame_irq_asserted || self.dmc_irq_asserted {
+            ActiveLow::Active
+        } else {
+            ActiveLow::Inactive
+        }
     }
 
     pub fn mapper_irq_asserted(&self) -> bool {
         self.mapper_irq_asserted
     }
 
-    pub fn acknowledge_mapper_irq(&mut self) {
-        self.mapper_irq_asserted = false;
+    pub fn acknowledge_mapper_irq(bus: &mut Bus) {
+        bus.cpu_pinout.mapper_irq_asserted = false;
     }
 
-    pub fn assert_mapper_irq(&mut self) {
-        self.mapper_irq_asserted = true;
+    pub fn assert_mapper_irq(bus: &mut Bus) {
+        bus.cpu_pinout.mapper_irq_asserted = true;
     }
 
     pub fn frame_irq_asserted(&self) -> bool {
         self.frame_irq_asserted
     }
 
-    pub fn acknowledge_frame_irq(&mut self) {
-        self.frame_irq_asserted = false;
+    pub fn acknowledge_frame_irq(bus: &mut Bus) {
+        bus.cpu_pinout.frame_irq_asserted = false;
     }
 
-    pub fn assert_frame_irq(&mut self) {
-        self.frame_irq_asserted = true;
+    pub fn assert_frame_irq(bus: &mut Bus) {
+        bus.cpu_pinout.frame_irq_asserted = true;
     }
 
     pub fn dmc_irq_asserted(&self) -> bool {
         self.dmc_irq_asserted
     }
 
-    pub fn acknowledge_dmc_irq(&mut self) {
-        self.dmc_irq_asserted = false;
+    pub fn acknowledge_dmc_irq(bus: &mut Bus) {
+        bus.cpu_pinout.dmc_irq_asserted = false;
     }
 
-    pub fn assert_dmc_irq(&mut self) {
-        self.dmc_irq_asserted = true;
+    pub fn assert_dmc_irq(bus: &mut Bus) {
+        bus.cpu_pinout.dmc_irq_asserted = true;
     }
 }
 

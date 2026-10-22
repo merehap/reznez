@@ -51,7 +51,7 @@ impl Mapper for Mapper091_0 {
             0x7001 => bus.set_prg_register(Q, value & 0b0000_1111),
             0x7002 => {
                 self.irq_counter.disable();
-                bus.cpu_pinout.acknowledge_mapper_irq();
+                CpuPinout::acknowledge_mapper_irq(bus);
             }
             0x7003 => {
                 self.irq_counter.enable();
@@ -69,7 +69,7 @@ impl Mapper for Mapper091_0 {
     fn on_ppu_address_change(&mut self, bus: &mut Bus, address: PpuAddress) {
         let transition_detected = self.transition_detector.detect(address) == Some(PatternTableSide::Right);
         if transition_detected && self.irq_counter.tick().triggered {
-            bus.cpu_pinout.assert_mapper_irq();
+            CpuPinout::assert_mapper_irq(bus);
         }
     }
 

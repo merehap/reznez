@@ -4,6 +4,7 @@ pub(in crate::mapper) use crate::bus::Bus;
 pub(in crate::mapper) use crate::counter::counter::{ReloadDrivenCounter, DirectlySetCounter, CounterBuilder, AutoTriggerWhen, ForcedReloadTiming, WhenDisabledPrevent};
 pub(in crate::mapper) use crate::counter::irq_counter_info::IrqCounterInfo;
 pub(in crate::mapper) use crate::memory::bank::bank_number::{BankNumber, ReadStatus, WriteStatus};
+pub(in crate::mapper) use crate::memory::cpu::cpu_pinout::CpuPinout;
 pub(in crate::mapper) use crate::memory::register_ids::bank::{ChrBankRegisterId, PrgBankRegisterId};
 pub(in crate::mapper) use crate::memory::register_ids::bank::ChrBankRegisterId::*;
 pub(in crate::mapper) use crate::memory::register_ids::bank::MetaRegisterId::*;

@@ -9,6 +9,7 @@ use crate::apu::pulse_channel::PulseChannel;
 use crate::apu::triangle_channel::TriangleChannel;
 use crate::apu::noise_channel::NoiseChannel;
 use crate::apu::dmc::Dmc;
+use crate::bus::Bus;
 use crate::cpu::dmc_dma::DmcDma;
 use crate::memory::read_result::ReadResult;
 use crate::memory::cpu::cpu_pinout::CpuPinout;
@@ -74,15 +75,15 @@ impl ApuRegisters {
         }
     }
 
-    pub fn reset(&mut self, clock: &ApuClock, cpu_pinout: &mut CpuPinout) {
+    pub fn reset(bus: &mut Bus) {
         // At reset, $4015 should be cleared
-        self.disable_channels();
-        cpu_pinout.acknowledge_dmc_irq();
+        bus.apu_regs.disable_channels();
+        CpuPinout::acknowledge_dmc_irq(bus);
         // At reset, $4017 should should be rewritten with last value written
-        self.clock_reset_status.initialize();
-        info!(target: "apuevents", "Frame IRQ acknowledged by RESET. APU Cycle: {}", clock.cpu_cycle());
-        cpu_pinout.acknowledge_frame_irq();
-        self.frame_irq_status = false;
+        bus.apu_regs.clock_reset_status.initialize();
+        info!(target: "apuevents", "Frame IRQ acknowledged by RESET. APU Cycle: {}", bus.apu_clock().cpu_cycle());
+        CpuPinout::acknowledge_frame_irq(bus);
+        bus.apu_regs.frame_irq_status = false;
     }
 
     pub fn clock_reset_status(&self) -> ClockResetStatus {
@@ -114,19 +115,21 @@ impl ApuRegisters {
     }
 
     // Write 0x4015
-    pub fn write_status(&mut self, clock: &ApuClock, cpu_pinout: &mut CpuPinout, dmc_dma: &mut DmcDma) {
-        let value = cpu_pinout.data_bus;
-        info!(target: "apuevents", "APU status write: {value:05b} . APU Cycle: {}", clock.cpu_cycle());
+    pub fn write_status(bus: &mut Bus) {
+        let value = bus.cpu_pinout.data_bus;
+        info!(target: "apuevents", "APU status write: {value:05b} . APU Cycle: {}", bus.apu_clock().cpu_cycle());
 
         let enabled_channels = splitbits!(value, "...dntqp");
-        self.dmc.set_enabled(cpu_pinout, dmc_dma, clock.cycle_parity(), enabled_channels.d);
-        // This applies immediately, unlike the similar flag within DMC.
-        self.dmc_enabled = enabled_channels.d;
+        Dmc::set_enabled(bus, enabled_channels.d);
 
-        self.noise.set_enabled(enabled_channels.n);
-        self.triangle.set_enabled(enabled_channels.t);
-        self.pulse_2.set_enabled(enabled_channels.q);
-        self.pulse_1.set_enabled(enabled_channels.p);
+        let apu_regs = &mut bus.apu_regs;
+        // This applies immediately, unlike the similar flag within DMC.
+        apu_regs.dmc_enabled = enabled_channels.d;
+
+        apu_regs.noise.set_enabled(enabled_channels.n);
+        apu_regs.triangle.set_enabled(enabled_channels.t);
+        apu_regs.pulse_2.set_enabled(enabled_channels.q);
+        apu_regs.pulse_1.set_enabled(enabled_channels.p);
     }
 
     // Upon RESET
@@ -138,58 +141,58 @@ impl ApuRegisters {
     }
 
     // Write 0x4017
-    pub fn write_frame_counter(&mut self, clock: &ApuClock, cpu_pinout: &mut CpuPinout) {
-        let value = cpu_pinout.data_bus;
+    pub fn write_frame_counter(bus: &mut Bus) {
+        let value = bus.cpu_pinout.data_bus;
         use StepMode::*;
-        self.pending_step_mode = if value & 0b1000_0000 == 0 { FourStep } else { FiveStep };
-        self.suppress_frame_irq = value & 0b0100_0000 != 0;
-        if self.suppress_frame_irq {
-            info!(target: "apuevents", "Frame IRQ acknowledged by Frame Counter write. APU Cycle: {}", clock.cpu_cycle());
-            cpu_pinout.acknowledge_frame_irq();
-            self.frame_irq_status = false;
+        bus.apu_regs.pending_step_mode = if value & 0b1000_0000 == 0 { FourStep } else { FiveStep };
+        bus.apu_regs.suppress_frame_irq = value & 0b0100_0000 != 0;
+        if bus.apu_regs.suppress_frame_irq {
+            info!(target: "apuevents", "Frame IRQ acknowledged by Frame Counter write. APU Cycle: {}", bus.apu_clock().cpu_cycle());
+            CpuPinout::acknowledge_frame_irq(bus);
+            bus.apu_regs.frame_irq_status = false;
         }
 
-        self.clock_reset_status.initialize();
+        bus.apu_regs.clock_reset_status.initialize();
 
         info!(target: "apuevents", "Frame counter write: {:?}, Suppress IRQ: {}, Status: {:?}, APU Cycle: {}",
-            self.pending_step_mode, self.suppress_frame_irq, self.clock_reset_status, clock.cpu_cycle());
+            bus.apu_regs.pending_step_mode, bus.apu_regs.suppress_frame_irq, bus.apu_regs.clock_reset_status, bus.apu_clock().cpu_cycle());
     }
 
-    pub fn tick_get(&mut self, clock: &mut ApuClock, cpu_pinout: &mut CpuPinout, dmc_dma: &mut DmcDma) {
-        if self.counter_suppression_cycles > 0 {
-            self.counter_suppression_cycles -= 1;
+    pub fn tick_get(bus: &mut Bus) {
+        if bus.apu_regs.counter_suppression_cycles > 0 {
+            bus.apu_regs.counter_suppression_cycles -= 1;
         }
 
-        self.maybe_update_step_mode(clock);
+        bus.apu_regs.maybe_update_step_mode(&mut bus.master_clock.apu_clock);
 
-        if self.should_acknowledge_frame_irq {
-            info!(target: "apuevents", "Frame IRQ acknowledged by APUSTATUS read. APU Cycle: {}", clock.cpu_cycle());
-            cpu_pinout.acknowledge_frame_irq();
-            self.frame_irq_status = false;
-            self.should_acknowledge_frame_irq = false;
+        if bus.apu_regs.should_acknowledge_frame_irq {
+            info!(target: "apuevents", "Frame IRQ acknowledged by APUSTATUS read. APU Cycle: {}", bus.apu_clock().cpu_cycle());
+            CpuPinout::acknowledge_frame_irq(bus);
+            bus.apu_regs.frame_irq_status = false;
+            bus.apu_regs.should_acknowledge_frame_irq = false;
         }
 
-        self.maybe_set_frame_irq_pending(clock, cpu_pinout);
-        self.apply_length_counter_pending_values();
+        ApuRegisters::maybe_set_frame_irq_pending(bus);
+        bus.apu_regs.apply_length_counter_pending_values();
 
-        self.triangle.tick();
-        self.dmc.tick(dmc_dma);
+        bus.apu_regs.triangle.tick();
+        bus.apu_regs.dmc.tick(&mut bus.dmc_dma);
     }
 
-    pub fn tick_put(&mut self, clock: &mut ApuClock, cpu_pinout: &mut CpuPinout, dmc_dma: &mut DmcDma) {
-        if self.counter_suppression_cycles > 0 {
-            self.counter_suppression_cycles -= 1;
+    pub fn tick_put(bus: &mut Bus) {
+        if bus.apu_regs.counter_suppression_cycles > 0 {
+            bus.apu_regs.counter_suppression_cycles -= 1;
         }
 
-        self.maybe_set_frame_irq_pending(clock, cpu_pinout);
-        self.maybe_decrement_counters(clock);
-        self.apply_length_counter_pending_values();
+        ApuRegisters::maybe_set_frame_irq_pending(bus);
+        bus.apu_regs.maybe_decrement_counters(&bus.master_clock.apu_clock);
+        bus.apu_regs.apply_length_counter_pending_values();
 
-        self.pulse_1.tick_put();
-        self.pulse_2.tick_put();
-        self.noise.tick_put();
-        self.triangle.tick();
-        self.dmc.tick(dmc_dma);
+        bus.apu_regs.pulse_1.tick_put();
+        bus.apu_regs.pulse_2.tick_put();
+        bus.apu_regs.noise.tick_put();
+        bus.apu_regs.triangle.tick();
+        bus.apu_regs.dmc.tick(&mut bus.dmc_dma);
     }
 
     fn maybe_update_step_mode(&mut self, clock: &mut ApuClock) {
@@ -283,14 +286,14 @@ impl ApuRegisters {
         self.noise.length_counter.apply_pending_values();
     }
 
-    fn maybe_set_frame_irq_pending(&mut self, clock: &ApuClock, cpu_pinout: &mut CpuPinout) {
-        if clock.is_in_frame_irq_window() {
-            if !self.suppress_frame_irq {
-                cpu_pinout.assert_frame_irq();
+    fn maybe_set_frame_irq_pending(bus: &mut Bus) {
+        if bus.apu_clock().is_in_frame_irq_window() {
+            if !bus.apu_regs.suppress_frame_irq {
+                CpuPinout::assert_frame_irq(bus);
             }
 
-            self.frame_irq_status = if clock.cpu_cycle() == 0 {
-                !self.suppress_frame_irq
+            bus.apu_regs.frame_irq_status = if bus.apu_clock().cpu_cycle() == 0 {
+                !bus.apu_regs.suppress_frame_irq
             } else {
                 true
             };

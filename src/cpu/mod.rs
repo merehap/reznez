@@ -5,6 +5,7 @@ pub mod rst_latch;
 pub mod reset_flip_flop;
 pub mod instruction;
 pub mod interrupt_cycle_detector;
+pub mod irq_latch;
 pub mod nmi_edge_detector;
 pub mod nmi_latch;
 pub mod oam_dma;

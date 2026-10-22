@@ -84,7 +84,7 @@ impl Mapper for Mapper042 {
                 if value & 0b0000_0010 == 0 {
                     self.irq_counter.disable();
                     self.irq_counter.force_reload();
-                    bus.cpu_pinout.acknowledge_mapper_irq();
+                    CpuPinout::acknowledge_mapper_irq(bus);
                 } else {
                     self.irq_counter.enable();
                 }
@@ -97,11 +97,11 @@ impl Mapper for Mapper042 {
     fn on_m2_fall(&mut self, bus: &mut Bus) {
         let tick_result = self.irq_counter.tick();
         if tick_result.triggered {
-            bus.cpu_pinout.assert_mapper_irq();
+            CpuPinout::assert_mapper_irq(bus);
         }
 
         if tick_result.wrapped {
-            bus.cpu_pinout.acknowledge_mapper_irq();
+            CpuPinout::acknowledge_mapper_irq(bus);
         }
     }
 

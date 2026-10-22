@@ -304,7 +304,7 @@ impl Mapper for Mapper209 {
                     self.irq_counter.enable_triggering();
                 } else {
                     self.irq_counter.disable_triggering();
-                    bus.cpu_pinout.acknowledge_mapper_irq();
+                    CpuPinout::acknowledge_mapper_irq(bus);
                 }
             }
             (_, _, 0xC001) => {
@@ -338,7 +338,7 @@ impl Mapper for Mapper209 {
             }
             (_, _, 0xC002) => {
                 self.irq_counter.disable_triggering();
-                bus.cpu_pinout.acknowledge_mapper_irq();
+                CpuPinout::acknowledge_mapper_irq(bus);
             }
             (_, _, 0xC003) => self.irq_counter.enable_triggering(),
             (_, _, 0xC004) => self.irq_counter.set_prescaler_count(value & self.irq_xor_value),
@@ -400,13 +400,13 @@ impl Mapper for Mapper209 {
     // TODO: Verify if the IRQ counter actually triggers on the falling edge.
     fn on_m2_fall(&mut self, bus: &mut Bus) {
         if self.irq_ticked_by == IrqTickedBy::CpuCycle && self.irq_counter.tick().triggered {
-            bus.cpu_pinout.assert_mapper_irq();
+            CpuPinout::assert_mapper_irq(bus);
         }
     }
 
     fn on_cpu_write(&mut self, bus: &mut Bus, _addr: CpuAddress, _value: u8) {
         if self.irq_ticked_by == IrqTickedBy::CpuWrite && self.irq_counter.tick().triggered {
-            bus.cpu_pinout.assert_mapper_irq();
+            CpuPinout::assert_mapper_irq(bus);
         }
     }
 
@@ -418,7 +418,7 @@ impl Mapper for Mapper209 {
 
         let should_tick = should_tick_from_read || should_tick_from_right_transition;
         if should_tick && self.irq_counter.tick().triggered {
-            bus.cpu_pinout.assert_mapper_irq();
+            CpuPinout::assert_mapper_irq(bus);
         }
 
         let (meta_id, bank_register_id) = match address.to_u16() {

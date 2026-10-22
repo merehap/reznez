@@ -64,7 +64,7 @@ impl Mapper for Mapper091_1 {
             }
             0x7006 => {
                 self.irq_counter.disable();
-                bus.cpu_pinout.acknowledge_mapper_irq();
+                CpuPinout::acknowledge_mapper_irq(bus);
             }
             0x7007 => {
                 self.irq_counter.enable();
@@ -76,7 +76,7 @@ impl Mapper for Mapper091_1 {
     // TODO: Verify if the IRQ counter actually triggers on the falling edge.
     fn on_m2_fall(&mut self, bus: &mut Bus) {
         if self.irq_counter.tick().triggered {
-            bus.cpu_pinout.assert_mapper_irq();
+            CpuPinout::assert_mapper_irq(bus);
         }
     }
 

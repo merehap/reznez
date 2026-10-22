@@ -88,7 +88,7 @@ impl Mapper for Mapper264 {
             }
             0x8800 => {
                 self.irq_counter.set_count_low_byte(value);
-                bus.cpu_pinout.acknowledge_mapper_irq();
+                CpuPinout::acknowledge_mapper_irq(bus);
             }
             0x8801 => {
                 self.irq_counter.set_count_high_byte(value);
@@ -109,7 +109,7 @@ impl Mapper for Mapper264 {
     // TODO: Verify if the IRQ counter actually triggers on the falling edge.
     fn on_m2_fall(&mut self, bus: &mut Bus) {
         if self.irq_counter.tick().triggered {
-            bus.cpu_pinout.assert_mapper_irq();
+            CpuPinout::assert_mapper_irq(bus);
             self.irq_counter.disable();
         }
     }

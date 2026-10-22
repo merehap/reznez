@@ -37,7 +37,7 @@ impl Mapper for Mapper142 {
             0xA000..=0xAFFF => self.irq_counter.set_reload_value_second_highest_nybble(u4::new(value & 0xF)),
             0xB000..=0xBFFF => self.irq_counter.set_reload_value_highest_nybble(u4::new(value & 0xF)),
             0xC000..=0xCFFF => {
-                bus.cpu_pinout.acknowledge_mapper_irq();
+                CpuPinout::acknowledge_mapper_irq(bus);
 
                 let enabled = value != 0;
                 self.irq_counter.set_enabled(enabled);
@@ -46,7 +46,7 @@ impl Mapper for Mapper142 {
                 }
             }
             0xD000..=0xDFFF => {
-                bus.cpu_pinout.acknowledge_mapper_irq();
+                CpuPinout::acknowledge_mapper_irq(bus);
             }
             0xE000..=0xEFFF => {
                 match value & 0b111 {
@@ -70,7 +70,7 @@ impl Mapper for Mapper142 {
     // TODO: Verify if the IRQ counter actually triggers on the falling edge.
     fn on_m2_fall(&mut self, bus: &mut Bus) {
         if self.irq_counter.tick().triggered {
-            bus.cpu_pinout.assert_mapper_irq();
+            CpuPinout::assert_mapper_irq(bus);
         }
     }
 

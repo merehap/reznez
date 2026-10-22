@@ -1,4 +1,4 @@
-use crate::mapper::mapper::IrqCounterInfo;
+use crate::mapper::mapper::{CpuPinout, IrqCounterInfo};
 use crate::bus::Bus;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pattern_table_side::PatternTableSide;
@@ -90,7 +90,7 @@ impl Mmc3IrqState {
         }
 
         if should_tick_irq_counter && self.counter.tick().triggered {
-            bus.cpu_pinout.assert_mapper_irq();
+            CpuPinout::assert_mapper_irq(bus);
         }
     }
 
@@ -111,7 +111,7 @@ impl Mmc3IrqState {
     // Write 0xE000 (even addresses)
     pub fn disable(&mut self, bus: &mut Bus) {
         self.counter.disable();
-        bus.cpu_pinout.acknowledge_mapper_irq();
+        CpuPinout::acknowledge_mapper_irq(bus);
     }
 
     // Write 0xE001 (odd addresses)

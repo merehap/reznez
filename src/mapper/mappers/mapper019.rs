@@ -70,11 +70,11 @@ impl Mapper for Mapper019 {
             0x4020..=0x47FF => { /* Do nothing. */ }
             0x4800..=0x4FFF => { /* TODO: Expansion Audio. */ }
             0x5000..=0x57FF => {
-                bus.cpu_pinout.acknowledge_mapper_irq();
+                CpuPinout::acknowledge_mapper_irq(bus);
                 self.irq_counter.set_count_low_byte(value);
             }
             0x5800..=0x5FFF => {
-                bus.cpu_pinout.acknowledge_mapper_irq();
+                CpuPinout::acknowledge_mapper_irq(bus);
 
                 let (irq_enable, irq_count_high_byte) = splitbits_named!(value, "eccccccc");
                 self.irq_counter.set_count_high_byte(irq_count_high_byte);
@@ -134,7 +134,7 @@ impl Mapper for Mapper019 {
     // TODO: Verify if the IRQ counter actually triggers on the falling edge.
     fn on_m2_fall(&mut self, bus: &mut Bus) {
         if self.irq_counter.tick().triggered {
-            bus.cpu_pinout.assert_mapper_irq();
+            CpuPinout::assert_mapper_irq(bus);
         }
     }
 

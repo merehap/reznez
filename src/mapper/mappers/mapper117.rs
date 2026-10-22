@@ -60,11 +60,11 @@ impl Mapper for Mapper117 {
             0xA007 => bus.set_chr_register(J, value),
 
             0xC001 => self.irq_counter.set_reload_value(value),
-            0xC002 => bus.cpu_pinout.acknowledge_mapper_irq(),
+            0xC002 => CpuPinout::acknowledge_mapper_irq(bus),
             0xC003 => self.irq_counter.force_reload(),
             0xD000 => bus.set_name_table_mirroring(value & 1),
             0xE000 => {
-                bus.cpu_pinout.acknowledge_mapper_irq();
+                CpuPinout::acknowledge_mapper_irq(bus);
                 self.irq_counter.set_enabled(value & 1 == 1);
             }
 
@@ -76,7 +76,7 @@ impl Mapper for Mapper117 {
     fn on_ppu_address_change(&mut self, bus: &mut Bus, address: PpuAddress) {
         let transitioned_right = self.transition_detector.detect(address) == Some(PatternTableSide::Right);
         if transitioned_right && self.irq_counter.tick().triggered {
-            bus.cpu_pinout.assert_mapper_irq();
+            CpuPinout::assert_mapper_irq(bus);
         }
     }
 

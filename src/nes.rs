@@ -220,7 +220,7 @@ impl Nes {
             if self.bus.cpu_pinout.reset().is_active() {
                 // Complete the CPU reset, if one is in progress and nearing completion.
                 self.bus.cpu.reset();
-                self.bus.apu_regs.reset(self.bus.master_clock.apu_clock(), &mut self.bus.cpu_pinout);
+                ApuRegisters::reset(&mut self.bus);
                 self.bus.dmc_dma.disable_soon();
                 self.bus.ciram.disable_writes();
                 self.mapper.reset(&mut self.bus);

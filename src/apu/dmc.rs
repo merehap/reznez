@@ -1,7 +1,7 @@
 use splitbits::{combinebits, splitbits, splitbits_named_ux};
 use ux::u7;
 
-use crate::apu::apu_clock::CycleParity;
+use crate::bus::Bus;
 use crate::cpu::dmc_dma::DmcDma;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::cpu_pinout::CpuPinout;
@@ -29,13 +29,13 @@ pub struct Dmc {
 
 impl Dmc {
     // 0x4010
-    pub fn write_control_byte(&mut self, cpu_pinout: &mut CpuPinout) {
-        let fields = splitbits!(cpu_pinout.data_bus, "il..pppp");
-        self.irq_enabled = fields.i;
-        self.should_loop = fields.l;
-        self.period = NTSC_PERIODS[fields.p as usize] - 1;
-        if !self.irq_enabled {
-            cpu_pinout.acknowledge_dmc_irq();
+    pub fn write_control_byte(bus: &mut Bus) {
+        let fields = splitbits!(bus.cpu_pinout.data_bus, "il..pppp");
+        bus.apu_regs.dmc.irq_enabled = fields.i;
+        bus.apu_regs.dmc.should_loop = fields.l;
+        bus.apu_regs.dmc.period = NTSC_PERIODS[fields.p as usize] - 1;
+        if !bus.apu_regs.dmc.irq_enabled {
+            CpuPinout::acknowledge_dmc_irq(bus);
         }
     }
 
@@ -51,17 +51,19 @@ impl Dmc {
     }
 
     // 0x4015
-    pub(super) fn set_enabled(&mut self, cpu_pinout: &mut CpuPinout, dma: &mut DmcDma, cycle_parity: CycleParity, enable: bool) {
-        cpu_pinout.acknowledge_dmc_irq();
+    pub(super) fn set_enabled(bus: &mut Bus, enable: bool) {
+        CpuPinout::acknowledge_dmc_irq(bus);
 
+        let Bus { dmc_dma, apu_regs, master_clock, ..} = bus;
+        let dmc = &mut apu_regs.dmc;
         if !enable {
-            dma.disable_soon();
-        } else if !dma.enabled() {
-            dma.enable();
-            self.sample_address = self.sample_start_address;
+            dmc_dma.disable_soon();
+        } else if !dmc_dma.enabled() {
+            dmc_dma.enable();
+            dmc.sample_address = dmc.sample_start_address;
 
-            if self.sample_buffer.is_none() {
-                dma.start_load(cycle_parity);
+            if dmc.sample_buffer.is_none() {
+                dmc_dma.start_load(master_clock.apu_clock().cycle_parity());
             }
         }
     }
@@ -105,21 +107,21 @@ impl Dmc {
     }
 
     // Called upon the completion of a DMC DMA (Load OR Reload).
-    pub fn set_sample_buffer(&mut self, cpu_pinout: &mut CpuPinout, dma: &mut DmcDma, value: u8) {
-        if dma.enabled() {
-            self.sample_buffer = Some(value);
-            self.sample_address.inc();
-            if self.sample_address == CpuAddress::ZERO {
-                self.sample_address = CpuAddress::new(0x8000);
+    pub fn set_sample_buffer(bus: &mut Bus, value: u8) {
+        if bus.dmc_dma.enabled() {
+            bus.apu_regs.dmc.sample_buffer = Some(value);
+            bus.apu_regs.dmc.sample_address.inc();
+            if bus.apu_regs.dmc.sample_address == CpuAddress::ZERO {
+                bus.apu_regs.dmc.sample_address = CpuAddress::new(0x8000);
             }
 
-            dma.decrement_sample_bytes_remaining();
-            if !dma.enabled() {
-                if self.should_loop {
-                    dma.enable();
-                    self.sample_address = self.sample_start_address;
-                } else if self.irq_enabled {
-                    cpu_pinout.assert_dmc_irq();
+            bus.dmc_dma.decrement_sample_bytes_remaining();
+            if !bus.dmc_dma.enabled() {
+                if bus.apu_regs.dmc.should_loop {
+                    bus.dmc_dma.enable();
+                    bus.apu_regs.dmc.sample_address = bus.apu_regs.dmc.sample_start_address;
+                } else if bus.apu_regs.dmc.irq_enabled {
+                    CpuPinout::assert_dmc_irq(bus);
                 }
             }
         }

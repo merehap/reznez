@@ -112,7 +112,7 @@ impl Mapper for Mapper064 {
         if self.irq_pending_delay_cycles > 0 {
             self.irq_pending_delay_cycles -= 1;
             if self.irq_pending_delay_cycles == 0 {
-                bus.cpu_pinout.assert_mapper_irq();
+                CpuPinout::assert_mapper_irq(bus);
             }
         }
 
@@ -218,7 +218,7 @@ impl Mapper064 {
 
     fn acknowledge_irq(&mut self, bus: &mut Bus) {
         self.irq_enabled = false;
-        bus.cpu_pinout.acknowledge_mapper_irq();
+        CpuPinout::acknowledge_mapper_irq(bus);
     }
 
     fn enabled_irq(&mut self) {

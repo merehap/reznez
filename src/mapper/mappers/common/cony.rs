@@ -57,7 +57,7 @@ impl Cony {
             bus.set_name_table_mirroring(fields.m);
         } else if *addr & 0x8301 == 0x8200 {
             self.irq_counter.set_count_low_byte(value);
-            bus.cpu_pinout.acknowledge_mapper_irq();
+            CpuPinout::acknowledge_mapper_irq(bus);
         } else if *addr & 0x8301 == 0x8201 {
             self.irq_counter.set_count_high_byte(value);
             self.irq_counter.set_enabled(self.next_irq_enabled_value);
@@ -70,7 +70,7 @@ impl Cony {
 
     pub fn on_end_of_cpu_cycle(&mut self, bus: &mut Bus) {
         if self.irq_counter.tick().triggered {
-            bus.cpu_pinout.assert_mapper_irq();
+            CpuPinout::assert_mapper_irq(bus);
             self.irq_counter.disable();
         }
     }

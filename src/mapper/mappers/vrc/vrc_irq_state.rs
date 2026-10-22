@@ -2,6 +2,7 @@ use splitbits::splitbits_named;
 
 use crate::counter::irq_counter_info::IrqCounterInfo;
 use crate::bus::Bus;
+use crate::mapper::mapper::CpuPinout;
 
 pub struct VrcIrqState {
     enabled: bool,
@@ -44,7 +45,7 @@ impl VrcIrqState {
         }
 
         if self.counter == 0xFF {
-            bus.cpu_pinout.assert_mapper_irq();
+            CpuPinout::assert_mapper_irq(bus);
             self.counter = self.counter_reload_value;
         } else {
             self.counter += 1;
@@ -64,7 +65,7 @@ impl VrcIrqState {
     }
 
     pub fn set_mode(&mut self, bus: &mut Bus, value: u8) {
-        bus.cpu_pinout.acknowledge_mapper_irq();
+        CpuPinout::acknowledge_mapper_irq(bus);
 
         let mode;
         (mode, self.enable_upon_acknowledgement, self.enabled) = splitbits_named!(value, ".....mae");
@@ -75,7 +76,7 @@ impl VrcIrqState {
     }
 
     pub fn acknowledge(&mut self, bus: &mut Bus) {
-        bus.cpu_pinout.acknowledge_mapper_irq();
+        CpuPinout::acknowledge_mapper_irq(bus);
         if self.enable_upon_acknowledgement {
             self.enabled = true;
         }

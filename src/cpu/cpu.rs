@@ -3,10 +3,12 @@ use std::marker::ConstParamTy;
 use log::{info, log_enabled};
 use log::Level::Info;
 
+use crate::apu::dmc::Dmc;
 use crate::config::CpuStepFormatting;
 use crate::cpu::cpu_mode::{CpuModeState, InterruptType};
 use crate::cpu::dmc_dma::DmcDmaAction;
 use crate::cpu::interrupt_cycle_detector::InterruptCycleDetector;
+use crate::cpu::irq_latch::IrqLatch;
 use crate::cpu::nmi_edge_detector::NmiEdgeDetector;
 use crate::cpu::nmi_latch::NmiLatch;
 use crate::cpu::rst_latch::RstLatch;
@@ -58,6 +60,7 @@ pub struct Cpu {
     pub reset_flip_flop: ResetFlipFlop,
     pub nmi_latch: NmiLatch, // TODO: No test ROMs exist for the nmip half-cycle delay.
     pub nmi_edge_detector: NmiEdgeDetector,
+    pub irq_latch: IrqLatch,
 
     nmi_falling_edge_detected: bool,
     nmi_pending: bool,
@@ -107,9 +110,10 @@ impl Cpu {
             interrupt_cycle_detector: InterruptCycleDetector::new(),
             rst_latch: RstLatch::new(),
             reset_flip_flop: ResetFlipFlop::new(),
-
             nmi_latch: NmiLatch::new(),
             nmi_edge_detector: NmiEdgeDetector::new(),
+            irq_latch: IrqLatch::new(),
+
             nmi_falling_edge_detected: false,
             nmi_pending: false,
             irq_status: IrqStatus::Inactive,
@@ -320,7 +324,7 @@ impl Cpu {
         InterruptCycleDetector::update(bus); // Relies on step.brk5()
 
         // Keep irq_pending and irq_status in sync
-        if bus.cpu_pinout.irq_asserted() {
+        if bus.cpu_pinout.irq().is_active() {
             if bus.cpu.irq_status == IrqStatus::Inactive && !bus.cpu.status.interrupts_disabled {
                 bus.cpu.irq_status = IrqStatus::Pending;
             }
@@ -353,7 +357,12 @@ impl Cpu {
 
     }
 
-    fn execute_step_action(Bus { cpu, cpu_pinout, apu_regs, dmc_dma, oam_dma, .. }: &mut Bus, action: StepAction, value: u8) {
+    fn execute_step_action(bus: &mut Bus, action: StepAction, value: u8) {
+        if action == StepAction::SetDmcSampleBuffer {
+            Dmc::set_sample_buffer(bus, value);
+        }
+
+        let Bus { cpu, cpu_pinout, oam_dma, .. } = bus;
         match action {
             StepAction::StartNextInstruction => {
                 if cpu.mode_state.should_suppress_next_instruction_start() {
@@ -578,7 +587,7 @@ impl Cpu {
                 }
             }
 
-            StepAction::SetDmcSampleBuffer => apu_regs.dmc.set_sample_buffer(cpu_pinout, dmc_dma, value),
+            StepAction::SetDmcSampleBuffer => { /* Already done above. */ }
 
             StepAction::XOffsetPendingAddressLow => {
                 let carry;

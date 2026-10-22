@@ -63,7 +63,7 @@ impl Mapper for Mapper043 {
                     self.irq_counter.disable();
                     // It's not clear that this is correct since the counter already wraps. A ROM test of the hardware is needed.
                     self.irq_counter.force_reload();
-                    bus.cpu_pinout.acknowledge_mapper_irq();
+                    CpuPinout::acknowledge_mapper_irq(bus);
                 }
             }
             _ => { /* Do nothing. */ }
@@ -74,7 +74,7 @@ impl Mapper for Mapper043 {
     fn on_m2_fall(&mut self, bus: &mut Bus) {
         let tick_result = self.irq_counter.tick();
         if tick_result.triggered {
-            bus.cpu_pinout.assert_mapper_irq();
+            CpuPinout::assert_mapper_irq(bus);
         }
 
         if tick_result.wrapped {

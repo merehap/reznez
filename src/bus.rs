@@ -1,6 +1,7 @@
 use crate::apu::apu::Apu;
 use crate::apu::apu_clock::ApuClock;
 use crate::apu::apu_registers::ApuRegisters;
+use crate::apu::dmc::Dmc;
 use crate::controller::joypad::Joypad;
 use crate::cpu::cpu::Cpu;
 use crate::cpu::dmc_dma::DmcDma;
@@ -480,15 +481,15 @@ impl Bus {
             Addr::NoiseControl    => self.apu_regs.noise.set_control(self.cpu_pinout.data_bus),
             Addr::NoisePeriod     => self.apu_regs.noise.set_loop_and_period(self.cpu_pinout.data_bus),
             Addr::NoiseLength     => self.apu_regs.noise.set_length(self.cpu_pinout.data_bus),
-            Addr::DmcControl      => self.apu_regs.dmc.write_control_byte(&mut self.cpu_pinout),
+            Addr::DmcControl      => Dmc::write_control_byte(self),
             Addr::DmcVolume       => self.apu_regs.dmc.write_volume(self.cpu_pinout.data_bus),
             Addr::DmcAddress      => self.apu_regs.dmc.write_sample_start_address(self.cpu_pinout.data_bus),
             Addr::DmcLength       => self.dmc_dma.write_sample_length(self.cpu_pinout.data_bus),
 
             // Miscellaneous registers.
             Addr::OamDma          => self.oam_dma.prepare_to_start(self.cpu_pinout.data_bus),
-            Addr::ApuStatus       => self.apu_regs.write_status(self.master_clock.apu_clock(), &mut self.cpu_pinout, &mut self.dmc_dma),
-            Addr::Controller2AndFrameCounter => self.apu_regs.write_frame_counter(self.master_clock.apu_clock(), &mut self.cpu_pinout),
+            Addr::ApuStatus       => ApuRegisters::write_status(self),
+            Addr::Controller2AndFrameCounter => ApuRegisters::write_frame_counter(self),
             Addr::Controller1AndStrobe => {
                 self.joypad1.change_strobe(self.cpu_pinout.data_bus);
                 self.joypad2.change_strobe(self.cpu_pinout.data_bus);

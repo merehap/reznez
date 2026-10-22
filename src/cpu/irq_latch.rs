@@ -1,12 +1,12 @@
-use crate::{bus::Bus, circuit::d_latch::DLatch, memory::signal_level::{ActiveHigh, ActiveLow, SignalLevel}};
+use crate::bus::Bus;
+use crate::circuit::d_latch::{DLInputs, DLatch};
+use crate::memory::signal_level::{ActiveLow, SignalLevel};
 
-#[allow(dead_code)]
 pub struct IrqLatch {
     irq1: DLatch,
     irq2: DLatch,
 }
 
-#[allow(dead_code)]
 impl IrqLatch {
     pub fn new() -> Self {
         Self {
@@ -15,21 +15,18 @@ impl IrqLatch {
         }
     }
 
+    pub fn irqp(&self) -> ActiveLow {
+        self.irq2.q().into()
+    }
 
-}
-
-#[allow(dead_code)]
-pub struct IrqInputs {
-    irq: ActiveLow,
-    phi2: ActiveHigh,
-}
-
-#[allow(dead_code)]
-impl IrqInputs {
-    pub fn new(Bus { cpu, cpu_pinout, .. }: &Bus) -> Self {
-        Self {
-            irq: cpu_pinout.irq(),
-            phi2: cpu.phi2,
-        }
+    pub fn update(bus: &mut Bus) {
+        bus.cpu.irq_latch.irq1.update(DLInputs {
+            e: *bus.cpu.phi2,
+            d: *bus.cpu_pinout.irq(),
+        });
+        bus.cpu.irq_latch.irq2.update(DLInputs {
+            e: !*bus.cpu.phi2,
+            d: bus.cpu.irq_latch.irq1.q(),
+        });
     }
 }

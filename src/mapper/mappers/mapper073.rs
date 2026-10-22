@@ -47,7 +47,7 @@ impl Mapper for Mapper073 {
             0xA000..=0xAFFF => self.high_irq_counter.set_reload_value_lowest_nybble(u4::new(value & 0xF)),
             0xB000..=0xBFFF => self.high_irq_counter.set_reload_value_second_lowest_nybble(u4::new(value & 0xF)),
             0xC000..=0xCFFF => {
-                bus.cpu_pinout.acknowledge_mapper_irq();
+                CpuPinout::acknowledge_mapper_irq(bus);
 
                 let (byte_mode, enabled, enabled_on_acknowledgement) = splitbits_named!(value, ".....mea");
                 self.irq_mode = if byte_mode { IrqMode::EightBit } else { IrqMode::SixteenBit };
@@ -61,7 +61,7 @@ impl Mapper for Mapper073 {
                 self.irq_enabled_on_acknowledgement = enabled_on_acknowledgement;
             }
             0xD000..=0xDFFF => {
-                bus.cpu_pinout.acknowledge_mapper_irq();
+                CpuPinout::acknowledge_mapper_irq(bus);
                 self.low_irq_counter.set_enabled(self.irq_enabled_on_acknowledgement);
                 self.high_irq_counter.set_enabled(self.irq_enabled_on_acknowledgement);
             }
@@ -76,12 +76,12 @@ impl Mapper for Mapper073 {
         if low_triggered {
             match self.irq_mode {
                 IrqMode::EightBit => {
-                    bus.cpu_pinout.assert_mapper_irq();
+                    CpuPinout::assert_mapper_irq(bus);
                 }
                 IrqMode::SixteenBit => {
                     let high_triggered = self.high_irq_counter.tick().triggered;
                     if high_triggered {
-                        bus.cpu_pinout.assert_mapper_irq();
+                        CpuPinout::assert_mapper_irq(bus);
                     }
                 }
             }

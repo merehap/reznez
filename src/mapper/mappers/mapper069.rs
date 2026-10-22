@@ -52,7 +52,7 @@ impl Mapper for Mapper069 {
     // TODO: Verify if the IRQ counter actually triggers on the falling edge.
     fn on_m2_fall(&mut self, bus: &mut Bus) {
         if self.irq_counter.tick().triggered {
-            bus.cpu_pinout.assert_mapper_irq();
+            CpuPinout::assert_mapper_irq(bus);
         }
     }
 
@@ -90,7 +90,7 @@ impl Mapper for Mapper069 {
                     Command::NameTableMirroring =>
                         bus.set_name_table_mirroring(value & 0b11),
                     Command::IrqControl => {
-                        bus.cpu_pinout.acknowledge_mapper_irq();
+                        CpuPinout::acknowledge_mapper_irq(bus);
                         let (counter_counting_enabled, irq_triggering_enabled) = splitbits_named!(value, "c......i");
                         self.irq_counter.set_counting_enabled(counter_counting_enabled);
                         self.irq_counter.set_triggering_enabled(irq_triggering_enabled);
