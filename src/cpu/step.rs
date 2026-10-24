@@ -355,6 +355,10 @@ impl Step {
         matches!(*self, Self::OamRead(..) | Self::OamWrite(..) | Self::DmcRead(..))
     }
 
+    pub fn t0(&self) -> ActiveHigh {
+        if self.has(StepAction::PollInterrupts) { ActiveHigh::Active } else { ActiveHigh::Inactive }
+    }
+
     pub fn brk5(&self) -> ActiveHigh {
         if self.has(StepAction::Brk5) { ActiveHigh::Active } else { ActiveHigh::Inactive }
     }

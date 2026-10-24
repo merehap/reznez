@@ -189,6 +189,14 @@ impl Cpu {
         self.step.address_bus_type()
     }
 
+    pub fn br2(&self) -> ActiveHigh {
+        if self.step.has(StepAction::MaybePollInterrupts) && self.address_carry != 0 {
+            ActiveHigh::Active
+        } else {
+            ActiveHigh::Inactive
+        }
+    }
+
     pub fn step_m2_rise(bus: &mut Bus, mapper: &mut dyn Mapper) {
         if bus.cpu_pinout.reset().is_active() {
             // The CPU doesn't do anything while the RESET button is held down.
