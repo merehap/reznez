@@ -4,7 +4,7 @@ use crate::bus::Bus;
 use crate::circuit::d_latch::{DLInputs, DLatch};
 use crate::circuit::sr_latch::{SRInputs, SRLatch};
 use crate::memory::cpu::cpu_pinout::CpuPinout;
-use crate::memory::signal_level::{SignalLevel, nor, nor3};
+use crate::memory::signal_level::{SignalLevel, nor3};
 use crate::ppu::ppu::Ppu;
 
 // Reference: https://github.com/emu-russia/breaks/blob/master/BreakingNESWiki_DeepL/PPU/fsm.md#vblank-interrupt-handling
@@ -29,7 +29,7 @@ impl VBlankInterruptHandler {
         Self::update_latches(bus);
 
         let vbl = if bus.ppu_regs.nmi_enabled() { SignalLevel::High } else { SignalLevel::Low };
-        let int = nor(!vbl, !bus.ppu.vblank_interrupt_handler.int_ff.q());
+        let int = (!vbl).nor(!bus.ppu.vblank_interrupt_handler.int_ff.q());
         CpuPinout::set_nmi(bus, (!int).into());
     }
 
@@ -49,7 +49,7 @@ impl VBlankInterruptHandler {
         });
         let set = nor3(!pclk, *vset, vih.vset_2.q());
 
-        let read_enabled = nor(r2, *dbe);
+        let read_enabled = dbe.nor(r2);
         let reset = *vclr | read_enabled;
 
         vih.int_ff.update(SRInputs {

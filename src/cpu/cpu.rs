@@ -5,6 +5,7 @@ use log::Level::Info;
 
 use crate::apu::dmc::Dmc;
 use crate::config::CpuStepFormatting;
+use crate::cpu::b_flag::BFlag;
 use crate::cpu::cpu_mode::{CpuModeState, InterruptType};
 use crate::cpu::dmc_dma::DmcDmaAction;
 use crate::cpu::interrupt_cycle_detector::InterruptCycleDetector;
@@ -35,7 +36,7 @@ pub struct Cpu {
     y: u8,
     stack_pointer: u8,
     program_counter: CpuAddress,
-    status: Status,
+    pub(super) status: Status,
 
     // Undocumented op codes expose a register that is normally not observable.
     // This is the high byte of the address bus prior to X/Y offsetting.
@@ -61,6 +62,7 @@ pub struct Cpu {
     pub nmi_latch: NmiLatch, // TODO: No test ROMs exist for the nmip half-cycle delay.
     pub nmi_edge_detector: NmiEdgeDetector,
     pub irq_latch: IrqLatch,
+    pub b_flag: BFlag,
 
     nmi_falling_edge_detected: bool,
     nmi_pending: bool,
@@ -113,6 +115,7 @@ impl Cpu {
             nmi_latch: NmiLatch::new(),
             nmi_edge_detector: NmiEdgeDetector::new(),
             irq_latch: IrqLatch::new(),
+            b_flag: BFlag::new(),
 
             nmi_falling_edge_detected: false,
             nmi_pending: false,
@@ -210,7 +213,7 @@ impl Cpu {
 
         //bus.ppu_regs.ppu_status_vblank_active = bus.ppu_regs.vblank_active;
 
-        if !bus.cpu.nmi_pending && bus.cpu.irq_status == IrqStatus::Pending && !bus.cpu.status.interrupts_disabled {
+        if !bus.cpu.nmi_pending && bus.cpu.irq_status == IrqStatus::Pending && !bus.cpu.status.interrupts_disabled() {
             bus.cpu.irq_status = IrqStatus::Ready;
         }
 
@@ -328,12 +331,13 @@ impl Cpu {
             }
         }
 
+        // TODO: Protect access to step, and update the InterruptCycleDetector in set_step().
         bus.cpu.step = bus.cpu.mode_state.current_step();
         InterruptCycleDetector::update(bus); // Relies on step.brk5()
 
         // Keep irq_pending and irq_status in sync
         if bus.cpu_pinout.irq().is_active() {
-            if bus.cpu.irq_status == IrqStatus::Inactive && !bus.cpu.status.interrupts_disabled {
+            if bus.cpu.irq_status == IrqStatus::Inactive && !bus.cpu.status.interrupts_disabled() {
                 bus.cpu.irq_status = IrqStatus::Pending;
             }
         } else if bus.cpu.irq_status != IrqStatus::Active || !bus.cpu.mode_state.is_branch_delay_active() {
@@ -366,8 +370,17 @@ impl Cpu {
     }
 
     fn execute_step_action(bus: &mut Bus, action: StepAction, value: u8) {
-        if action == StepAction::SetDmcSampleBuffer {
-            Dmc::set_sample_buffer(bus, value);
+        // Limitations of the borrow-checker mean a few actions need to be handled before the rest.
+        match action {
+            StepAction::SetDmcSampleBuffer =>
+                Dmc::set_sample_buffer(bus, value),
+            StepAction::DisableInterrupts =>
+                Status::set_interrupts_disabled(bus, true),
+            StepAction::ExecuteOpCode if let Some(instruction) = bus.cpu.mode_state.current_instruction() && instruction.op_code() == OpCode::CLI =>
+                Status::set_interrupts_disabled(bus, false),
+            StepAction::ExecuteOpCode if let Some(instruction) = bus.cpu.mode_state.current_instruction() && instruction.op_code() == OpCode::SEI =>
+                Status::set_interrupts_disabled(bus, true),
+            _ => { /* Everything else is handled just after this. */ }
         }
 
         let Bus { cpu, cpu_pinout, oam_dma, .. } = bus;
@@ -377,15 +390,16 @@ impl Cpu {
                     return;
                 }
 
+                if cpu.b_flag.b_out(&cpu.reset_flip_flop, cpu.brk6e).is_active() {
+                    cpu_pinout.data_bus = 0x00;
+                }
+
                 if cpu.reset_flip_flop.dores().is_active() {
                     log::info!("DORES forcing data bus to 0x00");
-                    cpu_pinout.data_bus = 0x00;
                     cpu.mode_state.interrupt_sequence(InterruptType::Reset);
                 } else if cpu.nmi_pending {
-                    cpu_pinout.data_bus = 0x00;
                     cpu.mode_state.interrupt_sequence(InterruptType::Nmi);
                 } else if cpu.irq_status == IrqStatus::Active && !cpu.nmi_pending {
-                    cpu_pinout.data_bus = 0x00;
                     cpu.mode_state.interrupt_sequence(InterruptType::Irq);
                 } else {
                     cpu.mode_state.instruction(Instruction::from_code_point(value));
@@ -414,8 +428,8 @@ impl Cpu {
                     SEC => cpu.status.carry = true,
                     CLD => cpu.status.decimal = false,
                     SED => cpu.status.decimal = true,
-                    CLI => cpu.status.interrupts_disabled = false,
-                    SEI => cpu.status.interrupts_disabled = true,
+                    CLI => { /* Already done above. */ }
+                    SEI => { /* Already done above. */ }
                     CLV => cpu.status.overflow = false,
                     NOP => { /* Do nothing. */ }
 
@@ -553,7 +567,7 @@ impl Cpu {
             StepAction::IncrementStackPointer => cpu.stack_pointer = cpu.stack_pointer.wrapping_add(1),
             StepAction::DecrementStackPointer => cpu.stack_pointer = cpu.stack_pointer.wrapping_sub(1),
 
-            StepAction::DisableInterrupts => cpu.status.interrupts_disabled = true,
+            StepAction::DisableInterrupts => { /* Already done above. */ }
             StepAction::SetInterruptVector => {
                 cpu.current_interrupt_vector =
                     if cpu.reset_flip_flop.dores().is_active() {
@@ -581,7 +595,7 @@ impl Cpu {
             StepAction::PollInterrupts => {
                 if cpu.nmi_falling_edge_detected {
                     cpu.nmi_pending = true;
-                } else if cpu.irq_status == IrqStatus::Ready && !cpu.status.interrupts_disabled {
+                } else if cpu.irq_status == IrqStatus::Ready && !cpu.status.interrupts_disabled() {
                     cpu.irq_status = IrqStatus::Active;
                 }
             }
@@ -589,7 +603,7 @@ impl Cpu {
                 if cpu.address_carry != 0 {
                     if cpu.nmi_falling_edge_detected {
                         cpu.nmi_pending = true;
-                    } else if cpu.irq_status == IrqStatus::Ready && !cpu.status.interrupts_disabled {
+                    } else if cpu.irq_status == IrqStatus::Ready && !cpu.status.interrupts_disabled() {
                         cpu.irq_status = IrqStatus::Active;
                     }
                 }
@@ -705,8 +719,10 @@ impl Cpu {
             Accumulator => self.a,
             Status => {
                 if self.mode_state.is_interrupt_sequence_active() {
+                    //assert!(b.is_active());
                     self.status.to_interrupt_byte()
                 } else {
+                    //assert!(b.is_inactive());
                     self.status.to_instruction_byte()
                 }
             }

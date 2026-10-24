@@ -1,6 +1,6 @@
 use crate::bus::Bus;
 use crate::cpu::cpu::Cpu;
-use crate::memory::signal_level::{ActiveLow, SignalLevel, nor, nor3};
+use crate::memory::signal_level::{ActiveLow, SignalLevel, nor3};
 
 // Questions:
 // * Should this all be processed right on the clock transition?
@@ -33,7 +33,7 @@ impl NmiEdgeDetector {
     }
 
     pub fn donmi_signal(self) -> ActiveLow {
-        nor(self.donmi, nor(self.ff1, self.brk6e)).into()
+        self.ff1.nor(self.brk6e).nor(self.donmi).into()
     }
 
     pub fn update(bus: &mut Bus) {
@@ -45,7 +45,7 @@ impl NmiEdgeDetector {
             ned.ff1 = donmi;
             ned.delay1 = donmi;
 
-            ned.ff2 = nor(ned.nmip, nor(ned.ff2, ned.delay2));
+            ned.ff2 = ned.ff2.nor(ned.delay2).nor(ned.nmip);
         } else {
             let Cpu { nmi_edge_detector: ned, nmi_latch, brk6e, ..} = &mut bus.cpu;
 
@@ -53,7 +53,7 @@ impl NmiEdgeDetector {
             ned.brk6e = **brk6e;
             ned.delay2 = !ned.delay1;
 
-            let last_source = nor(ned.nmip, nor(ned.ff2, ned.delay2));
+            let last_source = ned.ff2.nor(ned.delay2).nor(ned.nmip);
             ned.donmi = nor3(!ned.brk7, ned.nmip, last_source);
         }
     }

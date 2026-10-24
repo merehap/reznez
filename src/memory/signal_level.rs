@@ -25,6 +25,24 @@ pub enum ActiveLow {
     Inactive = 1,
 }
 
+impl From<ActiveHigh> for SignalLevel {
+    fn from(value: ActiveHigh) -> Self {
+        match value {
+            ActiveHigh::Inactive => SignalLevel::Low,
+            ActiveHigh::Active => SignalLevel::High,
+        }
+    }
+}
+
+impl From<ActiveLow> for SignalLevel {
+    fn from(value: ActiveLow) -> Self {
+        match value {
+            ActiveLow::Inactive => SignalLevel::High,
+            ActiveLow::Active => SignalLevel::Low,
+        }
+    }
+}
+
 impl Deref for ActiveHigh {
     type Target = SignalLevel;
 
@@ -89,9 +107,16 @@ impl SignalLevel {
     pub fn negate(self) -> SignalLevel {
         !self
     }
+
+    pub fn nor(self, other: impl Into<Self>) -> SignalLevel {
+        !(self | other.into())
+    }
+
+    pub fn nand(self, other: impl Into<Self>) -> SignalLevel {
+        !(self & other.into())
+    }
 }
 
-#[allow(dead_code)]
 impl ActiveHigh {
     pub fn is_inactive(self) -> bool {
         self == Self::Inactive
@@ -105,12 +130,11 @@ impl ActiveHigh {
         (*self & *other.into()).into()
     }
 
-    pub fn nor(self, other: impl Into<Self>) -> Self {
-        nor(*self, *other.into()).into()
+    pub fn or(self, other: impl Into<Self>) -> Self {
+        (*self | *other.into()).into()
     }
 }
 
-#[allow(dead_code)]
 impl ActiveLow {
     pub fn is_inactive(self) -> bool {
         self == Self::Inactive
@@ -123,14 +147,6 @@ impl ActiveLow {
     pub fn and(self, other: impl Into<Self>) -> Self {
         (*self & *other.into()).into()
     }
-
-    pub fn nor(self, other: impl Into<Self>) -> Self {
-        nor(*self, *other.into()).into()
-    }
-}
-
-pub fn nor(a: SignalLevel, b: SignalLevel) -> SignalLevel {
-    !(a | b)
 }
 
 pub fn nor3(a: SignalLevel, b: SignalLevel, c: SignalLevel) -> SignalLevel {

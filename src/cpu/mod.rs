@@ -1,3 +1,4 @@
+pub mod b_flag;
 pub mod cpu;
 pub mod cpu_mode;
 pub mod dmc_dma;

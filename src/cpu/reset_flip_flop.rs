@@ -1,7 +1,7 @@
 use crate::bus::Bus;
 use crate::circuit::d_latch::{DLInputs, DLatch};
 use crate::cpu::cpu::Cpu;
-use crate::memory::signal_level::{ActiveHigh, SignalLevel, nor};
+use crate::memory::signal_level::{ActiveHigh, SignalLevel};
 
 pub struct ResetFlipFlop {
     res_1: DLatch,
@@ -28,10 +28,10 @@ impl ResetFlipFlop {
             d: *rst_latch.resp(),
         });
 
-        let not_dores = nor(rff.res_1.q(), rff.res_2.q());
+        let not_dores = rff.res_1.q().nor(rff.res_2.q());
         rff.res_2.update(DLInputs {
             e: !**phi2,
-            d: nor(not_dores, **brk6e),
+            d: brk6e.nor(not_dores),
         });
     }
 }

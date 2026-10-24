@@ -1,7 +1,7 @@
 use crate::bus::Bus;
 use crate::memory::cpu::cpu_pinout::ReadWrite;
 use crate::memory::ppu::ppu_address::PpuAddress;
-use crate::memory::signal_level::{ActiveHigh, ActiveLow, SignalLevel, nor};
+use crate::memory::signal_level::{ActiveHigh, ActiveLow, SignalLevel};
 use crate::ppu::vblank_interrupt_handler::VBlankInterruptHandler;
 use crate::util::edge_detector::EdgeDetector;
 
@@ -96,7 +96,7 @@ impl PpuPinout {
     }
 
     pub fn r2_enabled(&self) -> ActiveHigh {
-        nor(self.r2(), *self.data_bus_enabled).into()
+        self.data_bus_enabled.nor(self.r2()).into()
     }
 
     // Active Low

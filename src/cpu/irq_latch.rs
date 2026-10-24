@@ -1,5 +1,6 @@
 use crate::bus::Bus;
 use crate::circuit::d_latch::{DLInputs, DLatch};
+use crate::cpu::b_flag::BFlag;
 use crate::memory::signal_level::{ActiveLow, SignalLevel};
 
 pub struct IrqLatch {
@@ -28,5 +29,6 @@ impl IrqLatch {
             e: !*bus.cpu.phi2,
             d: bus.cpu.irq_latch.irq1.q(),
         });
+        BFlag::update(bus);
     }
 }

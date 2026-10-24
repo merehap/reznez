@@ -1,13 +1,13 @@
 use std::fmt;
 
-use crate::util::bit_util::{pack_bools, unpack_bools};
+use crate::{bus::Bus, cpu::b_flag::BFlag, util::bit_util::{pack_bools, unpack_bools}};
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct Status {
     pub negative: bool,
     pub overflow: bool,
     pub decimal: bool,
-    pub interrupts_disabled: bool,
+    interrupts_disabled: bool,
     pub zero: bool,
     pub carry: bool,
 }
@@ -39,6 +39,15 @@ impl Status {
         ] = unpack_bools(value);
 
         status
+    }
+
+    pub fn interrupts_disabled(self) -> bool {
+        self.interrupts_disabled
+    }
+
+    pub fn set_interrupts_disabled(bus: &mut Bus, value: bool) {
+        bus.cpu.status.interrupts_disabled = value;
+        BFlag::update(bus);
     }
 
     // TODO: Unify the three to_X() methods?

@@ -979,7 +979,7 @@ impl SnapshotBuilder {
     }
 
     fn frame_irq(&mut self, bus: &Bus) {
-        self.frame_irq = Some(bus.cpu_pinout.frame_irq_asserted() && !bus.cpu.status().interrupts_disabled);
+        self.frame_irq = Some(bus.cpu_pinout.frame_irq_asserted() && !bus.cpu.status().interrupts_disabled());
     }
 
     fn add_ppu_position(&mut self, clock: &PpuClock) {
