@@ -356,8 +356,11 @@ impl Cpu {
                 Dmc::set_sample_buffer(bus, value),
             StepAction::DisableInterrupts =>
                 Status::set_interrupts_disabled(bus, true),
-            StepAction::ExecuteOpCode if let Some(instruction) = bus.cpu.mode_state.current_instruction() && instruction.op_code() == OpCode::CLI =>
-                Status::set_interrupts_disabled(bus, false),
+            StepAction::ExecuteOpCode if let Some(instruction) = bus.cpu.mode_state.current_instruction() && instruction.op_code() == OpCode::CLI => {
+                bus.cpu.b_flag.b_out(&bus.cpu.reset_flip_flop, bus.cpu.brk6e);
+                Status::set_interrupts_disabled(bus, false);
+                bus.cpu.b_flag.b_out(&bus.cpu.reset_flip_flop, bus.cpu.brk6e);
+            }
             StepAction::ExecuteOpCode if let Some(instruction) = bus.cpu.mode_state.current_instruction() && instruction.op_code() == OpCode::SEI =>
                 Status::set_interrupts_disabled(bus, true),
             _ => { /* Everything else is handled just after this. */ }

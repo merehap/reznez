@@ -109,6 +109,7 @@ impl CpuPinout {
 
     pub fn assert_frame_irq(bus: &mut Bus) {
         bus.cpu_pinout.frame_irq_asserted = true;
+        log::info!("Asserting frame IRQ.");
         IrqLatch::update(bus);
     }
 
