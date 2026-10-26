@@ -1,5 +1,3 @@
-use std::marker::ConstParamTy;
-
 use log::{info, log_enabled};
 use log::Level::Info;
 
@@ -66,7 +64,6 @@ pub struct Cpu {
 
     nmi_falling_edge_detected: bool,
     nmi_pending: bool,
-    irq_status: IrqStatus,
 
     current_interrupt_vector: Option<InterruptType>,
 
@@ -119,7 +116,6 @@ impl Cpu {
 
             nmi_falling_edge_detected: false,
             nmi_pending: false,
-            irq_status: IrqStatus::Inactive,
 
             current_interrupt_vector: Some(InterruptType::Reset),
 
@@ -145,7 +141,6 @@ impl Cpu {
 
         self.address_carry = 0;
         self.nmi_pending = false;
-        self.irq_status = IrqStatus::Inactive;
     }
 
     pub fn accumulator(&self) -> u8 {
@@ -176,8 +171,8 @@ impl Cpu {
         &self.mode_state
     }
 
-    pub fn irq_status(&self) -> IrqStatus {
-        self.irq_status
+    pub fn irq_status(&self) -> ActiveLow {
+        self.irq_latch.irqp()
     }
 
     pub fn reset_status(&self) -> ActiveHigh {
@@ -209,12 +204,6 @@ impl Cpu {
         bus.cpu.mode_state.clear_new_instruction();
         if bus.cpu.mode_state.is_jammed() {
             return;
-        }
-
-        //bus.ppu_regs.ppu_status_vblank_active = bus.ppu_regs.vblank_active;
-
-        if !bus.cpu.nmi_pending && bus.cpu.irq_status == IrqStatus::Pending && !bus.cpu.status.interrupts_disabled() {
-            bus.cpu.irq_status = IrqStatus::Ready;
         }
 
         let cycle_parity = bus.apu_clock().cycle_parity();
@@ -335,15 +324,6 @@ impl Cpu {
         bus.cpu.step = bus.cpu.mode_state.current_step();
         InterruptCycleDetector::update(bus); // Relies on step.brk5()
 
-        // Keep irq_pending and irq_status in sync
-        if bus.cpu_pinout.irq().is_active() {
-            if bus.cpu.irq_status == IrqStatus::Inactive && !bus.cpu.status.interrupts_disabled() {
-                bus.cpu.irq_status = IrqStatus::Pending;
-            }
-        } else if bus.cpu.irq_status != IrqStatus::Active || !bus.cpu.mode_state.is_branch_delay_active() {
-            bus.cpu.irq_status = IrqStatus::Inactive;
-        }
-
         Some(bus.cpu.step)
     }
 
@@ -399,7 +379,7 @@ impl Cpu {
                     cpu.mode_state.interrupt_sequence(InterruptType::Reset);
                 } else if cpu.nmi_pending {
                     cpu.mode_state.interrupt_sequence(InterruptType::Nmi);
-                } else if cpu.irq_status == IrqStatus::Active && !cpu.nmi_pending {
+                } else if cpu.b_flag.b_out(&cpu.reset_flip_flop, cpu.brk6e).is_active() {
                     cpu.mode_state.interrupt_sequence(InterruptType::Irq);
                 } else {
                     cpu.mode_state.instruction(Instruction::from_code_point(value));
@@ -573,38 +553,28 @@ impl Cpu {
                     if cpu.reset_flip_flop.dores().is_active() {
                         info!(target: "cpuflowcontrol", "Setting interrupt vector to RESET.");
                         Some(InterruptType::Reset)
-                    } else if cpu.nmi_pending {
+                    } else if cpu.nmi_edge_detector.donmi_signal().is_active() {
                         info!(target: "cpuflowcontrol", "Setting interrupt vector to NMI.");
                         Some(InterruptType::Nmi)
-                    } else if cpu.irq_status != IrqStatus::Inactive {
-                        info!(target: "cpuflowcontrol", "Setting interrupt vector to IRQ due to IRQ.");
-                        Some(InterruptType::Irq)
-                    } else if let Some(instruction) = cpu.mode_state.current_instruction() && instruction.op_code() == OpCode::BRK {
-                        info!(target: "cpuflowcontrol", "Setting interrupt vector to IRQ due to BRK.");
-                        Some(InterruptType::Irq)
                     } else {
-                        None
+                        info!(target: "cpuflowcontrol", "Setting interrupt vector to IRQ.");
+                        Some(InterruptType::Irq)
                     };
                 cpu.mode_state.interrupt_vector_set(cpu.current_interrupt_vector);
 
                 // Clear interrupt statuses now that the vector is set.
                 cpu.nmi_pending = false;
-                cpu.irq_status = IrqStatus::Inactive;
             }
             StepAction::ClearInterruptVector => cpu.current_interrupt_vector = None,
             StepAction::PollInterrupts => {
                 if cpu.nmi_falling_edge_detected {
                     cpu.nmi_pending = true;
-                } else if cpu.irq_status == IrqStatus::Ready && !cpu.status.interrupts_disabled() {
-                    cpu.irq_status = IrqStatus::Active;
                 }
             }
             StepAction::MaybePollInterrupts => {
                 if cpu.address_carry != 0 {
                     if cpu.nmi_falling_edge_detected {
                         cpu.nmi_pending = true;
-                    } else if cpu.irq_status == IrqStatus::Ready && !cpu.status.interrupts_disabled() {
-                        cpu.irq_status = IrqStatus::Active;
                     }
                 }
             }
@@ -893,13 +863,4 @@ impl Cpu {
 
 fn is_neg(value: u8) -> bool {
     (value >> 7) == 1
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug, Default, ConstParamTy)]
-pub enum IrqStatus {
-    #[default]
-    Inactive,
-    Pending,
-    Ready,
-    Active,
 }

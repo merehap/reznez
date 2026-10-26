@@ -18,7 +18,7 @@ use crate::cartridge::header_db::HeaderDb;
 use crate::cartridge::resolved_metadata::{MetadataResolver, ResolvedMetadata};
 use crate::config::Config;
 use crate::counter::irq_counter_info::IrqCounterInfo;
-use crate::cpu::cpu::{Cpu, IrqStatus};
+use crate::cpu::cpu::Cpu;
 use crate::cpu::cpu_mode::CpuMode;
 use crate::cpu::dmc_dma::{DmcDmaAction, DmcDmaState};
 use crate::cpu::oam_dma::{OamDmaAction, OamDmaState};
@@ -659,7 +659,7 @@ struct LatestValues {
     nmi_signal_detector: EdgeDetector<ActiveLow>,
     reset_signal_detector: EdgeDetector<ActiveLow>,
 
-    irq_status_detector: EdgeDetector<IrqStatus>,
+    irq_status_detector: EdgeDetector<ActiveLow>,
     nmi_status_detector: EdgeDetector<bool>,
     reset_status_detector: EdgeDetector<ActiveHigh>,
 
@@ -890,7 +890,7 @@ impl Snapshots {
             append(&mut fcw_status, &center(&format!("{:?}", snapshot.frame_counter_write_status)),
                 snapshot.frame_counter_write_status != ClockResetStatus::Inactive, skip);
             append(&mut nmi_status, &center(&format!("{:?}", snapshot.nmi_pending)), snapshot.nmi_pending, skip);
-            append(&mut irq_status, &center(&format!("{:?}", snapshot.irq_status)), snapshot.irq_status != IrqStatus::Inactive, skip);
+            append(&mut irq_status, &center(&format!("{:?}", snapshot.irq_status)), snapshot.irq_status.is_active(), skip);
             append(&mut frame_irq, &center("Raise IRQ"), snapshot.frame_irq, skip);
         };
 
@@ -945,7 +945,7 @@ struct Snapshot {
     instruction: String,
     frame_counter_write_status: ClockResetStatus,
     frame_irq: bool,
-    irq_status: IrqStatus,
+    irq_status: ActiveLow,
     nmi_pending: bool,
     ppu_pos: [(u16, u16); 3],
 }
@@ -958,7 +958,7 @@ struct SnapshotBuilder {
     instruction: String,
     frame_counter_write_status: Option<ClockResetStatus>,
     frame_irq: Option<bool>,
-    irq_status: Option<IrqStatus>,
+    irq_status: Option<ActiveLow>,
     nmi_pending: Option<bool>,
     ppu_pos: VecDeque<(u16, u16)>,
 }
@@ -995,7 +995,7 @@ impl SnapshotBuilder {
         self.instruction = value;
     }
 
-    fn irq_status(&mut self, irq_status: IrqStatus) {
+    fn irq_status(&mut self, irq_status: ActiveLow) {
         self.irq_status = Some(irq_status);
     }
 
