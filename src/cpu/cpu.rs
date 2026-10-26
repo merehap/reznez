@@ -847,8 +847,10 @@ impl Cpu {
             PpuPinout::set_data_bus_enabled(bus, ActiveLow::Inactive);
         }
 
-        InterruptCycleDetector::update(bus);
         RstLatch::update(bus);
+        IrqLatch::update(bus);
+        NmiLatch::update(bus);
+        InterruptCycleDetector::update(bus);
     }
 
     fn set_ready_and_brk5(bus: &mut Bus) {

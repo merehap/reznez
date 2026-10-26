@@ -22,11 +22,9 @@ impl BFlag {
     }
 
     pub fn b_out(&self, reset_flip_flop: &ResetFlipFlop, brk6e: ActiveHigh) -> ActiveLow {
-        let value = self.b1.q()
+        self.b1.q()
             .nor(brk6e)
-            .nor(reset_flip_flop.dores()).into();
-        log::info!("b_out: {value:?} b1: {:?}, brk6e: {:?}, dores: {:?}, b2: {:?}", self.b1.q(), *brk6e, *(reset_flip_flop.dores()), self.b2.q());
-        value
+            .nor(reset_flip_flop.dores()).into()
     }
 
     pub fn update(bus: &mut Bus) {
@@ -46,14 +44,8 @@ impl BFlag {
 
         let br2_t0 = br2.or(step.t0());
         let irqp_i_out = (*irq_latch.irqp()) | !*i_out;
-        if irq_latch.irqp().is_active() {
-            log::info!("IRQP active");
-        }
 
         let interrupt_ready = nmi_edge_detector.donmi_signal().nand(irqp_i_out);
-        if interrupt_ready.is_high() {
-            log::info!("IRQ or NMI ready.");
-        }
 
         let b_flag_input = interrupt_ready.nand(br2_t0);
 
