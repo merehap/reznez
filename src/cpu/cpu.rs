@@ -195,6 +195,24 @@ impl Cpu {
         }
     }
 
+    pub fn step_m2_falling(bus: &mut Bus, mapper: &mut dyn Mapper) {
+        Cpu::set_phi2(bus, ActiveHigh::Inactive);
+
+        bus.cpu.nmi_falling_edge_detected = bus.cpu.nmi_edge_detector.donmi_signal().is_low();
+
+        bus.signals.stop_read_2007();
+        bus.signals.stop_write_2007();
+        mapper.on_m2_fall(bus);
+    }
+
+    pub fn step_read_write(Bus {..}: &mut Bus) {
+        // TODO: Implement this once DMA step selection can be moved here.
+    }
+
+    pub fn step_end_of_low(Bus {..}: &mut Bus) {
+
+    }
+
     pub fn step_m2_rise(bus: &mut Bus, mapper: &mut dyn Mapper) {
         if bus.cpu_pinout.reset().is_active() {
             // The CPU doesn't do anything while the RESET button is held down.
@@ -328,24 +346,6 @@ impl Cpu {
     }
 
     pub fn step_end_of_high(_bus: &mut Bus) {
-
-    }
-
-    pub fn step_m2_falling(bus: &mut Bus, mapper: &mut dyn Mapper) {
-        Cpu::set_phi2(bus, ActiveHigh::Inactive);
-
-        bus.cpu.nmi_falling_edge_detected = bus.cpu.nmi_edge_detector.donmi_signal().is_low();
-
-        bus.signals.stop_read_2007();
-        bus.signals.stop_write_2007();
-        mapper.on_m2_fall(bus);
-    }
-
-    pub fn step_read_write(Bus {..}: &mut Bus) {
-        // TODO: Implement this once DMA step selection can be moved here.
-    }
-
-    pub fn step_end_of_low(Bus {..}: &mut Bus) {
 
     }
 

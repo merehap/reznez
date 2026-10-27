@@ -79,16 +79,16 @@ impl MasterClock {
             24 => {
                 self.cpu_offset = 0;
                 self.cpu_cycle += 1;
-                Some(M2Event::Rise)
+                Some(M2Event::Fall)
             }
-            2 => Some(M2Event::ChipSelected),
-            3 => Some(M2Event::Phi2Rise),
-            5 => Some(M2Event::DataBusReady),
-            8 => Some(M2Event::MiddleOfHigh),
-            14 => Some(M2Event::EndOfHigh),
-            15 => Some(M2Event::Fall),
-            19 => Some(M2Event::ReadWriteSelect),
-            23 => Some(M2Event::EndOfLow),
+            4 => Some(M2Event::ReadWriteSelect),
+            8 => Some(M2Event::EndOfLow),
+            9 => Some(M2Event::Rise),
+            11 => Some(M2Event::ChipSelected),
+            12 => Some(M2Event::Phi2Rise),
+            14 => Some(M2Event::DataBusReady),
+            17 => Some(M2Event::MiddleOfHigh),
+            23 => Some(M2Event::EndOfHigh),
             0..=23 => None,
             25.. => unreachable!(),
         };
