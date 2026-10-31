@@ -217,11 +217,11 @@ impl Cpu {
 
         let cycle_parity = bus.apu_clock().cycle_parity();
         bus.dmc_dma.step(bus.cpu.step.is_read(), cycle_parity);
-        match bus.dmc_dma.latest_action() {
-            DmcDmaAction::DoNothing => {}
-            DmcDmaAction::Halt | DmcDmaAction::Dummy | DmcDmaAction::Align => bus.cpu.step = bus.cpu.step.with_actions_removed(),
-            DmcDmaAction::Read => bus.cpu.step = DMC_READ_STEP,
-        }
+        bus.cpu.step = match bus.dmc_dma.latest_action() {
+            DmcDmaAction::DoNothing => bus.cpu.step,
+            DmcDmaAction::Halt | DmcDmaAction::Dummy | DmcDmaAction::Align => bus.cpu.step.with_actions_removed(),
+            DmcDmaAction::Read => DMC_READ_STEP,
+        };
 
         let block_oam_dma_memory_access = bus.dmc_dma.latest_action() == DmcDmaAction::Read;
         bus.oam_dma.step(bus.cpu.step.is_read(), cycle_parity, block_oam_dma_memory_access);
@@ -307,17 +307,22 @@ impl Cpu {
             bus.cpu.h = 0xFF;
         }
 
+        let original_pc = bus.cpu.program_counter;
+        bus.cpu.formatted_step = if log_enabled!(target: "cpustep", Info) {
+            match bus.cpu.step_formatting {
+                CpuStepFormatting::NoData => format!("{:?}", bus.cpu.step),
+                CpuStepFormatting::Data => bus.cpu.step.format_with_read_write_values(bus, bus.cpu.value),
+            }
+        } else {
+            String::new()
+        };
+
+        for &action in bus.cpu.step.actions() {
+            Cpu::execute_step_action(bus, action, bus.cpu.value);
+        }
+
         let halted = bus.dmc_dma.cpu_should_be_halted() || bus.oam_dma.cpu_should_be_halted();
         if log_enabled!(target: "cpustep", Info) {
-            bus.cpu.formatted_step = if log_enabled!(target: "cpustep", Info) {
-                match bus.cpu.step_formatting {
-                    CpuStepFormatting::NoData => format!("{:?}", bus.cpu.step),
-                    CpuStepFormatting::Data => bus.cpu.step.format_with_read_write_values(bus, bus.cpu.value),
-                }
-            } else {
-                String::new()
-            };
-
             let step_name = if halted { "HALTED".to_string() } else { bus.cpu.mode_state.step_name() };
             let cpu_cycle = bus.cpu_cycle();
             let current_address = bus.cpu_address_bus();
@@ -328,11 +333,7 @@ impl Cpu {
                     .index_for_address(current_address)
                     .map_or("Open Bus".to_owned(), |(index, _)| format!(" ${index:06X}"))
             };
-            info!("{prg_index:08} {step_name} PC: {}, Cycle: {cpu_cycle}, {}", bus.cpu.program_counter, bus.cpu.formatted_step);
-        }
-
-        for &action in bus.cpu.step.actions() {
-            Cpu::execute_step_action(bus, action, bus.cpu.value);
+            info!("{prg_index:08} {step_name} PC: {}, Cycle: {cpu_cycle}, {}", original_pc, bus.cpu.formatted_step);
         }
 
         Some(bus.cpu.step)
