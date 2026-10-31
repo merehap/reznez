@@ -33,7 +33,7 @@ impl RstLatch {
         });
 
         self.rst_2.update(DLInputs {
-            e: *phi2,
+            e: !*phi2,
             d: self.rst_1.q(),
         });
     }

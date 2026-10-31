@@ -1,88 +1,78 @@
 use std::fmt;
 
 use crate::cpu::step::*;
-use crate::cpu::instruction::{Instruction, OpCode};
+use crate::cpu::instruction::Instruction;
 use crate::memory::cpu::cpu_address::CpuAddress;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum CpuMode {
-    StartNext,
-    Instruction(OpCode, InstructionMode),
-    InterruptSequence(InterruptType),
-    Jammed,
-}
-
-impl CpuMode {
-    pub fn to_instruction_mode_string(self) -> String {
-        if let Self::Instruction(_, instruction_mode) = self {
-            format!("{instruction_mode:?}")
-        } else {
-            self.to_string()
-        }
-    }
-}
-
-impl fmt::Display for CpuMode {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            Self::StartNext => write!(f, "StartNext"),
-            Self::Instruction(..) => write!(f, "Instruction"),
-            Self::InterruptSequence(InterruptType::Reset) => write!(f, "RESET"),
-            Self::InterruptSequence(InterruptType::Nmi) => write!(f, "NMI"),
-            Self::InterruptSequence(InterruptType::Irq) => write!(f, "IRQ"),
-            Self::Jammed => write!(f, "Jammed"),
-        }
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum InstructionMode {
+pub enum SubState {
     Normal,
     Oops,
     BranchTaken,
     BranchOops,
 }
 
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum CpuMode {
+    WaitingForRst,
+    FirstStep,
+    Instruction { sub_state: SubState, pending_sub_state: SubState },
+    InterruptSequence,
+    Jammed,
+}
+
+impl fmt::Display for CpuMode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Self::WaitingForRst => write!(f, "Wait"),
+            Self::FirstStep => write!(f, "First"),
+            Self::Instruction{..} => write!(f, "Instruction"),
+            Self::InterruptSequence => write!(f, "INT"),
+            Self::Jammed => write!(f, "Jammed"),
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct CpuModeState {
     steps: &'static [Step],
     step_index: usize,
-    mode: CpuMode,
-    next_mode: Option<CpuMode>,
 
-    current_instruction: Option<Instruction>,
-    new_instruction_with_address: Option<(Instruction, CpuAddress)>,
+    mode: CpuMode,
+
+    instruction: Instruction,
+    next_sequence: NextSequence,
+    is_reset: bool,
+    code_point_address: CpuAddress,
 }
 
 impl CpuModeState {
     pub fn startup() -> Self {
         Self {
-            steps: RESET_STEPS,
+            steps: &[FIRST_STEP],
             step_index: 0,
-            mode: CpuMode::InterruptSequence(InterruptType::Reset),
-            next_mode: None,
-            current_instruction: None,
 
-            new_instruction_with_address: None,
+            mode: CpuMode::WaitingForRst,
+
+            instruction: Instruction::from_code_point(0), // Initial value ignored.
+            next_sequence: NextSequence::NotReady,
+            is_reset: false,
+            code_point_address: CpuAddress::ZERO,
         }
     }
 
     pub fn state_label(&self) -> String {
         match self.mode {
-            CpuMode::Instruction(op_code, instruction_mode) => {
-                match instruction_mode {
-                    InstructionMode::Normal => format!("{op_code:?}"),
-                    InstructionMode::Oops => "OOPS".to_owned(),
-                    InstructionMode::BranchTaken => "BTAKEN".to_owned(),
-                    InstructionMode::BranchOops => "BOOPS".to_owned(),
-                }
+            CpuMode::WaitingForRst => "WAIT".to_owned(),
+            CpuMode::FirstStep => "FIRST".to_owned(),
+            CpuMode::Instruction { sub_state, .. } => match sub_state {
+                SubState::Normal => format!("{:?}", self.instruction.op_code()),
+                SubState::Oops => "OOPS".to_owned(),
+                SubState::BranchTaken => "BTAKEN".to_owned(),
+                SubState::BranchOops => "BOOPS".to_owned(),
             }
-            CpuMode::InterruptSequence(InterruptType::Reset) => "RESET".to_owned(),
-            CpuMode::InterruptSequence(InterruptType::Irq) => "IRQ".to_owned(),
-            CpuMode::InterruptSequence(InterruptType::Nmi) => "NMI".to_owned(),
+            CpuMode::InterruptSequence => "INT".to_owned(),
             CpuMode::Jammed => "JAM".to_owned(),
-            CpuMode::StartNext => "STARTNEXT".to_owned(),
         }
     }
 
@@ -94,184 +84,130 @@ impl CpuModeState {
         self.mode == CpuMode::Jammed
     }
 
-    pub fn step_index(&self) -> usize {
-        self.step_index
-    }
-
     pub fn should_suppress_next_instruction_start(&self) -> bool {
-        matches!(self.next_mode, Some(CpuMode::Instruction(_, InstructionMode::BranchTaken | InstructionMode::BranchOops)))
+        matches!(self.mode, CpuMode::Instruction { pending_sub_state: SubState::BranchTaken | SubState::BranchOops, ..})
     }
 
     pub fn is_interrupt_sequence_active(&self) -> bool {
-        matches!(self.next_mode, Some(CpuMode::InterruptSequence {..}))
-            || matches!(self.mode, CpuMode::InterruptSequence {..})
-    }
-
-    pub fn is_irq_sequence_active(&self) -> bool {
-        matches!(self.next_mode, Some(CpuMode::InterruptSequence(InterruptType::Irq)))
-            || matches!(self.mode, CpuMode::InterruptSequence(InterruptType::Irq))
-    }
-
-    pub fn is_branch_delay_active(&self) -> bool {
-        matches!(self.mode, CpuMode::Instruction(_, InstructionMode::BranchTaken | InstructionMode::BranchOops))
+        self.next_sequence.is_interrupt()
+            || (self.mode == CpuMode::InterruptSequence && self.step_index < self.steps.len() - 1)
     }
 
     pub fn current_step(&self) -> Step {
         match self.mode {
-            CpuMode::Instruction(_, InstructionMode::Oops) => OOPS_STEP,
+            CpuMode::Instruction { sub_state: SubState::Oops, .. } => OOPS_STEP,
+            CpuMode::Instruction { sub_state: SubState::BranchTaken, .. } => BRANCH_TAKEN_STEP,
+            CpuMode::Instruction { sub_state: SubState::BranchOops, .. } => READ_OP_CODE_STEP,
             _ => self.steps[self.step_index],
         }
     }
 
     pub fn current_instruction(&self) -> Option<Instruction> {
-        self.current_instruction
-    }
-
-    pub fn new_instruction_with_address(&self) -> Option<(Instruction, CpuAddress)> {
-        if matches!(self.mode, CpuMode::StartNext | CpuMode::Instruction(_, InstructionMode::Normal)) {
-            self.new_instruction_with_address
+        if matches!(self.mode, CpuMode::Instruction {..}) {
+            Some(self.instruction)
         } else {
             None
         }
-
     }
 
-    pub fn clear_new_instruction(&mut self) {
-        self.new_instruction_with_address = None;
-    }
-
-    pub fn set_current_instruction_with_address(&mut self, instruction: Instruction, address: CpuAddress) {
-        self.current_instruction = Some(instruction);
-        self.new_instruction_with_address = Some((instruction, address));
-    }
-
-    pub fn instruction(&mut self, instruction: Instruction) {
-        self.steps = instruction.steps();
-        self.next_mode = Some(CpuMode::Instruction(instruction.op_code(), InstructionMode::Normal));
-    }
-
-    pub fn interrupt_sequence(&mut self, interrupt_type: InterruptType) {
-        if self.next_mode == Some(CpuMode::Jammed) {
-            return;
+    pub fn new_instruction_with_address(&self) -> Option<(Instruction, CpuAddress)> {
+        if let NextSequence::Instruction(next_instruction) = self.next_sequence {
+            Some((next_instruction, self.code_point_address))
+        } else {
+            None
         }
+    }
 
-        assert_eq!(self.next_mode, None, "next_mode should not already be set");
-        self.next_mode = Some(CpuMode::InterruptSequence(interrupt_type));
-        self.current_instruction = None;
+    pub fn instruction(&mut self, instruction_code_point: u8, code_point_address: CpuAddress) {
+        self.code_point_address = code_point_address;
+        self.next_sequence = NextSequence::Instruction(Instruction::from_code_point(instruction_code_point));
+    }
+
+    pub fn interrupt_sequence(&mut self) {
+        self.is_reset = self.mode == CpuMode::FirstStep;
+        self.next_sequence = NextSequence::Interrupt;
     }
 
     pub fn jammed(&mut self) {
-        assert_eq!(self.next_mode, None, "next_mode should not already be set");
-        self.next_mode = Some(CpuMode::Jammed);
+        self.mode = CpuMode::Jammed;
     }
 
     pub fn branch_taken(&mut self) {
-        assert_eq!(self.next_mode, None, "next_mode should not already be set");
-
-        let CpuMode::Instruction(op_code, InstructionMode::Normal) = self.mode else {
-            panic!("Current mode must be Instruction with no branching mode.");
+        self.mode = CpuMode::Instruction {
+            sub_state: SubState::Normal,
+            pending_sub_state: SubState::BranchTaken
         };
-        self.next_mode = Some(CpuMode::Instruction(op_code, InstructionMode::BranchTaken));
     }
 
     pub fn branch_oops(&mut self) {
-        assert_eq!(self.next_mode, None, "next_mode should not already be set");
-
-        let CpuMode::Instruction(op_code, InstructionMode::BranchTaken) = self.mode else {
-            panic!("Current mode must be Instruction (BranchTaken) with no branching mode.");
+        self.mode = CpuMode::Instruction {
+            sub_state: SubState::BranchTaken,
+            pending_sub_state: SubState::BranchOops,
         };
-        self.next_mode = Some(CpuMode::Instruction(op_code, InstructionMode::BranchOops));
     }
 
     pub fn oops(&mut self) {
-        assert_eq!(self.next_mode, None, "next_mode should not already be set");
-        let CpuMode::Instruction(op_code, InstructionMode::Normal) = self.mode else {
-            unreachable!("Oops steps can only occur during Instructions");
+        self.mode = CpuMode::Instruction {
+            sub_state: SubState::Normal,
+            pending_sub_state: SubState::Oops,
         };
-
-        // Don't repeat the last instruction step when we resume.
-        self.step_index += 1;
-        self.next_mode = Some(CpuMode::Instruction(op_code, InstructionMode::Oops));
-    }
-
-    pub fn interrupt_vector_set(&mut self, interrupt_vector: Option<InterruptType>) {
-        // FIXME: This doesn't currently let RESET hijack properly since RESET has an extra step.
-        if let Some(new_interrupt_type) = interrupt_vector {
-            self.mode = CpuMode::InterruptSequence(new_interrupt_type);
-        }
-    }
-
-    pub fn is_first_step(&self) -> bool {
-        self.step_index == 0
     }
 
     pub fn step(&mut self) {
-        if let Some(next_mode) = self.next_mode.take() {
-            match next_mode {
-                CpuMode::StartNext => unreachable!(),
-                CpuMode::Jammed => self.steps = &[],
-
-                CpuMode::InterruptSequence(InterruptType::Reset) => self.steps = RESET_STEPS,
-                CpuMode::InterruptSequence(_) => self.steps = BRK_STEPS,
-                CpuMode::Instruction(_, InstructionMode::Normal) => { /* steps will be set by the caller in this case. */ }
-                CpuMode::Instruction(_, InstructionMode::Oops) => assert!(matches!(self.mode, CpuMode::Instruction {..})),
-                CpuMode::Instruction(_, InstructionMode::BranchTaken) => self.steps = &[BRANCH_TAKEN_STEP],
-                CpuMode::Instruction(_, InstructionMode::BranchOops) => self.steps = &[READ_OP_CODE_STEP],
+        match self.mode {
+            CpuMode::WaitingForRst => {
+                self.mode = CpuMode::FirstStep;
             }
-
-            self.mode = next_mode;
-            if !matches!(self.mode, CpuMode::Instruction(_, InstructionMode::Oops)) {
+            CpuMode::Jammed => { /* Stay jammed. */ }
+            CpuMode::Instruction { pending_sub_state, .. } if pending_sub_state != SubState::Normal => {
+                self.mode = CpuMode::Instruction { sub_state: pending_sub_state, pending_sub_state: SubState::Normal };
+            }
+            _ if self.step_index == self.steps.len() - 1 => {
                 self.step_index = 0;
-            }
+                self.mode = match self.next_sequence {
+                    NextSequence::NotReady => panic!("Next sequence should have been ready!"),
+                    NextSequence::Instruction(instruction) => {
+                        self.instruction = instruction;
+                        self.steps = instruction.steps();
+                        CpuMode::Instruction { sub_state: SubState::Normal, pending_sub_state: SubState::Normal }
+                    }
+                    NextSequence::Interrupt => {
+                        self.instruction = Instruction::from_code_point(0x00);
+                        // TODO: Unify these branches.
+                        self.steps = if self.mode == CpuMode::FirstStep {
+                            RESET_STEPS
+                        } else {
+                            self.instruction.steps()
+                        };
 
-            return;
+                        CpuMode::InterruptSequence
+                    }
+                };
+            }
+            CpuMode::FirstStep => {
+                panic!();
+            }
+            CpuMode::Instruction {..} => {
+                self.step_index += 1;
+                self.mode = CpuMode::Instruction { sub_state: SubState::Normal, pending_sub_state: SubState::Normal };
+            }
+            CpuMode::InterruptSequence => {
+                self.step_index += 1;
+            }
         }
-
-        if self.step_index < self.steps.len() - 1 {
-            self.step_index += 1;
-            return;
-        }
-
-        // Transition to a new mode since we're at the last index of the current one.
-        self.mode = match self.mode {
-            CpuMode::StartNext | CpuMode::Instruction(_, InstructionMode::BranchTaken | InstructionMode::BranchOops) => panic!(),
-            CpuMode::Instruction(op_code, InstructionMode::Oops) => {
-                CpuMode::Instruction(op_code, InstructionMode::Normal)
-            }
-
-            CpuMode::Instruction(_, InstructionMode::Normal) | CpuMode::InterruptSequence {..} => {
-                self.steps = &[READ_OP_CODE_STEP];
-                self.step_index = 0;
-                CpuMode::StartNext
-            }
-
-            CpuMode::Jammed => CpuMode::Jammed,
-        };
     }
 
     pub fn step_name(&self) -> String {
-        let name: String = match (&self.mode, &self.next_mode) {
-            (CpuMode::Jammed, _) =>
-                "JAMMED".into(),
-            (CpuMode::StartNext, Some(CpuMode::Instruction(op_code, InstructionMode::Normal))) =>
-                format!("{op_code:?}0"),
-            (CpuMode::StartNext, Some(CpuMode::InterruptSequence(InterruptType::Irq))) => "IRQ0".into(),
-            (CpuMode::StartNext, Some(CpuMode::InterruptSequence(InterruptType::Nmi))) => "NMI0".into(),
-            (CpuMode::StartNext, Some(CpuMode::InterruptSequence(InterruptType::Reset))) => "RESET0".into(),
-            (CpuMode::StartNext, _) => unreachable!(),
-            (CpuMode::Instruction(op_code, InstructionMode::Normal), _) =>
-                format!("{:?}{}", op_code, self.step_index + 1),
-            (CpuMode::Instruction(_, InstructionMode::Oops), _) => "OOPS".into(),
-            (CpuMode::Instruction(_, InstructionMode::BranchTaken), _) => "BTAKEN".to_owned(),
-            (CpuMode::Instruction(_, InstructionMode::BranchOops), _) => "BOOPS".to_owned(),
-            (CpuMode::InterruptSequence(InterruptType::Irq), _) =>
-                format!("IRQ{}", self.step_index + 1),
-            (CpuMode::InterruptSequence(InterruptType::Nmi), _) =>
-                format!("NMI{}", self.step_index + 1),
-            (CpuMode::InterruptSequence(InterruptType::Reset), _) =>
-                format!("RESET{}", self.step_index),
+        let name: String = match self.mode {
+            CpuMode::WaitingForRst => "WAIT".to_owned(),
+            CpuMode::FirstStep => "FIRST".to_owned(),
+            CpuMode::Instruction { sub_state: SubState::Normal, ..} => format!("{:?}{}", self.instruction.op_code(), self.step_index + 1),
+            CpuMode::Instruction { sub_state: SubState::Oops, ..} => "OOPS".to_owned(),
+            CpuMode::Instruction { sub_state: SubState::BranchTaken, ..} => "BTAKEN".to_owned(),
+            CpuMode::Instruction { sub_state: SubState::BranchOops, ..} => "BOOPS".to_owned(),
+            CpuMode::InterruptSequence => format!("INT{}", self.step_index + 1),
+            CpuMode::Jammed => "JAMMED".to_owned(),
         };
-
         format!("{name:<6}")
     }
 }
@@ -281,4 +217,17 @@ pub enum InterruptType {
     Nmi,
     Reset,
     Irq,
+}
+
+#[derive(Clone, Copy, Debug)]
+enum NextSequence {
+    NotReady,
+    Instruction(Instruction),
+    Interrupt,
+}
+
+impl NextSequence {
+    fn is_interrupt(self) -> bool {
+        matches!(self, Self::Interrupt)
+    }
 }

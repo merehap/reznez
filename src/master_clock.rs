@@ -75,12 +75,13 @@ impl MasterClock {
         self.apu = false;
         self.is_last_dot_of_frame = false;
 
+        if self.cpu_offset == 24 {
+            self.cpu_offset = 0;
+            self.cpu_cycle += 1;
+        }
+
         self.m2_event = match self.cpu_offset {
-            24 => {
-                self.cpu_offset = 0;
-                self.cpu_cycle += 1;
-                Some(M2Event::Fall)
-            }
+            0 => Some(M2Event::Fall),
             4 => Some(M2Event::ReadWriteSelect),
             8 => Some(M2Event::EndOfLow),
             9 => Some(M2Event::Rise),
@@ -90,7 +91,7 @@ impl MasterClock {
             17 => Some(M2Event::MiddleOfHigh),
             23 => Some(M2Event::EndOfHigh),
             0..=23 => None,
-            25.. => unreachable!(),
+            24.. => unreachable!(),
         };
 
         //log::info!("Master clock half cycle {}", self.cpu_offset);
@@ -124,13 +125,13 @@ impl MasterClock {
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum M2Event {
+    Fall,
+    ReadWriteSelect,
+    EndOfLow,
     Rise,
     ChipSelected,
     Phi2Rise,
     DataBusReady,
     MiddleOfHigh,
     EndOfHigh,
-    Fall,
-    ReadWriteSelect,
-    EndOfLow,
 }

@@ -7,16 +7,14 @@ use crate::cpu::step::Step::{Read, ReadField, WriteField, OamRead, OamWrite, Dmc
 use crate::bus::{AddressBusType, Bus};
 use crate::memory::signal_level::ActiveHigh;
 
+// TODO: Merge this with READ_OP_CODE_STEP.
+pub const FIRST_STEP: Step = Read(From::ProgramCounterTarget, &[StartNextInstruction]);
+pub const READ_OP_CODE_STEP: Step = Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]);
+pub const OOPS_STEP: Step = ReadField(Field::Operand, From::ComputedTarget, &[]);
+
 pub static OAM_READ_STEP: Step = OamRead(From::OamDmaAddressTarget, &[]);
 pub static OAM_WRITE_STEP: Step = OamWrite(To::OAM_DATA, &[IncrementOamDmaAddress]);
-
 pub static DMC_READ_STEP: Step = DmcRead(From::DmcDmaAddressTarget, &[SetDmcSampleBuffer]);
-
-pub const READ_OP_CODE_STEP: Step =
-    Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]);
-
-pub const OOPS_STEP: Step =
-    ReadField(Field::Operand, From::ComputedTarget, &[]);
 
 pub const BRANCH_TAKEN_STEP: Step =
     // TODO: Double check that MaybePollInterrupts shouldn't be a cycle earlier.
@@ -103,11 +101,13 @@ pub const ABSOLUTE_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressLow , From::ProgramCounterTarget, &[InterpretOpCode, IncrementPC]),
     ReadField(PendingAddressHigh, From::ProgramCounterTarget, &[IncrementPC]),
     WriteField(OpRegister, To::PendingAddressTarget, &[PollInterrupts]),
+    Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]),
 ];
 
 pub const ZERO_PAGE_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressLow, From::ProgramCounterTarget, &[InterpretOpCode, IncrementPC]),
     WriteField(OpRegister      , To::PendingZeroPageTarget , &[PollInterrupts]),
+    Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]),
 ];
 
 pub const ABSOLUTE_X_WRITE_STEPS: &[Step] = &[
@@ -115,12 +115,14 @@ pub const ABSOLUTE_X_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressHigh, From::ProgramCounterTarget, &[XOffsetPendingAddressLow, IncrementPC]),
     Read(                         From::PendingAddressTarget, &[AddCarryToAddress]),
     WriteField(OpRegister       , To::ComputedTarget        , &[PollInterrupts]),
+    Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]),
 ];
 
 pub const ZERO_PAGE_X_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressLow, From::ProgramCounterTarget , &[InterpretOpCode, IncrementPC]),
     Read(                        From::PendingZeroPageTarget, &[XOffsetAddress]),
     WriteField(OpRegister      , To::ComputedTarget         , &[PollInterrupts]),
+    Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]),
 ];
 
 pub const ABSOLUTE_Y_WRITE_STEPS: &[Step] = &[
@@ -128,12 +130,14 @@ pub const ABSOLUTE_Y_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressHigh, From::ProgramCounterTarget, &[YOffsetPendingAddressLow, IncrementPC]),
     Read(                         From::PendingAddressTarget, &[AddCarryToAddress]),
     WriteField(OpRegister,        To::ComputedTarget        , &[PollInterrupts]),
+    Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]),
 ];
 
 pub const ZERO_PAGE_Y_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressLow, From::ProgramCounterTarget , &[InterpretOpCode, IncrementPC]),
     Read(                        From::PendingZeroPageTarget, &[YOffsetAddress]),
     WriteField(OpRegister,       To::ComputedTarget         , &[PollInterrupts]),
+    Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]),
 ];
 
 pub const INDEXED_INDIRECT_WRITE_STEPS: &[Step] = &[
@@ -142,6 +146,7 @@ pub const INDEXED_INDIRECT_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressLow , From::ComputedTarget       , &[IncrementAddressLow]),
     ReadField(PendingAddressHigh, From::ComputedTarget       , &[]),
     WriteField(OpRegister       , To::PendingAddressTarget   , &[PollInterrupts]),
+    Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]),
 ];
 
 pub const INDIRECT_INDEXED_WRITE_STEPS: &[Step] = &[
@@ -150,6 +155,7 @@ pub const INDIRECT_INDEXED_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressHigh, From::ComputedTarget       , &[YOffsetPendingAddressLow]),
     Read(                         From::PendingAddressTarget , &[AddCarryToAddress]),
     WriteField(OpRegister       , To::ComputedTarget         , &[PollInterrupts]),
+    Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]),
 ];
 
 pub const ABSOLUTE_READ_MODIFY_WRITE_STEPS: &[Step] = &[
@@ -158,6 +164,7 @@ pub const ABSOLUTE_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     ReadField(Operand           , From::PendingAddressTarget, &[]),
     WriteField(Operand          , To::PendingAddressTarget, &[ExecuteOpCode]),
     WriteField(Operand          , To::PendingAddressTarget, &[PollInterrupts]),
+    Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]),
 ];
 
 pub const ZERO_PAGE_READ_MODIFY_WRITE_STEPS: &[Step] = &[
@@ -165,6 +172,7 @@ pub const ZERO_PAGE_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     ReadField(Operand          , From::PendingZeroPageTarget, &[]),
     WriteField(Operand         , To::PendingZeroPageTarget  , &[ExecuteOpCode]),
     WriteField(Operand         , To::PendingZeroPageTarget  , &[PollInterrupts]),
+    Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]),
 ];
 
 pub const ABSOLUTE_X_READ_MODIFY_WRITE_STEPS: &[Step] = &[
@@ -174,6 +182,7 @@ pub const ABSOLUTE_X_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     ReadField(Operand           , From::ComputedTarget      , &[]),
     WriteField(Operand          , To::ComputedTarget        , &[ExecuteOpCode]),
     WriteField(Operand          , To::ComputedTarget        , &[PollInterrupts]),
+    Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]),
 ];
 
 pub const ZERO_PAGE_X_READ_MODIFY_WRITE_STEPS: &[Step] = &[
@@ -182,6 +191,7 @@ pub const ZERO_PAGE_X_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     ReadField(Operand          , From::ComputedTarget       , &[]),
     WriteField(Operand         , To::ComputedTarget         , &[ExecuteOpCode]),
     WriteField(Operand         , To::ComputedTarget         , &[PollInterrupts]),
+    Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]),
 ];
 
 pub const ABSOLUTE_Y_READ_MODIFY_WRITE_STEPS: &[Step] = &[
@@ -191,6 +201,7 @@ pub const ABSOLUTE_Y_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     ReadField(Operand           , From::ComputedTarget      , &[]),
     WriteField(Operand          , To::ComputedTarget        , &[ExecuteOpCode]),
     WriteField(Operand          , To::ComputedTarget        , &[PollInterrupts]),
+    Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]),
 ];
 
 pub const ZERO_PAGE_Y_READ_MODIFY_WRITE_STEPS: &[Step] = &[
@@ -199,6 +210,7 @@ pub const ZERO_PAGE_Y_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     ReadField(Operand          , From::ComputedTarget       , &[]),
     WriteField(Operand         , To::ComputedTarget         , &[ExecuteOpCode]),
     WriteField(Operand         , To::ComputedTarget         , &[PollInterrupts]),
+    Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]),
 ];
 
 pub const INDEXED_INDIRECT_READ_MODIFY_WRITE_STEPS: &[Step] = &[
@@ -209,6 +221,7 @@ pub const INDEXED_INDIRECT_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     ReadField(Operand           , From::PendingAddressTarget , &[]),
     WriteField(Operand          , To::PendingAddressTarget   , &[ExecuteOpCode]),
     WriteField(Operand          , To::PendingAddressTarget   , &[PollInterrupts]),
+    Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]),
 ];
 
 pub const INDIRECT_INDEXED_READ_MODIFY_WRITE_STEPS: &[Step] = &[
@@ -219,10 +232,10 @@ pub const INDIRECT_INDEXED_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     ReadField(Operand           , From::ComputedTarget       , &[]),
     WriteField(Operand          , To::ComputedTarget         , &[ExecuteOpCode]),
     WriteField(Operand          , To::ComputedTarget         , &[PollInterrupts]),
+    Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]),
 ];
 
 pub const RESET_STEPS: &[Step] = &[
-    Read(                             From::ProgramCounterTarget, &[IncrementPC]),
     Read(                             From::ProgramCounterTarget, &[]),
     // NES Manual: "read/write line is disabled so that no writes to stack are accomplished".
     // Hopefully switching the writes to reads here is what is actually intended.
@@ -231,6 +244,7 @@ pub const RESET_STEPS: &[Step] = &[
     Read(                             From::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
     ReadField(Operand               , From::InterruptVectorLow , &[DisableInterrupts, Brk5]),
     ReadField(ProgramCounterHighByte, From::InterruptVectorHigh, &[ClearInterruptVector]),
+    Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]),
 ];
 
 pub const BRK_STEPS: &[Step] = &[
@@ -240,6 +254,7 @@ pub const BRK_STEPS: &[Step] = &[
     WriteField(Status                , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
     ReadField(Operand                , From::InterruptVectorLow , &[DisableInterrupts, Brk5]),
     ReadField(ProgramCounterHighByte , From::InterruptVectorHigh, &[ClearInterruptVector]),
+    Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]),
 ];
 
 pub const RTI_STEPS: &[Step] = &[
@@ -249,6 +264,7 @@ pub const RTI_STEPS: &[Step] = &[
     ReadField(Status                , From::TopOfStack, &[IncrementStackPointer]),
     ReadField(Operand               , From::TopOfStack, &[IncrementStackPointer]),
     ReadField(ProgramCounterHighByte, From::TopOfStack, &[PollInterrupts]),
+    Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]),
 ];
 
 pub const RTS_STEPS: &[Step] = &[
@@ -260,16 +276,19 @@ pub const RTS_STEPS: &[Step] = &[
     ReadField(ProgramCounterHighByte, From::TopOfStack          , &[]),
     // TODO: Make sure this dummy read is correct.
     Read(                             From::ProgramCounterTarget, &[IncrementPC, PollInterrupts]),
+    Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]),
 ];
 
 // FIXME: This is polling interrupts on both cycles. Presumably only the second cycle should.
 pub const PHA_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode, PollInterrupts]),
     WriteField(Accumulator         , To::TopOfStack, &[DecrementStackPointer, PollInterrupts]),
+    Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]),
 ];
 pub const PHP_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode]),
     WriteField(Status              , To::TopOfStack, &[DecrementStackPointer, PollInterrupts]),
+    Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]),
 ];
 
 pub const PLA_STEPS: &[Step] = &[
@@ -300,6 +319,7 @@ pub const JSR_STEPS: &[Step] = &[
 pub const JMP_ABS_STEPS: &[Step] = &[
     ReadField(Operand               , From::ProgramCounterTarget, &[InterpretOpCode, IncrementPC]),
     ReadField(ProgramCounterHighByte, From::ProgramCounterTarget, &[PollInterrupts]),
+    Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]),
 ];
 
 pub const JMP_IND_STEPS: &[Step] = &[

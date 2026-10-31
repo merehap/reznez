@@ -250,6 +250,9 @@ impl Nes {
         }
 
         match self.bus.master_clock.m2_event {
+            Some(M2Event::Fall) => self.cpu_step_m2_falling(),
+            Some(M2Event::ReadWriteSelect) => Cpu::step_read_write(&mut self.bus),
+            Some(M2Event::EndOfLow) => Cpu::step_end_of_low(&mut self.bus),
             Some(M2Event::Rise) => self.cpu_step_m2_rising(),
             Some(M2Event::ChipSelected) => {
                 Cpu::step_chip_selected(&mut self.bus);
@@ -258,10 +261,7 @@ impl Nes {
             Some(M2Event::Phi2Rise) => Cpu::step_phi2_rise(&mut self.bus),
             Some(M2Event::DataBusReady) => Ppu::cpu_data_bus_ready(&mut self.bus),
             Some(M2Event::MiddleOfHigh) => step = self.cpu_step_middle_of_m2_high(),
-            Some(M2Event::EndOfHigh) => Cpu::step_end_of_high(&mut self.bus),
-            Some(M2Event::Fall) => self.cpu_step_m2_falling(),
-            Some(M2Event::ReadWriteSelect) => Cpu::step_read_write(&mut self.bus),
-            Some(M2Event::EndOfLow) => Cpu::step_end_of_low(&mut self.bus),
+            Some(M2Event::EndOfHigh) => Cpu::step_end_of_m2_high(&mut self.bus),
             None => {}
         }
 
@@ -503,7 +503,8 @@ impl Nes {
                     if dmc_dma_state == DmcDmaState::Idle && oam_dma_state == OamDmaState::Idle {
                         latest_extended_cpu_mode.cpu_mode.to_string()
                     } else {
-                        latest_extended_cpu_mode.cpu_mode.to_instruction_mode_string()
+                        //latest_extended_cpu_mode.cpu_mode.to_instruction_mode_string()
+                        todo!();
                     }
                 } else {
                     "HALTED".to_owned()
@@ -744,7 +745,7 @@ struct ExtendedCpuMode {
 impl ExtendedCpuMode {
     fn new() -> Self {
         Self {
-            cpu_mode: CpuMode::StartNext,
+            cpu_mode: CpuMode::InterruptSequence,
             dmc_dma_state: DmcDmaState::Idle,
             dmc_dma_action: DmcDmaAction::DoNothing,
             oam_dma_state: OamDmaState::Idle,
@@ -764,15 +765,20 @@ impl ExtendedCpuMode {
             return false;
         }
 
+        /*
         match (prev.cpu_mode, self.cpu_mode) {
             (_, CpuMode::StartNext) => false,
             (prev, curr) if prev == curr => false,
             (CpuMode::Instruction(_, _), CpuMode::Instruction(_, _)) => false,
             (_, _) => true,
         }
+        */
+        todo!();
     }
 
-    fn fine_change_occurred(&self, prev: &ExtendedCpuMode) -> (bool, bool, bool) {
+    fn fine_change_occurred(&self, _prev: &ExtendedCpuMode) -> (bool, bool, bool) {
+        todo!();
+        /*
         let fine_cpu_mode_changed = match (prev.cpu_mode, self.cpu_mode) {
             (_, CpuMode::StartNext) => false,
             (prev, curr) if prev == curr => false,
@@ -791,6 +797,7 @@ impl ExtendedCpuMode {
         let oam_changed = prev.oam_dma_state != self.oam_dma_state || prev.oam_dma_action != self.oam_dma_action;
 
         (mode_changed, dmc_changed, oam_changed)
+        */
     }
 }
 

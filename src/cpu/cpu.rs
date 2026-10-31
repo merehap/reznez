@@ -13,7 +13,7 @@ use crate::cpu::nmi_latch::NmiLatch;
 use crate::cpu::rst_latch::RstLatch;
 use crate::cpu::reset_flip_flop::ResetFlipFlop;
 use crate::cpu::step_action::{StepAction, From, To, Field};
-use crate::cpu::instruction::{Instruction, AccessMode, OpCode};
+use crate::cpu::instruction::{AccessMode, OpCode};
 use crate::cpu::oam_dma::OamDmaAction;
 use crate::cpu::status;
 use crate::cpu::status::Status;
@@ -45,6 +45,7 @@ pub struct Cpu {
 
     // The initial button power-on button press is very short so not CPU cycles are wasted for counting purposes.
     just_powered_on: bool,
+    clear_power_on_rst: bool,
 
     // CPU-internal signals (TODO: make these pub-in-this-directory)
     pub phi2: ActiveHigh, // Internal clock with a 50/50 duty cycle (M2 is a modified form of it)
@@ -75,7 +76,6 @@ pub struct Cpu {
 
     // TODO: Remove
     formatted_step: String,
-    original_program_counter: CpuAddress,
     value: u8,
 
     step_formatting: CpuStepFormatting,
@@ -100,6 +100,8 @@ impl Cpu {
             step: Step::Read(From::ProgramCounterTarget, &[]),
 
             just_powered_on: true,
+            clear_power_on_rst: false,
+
             phi2: ActiveHigh::Inactive,
             ready: ActiveLow::Active,
             brk5: ActiveHigh::Inactive,
@@ -126,7 +128,6 @@ impl Cpu {
             operand: 0,
 
             formatted_step: "".to_owned(),
-            original_program_counter: CpuAddress::ZERO,
             value: 0,
 
             step_formatting,
@@ -198,31 +199,21 @@ impl Cpu {
     pub fn step_m2_falling(bus: &mut Bus, mapper: &mut dyn Mapper) {
         Cpu::set_phi2(bus, ActiveHigh::Inactive);
 
-        bus.cpu.nmi_falling_edge_detected = bus.cpu.nmi_edge_detector.donmi_signal().is_low();
-
-        bus.signals.stop_read_2007();
-        bus.signals.stop_write_2007();
-        mapper.on_m2_fall(bus);
-    }
-
-    pub fn step_read_write(Bus {..}: &mut Bus) {
-        // TODO: Implement this once DMA step selection can be moved here.
-    }
-
-    pub fn step_end_of_low(Bus {..}: &mut Bus) {
-
-    }
-
-    pub fn step_m2_rise(bus: &mut Bus, mapper: &mut dyn Mapper) {
         if bus.cpu_pinout.reset().is_active() {
             // The CPU doesn't do anything while the RESET button is held down.
             return;
         }
 
-        bus.cpu.mode_state.clear_new_instruction();
         if bus.cpu.mode_state.is_jammed() {
             return;
         }
+
+        let halted = bus.dmc_dma.cpu_should_be_halted() || bus.oam_dma.cpu_should_be_halted();
+        if !halted {
+            bus.cpu.mode_state.step();
+        }
+
+        bus.cpu.step = bus.cpu.mode_state.current_step();
 
         let cycle_parity = bus.apu_clock().cycle_parity();
         bus.dmc_dma.step(bus.cpu.step.is_read(), cycle_parity);
@@ -243,13 +234,31 @@ impl Cpu {
 
         Cpu::set_ready_and_brk5(bus);
 
-        // FIXME: This placement is wrong. It should be earlier: during the ReadWrite step.
+        bus.cpu.nmi_falling_edge_detected = bus.cpu.nmi_edge_detector.donmi_signal().is_low();
+
+        bus.signals.stop_read_2007();
+        bus.signals.stop_write_2007();
+        mapper.on_m2_fall(bus);
+    }
+
+    pub fn step_read_write(bus: &mut Bus) {
         let rw = if bus.cpu.step.is_read() {
             ReadWrite::Read
         } else {
             ReadWrite::Write
         };
         CpuPinout::set_read_write(bus, rw);
+    }
+
+    pub fn step_end_of_low(Bus {..}: &mut Bus) {
+
+    }
+
+    pub fn step_m2_rise(bus: &mut Bus, mapper: &mut dyn Mapper) {
+        if bus.cpu_pinout.reset().is_active() {
+            // The CPU doesn't do anything while the RESET button is held down.
+            return;
+        }
 
         let current_address_bus_type = bus.cpu.step.address_bus_type();
         let address = bus.cpu.lookup_step_address(bus, bus.cpu.step);
@@ -298,22 +307,17 @@ impl Cpu {
             bus.cpu.h = 0xFF;
         }
 
-        bus.cpu.formatted_step = if log_enabled!(target: "cpustep", Info) {
-            match bus.cpu.step_formatting {
-                CpuStepFormatting::NoData => format!("{:?}", bus.cpu.step),
-                CpuStepFormatting::Data => bus.cpu.step.format_with_read_write_values(bus, bus.cpu.value),
-            }
-        } else {
-            String::new()
-        };
-
-        bus.cpu.original_program_counter = bus.cpu.program_counter;
-        for &action in bus.cpu.step.actions() {
-            Cpu::execute_step_action(bus, action, bus.cpu.value);
-        }
-
         let halted = bus.dmc_dma.cpu_should_be_halted() || bus.oam_dma.cpu_should_be_halted();
         if log_enabled!(target: "cpustep", Info) {
+            bus.cpu.formatted_step = if log_enabled!(target: "cpustep", Info) {
+                match bus.cpu.step_formatting {
+                    CpuStepFormatting::NoData => format!("{:?}", bus.cpu.step),
+                    CpuStepFormatting::Data => bus.cpu.step.format_with_read_write_values(bus, bus.cpu.value),
+                }
+            } else {
+                String::new()
+            };
+
             let step_name = if halted { "HALTED".to_string() } else { bus.cpu.mode_state.step_name() };
             let cpu_cycle = bus.cpu_cycle();
             let current_address = bus.cpu_address_bus();
@@ -324,29 +328,17 @@ impl Cpu {
                     .index_for_address(current_address)
                     .map_or("Open Bus".to_owned(), |(index, _)| format!(" ${index:06X}"))
             };
-            info!("{prg_index:08} {step_name} PC: {}, Cycle: {cpu_cycle}, {}", bus.cpu.original_program_counter, bus.cpu.formatted_step);
+            info!("{prg_index:08} {step_name} PC: {}, Cycle: {cpu_cycle}, {}", bus.cpu.program_counter, bus.cpu.formatted_step);
         }
 
-        if !halted {
-            bus.cpu.mode_state.step();
-
-            if bus.cpu.step.has(StepAction::StartNextInstruction) {
-                bus.cpu.mode_state.set_current_instruction_with_address(
-                    Instruction::from_code_point(bus.cpu.value),
-                    bus.cpu_pinout.address_bus,
-                );
-            }
+        for &action in bus.cpu.step.actions() {
+            Cpu::execute_step_action(bus, action, bus.cpu.value);
         }
-
-        // TODO: Protect access to step, and update the InterruptCycleDetector in set_step().
-        bus.cpu.step = bus.cpu.mode_state.current_step();
-        InterruptCycleDetector::update(bus); // Relies on step.brk5()
 
         Some(bus.cpu.step)
     }
 
-    pub fn step_end_of_high(_bus: &mut Bus) {
-
+    pub fn step_end_of_m2_high(_bus: &mut Bus) {
     }
 
     fn execute_step_action(bus: &mut Bus, action: StepAction, value: u8) {
@@ -357,9 +349,7 @@ impl Cpu {
             StepAction::DisableInterrupts =>
                 Status::set_interrupts_disabled(bus, true),
             StepAction::ExecuteOpCode if let Some(instruction) = bus.cpu.mode_state.current_instruction() && instruction.op_code() == OpCode::CLI => {
-                bus.cpu.b_flag.b_out(&bus.cpu.reset_flip_flop, bus.cpu.brk6e);
                 Status::set_interrupts_disabled(bus, false);
-                bus.cpu.b_flag.b_out(&bus.cpu.reset_flip_flop, bus.cpu.brk6e);
             }
             StepAction::ExecuteOpCode if let Some(instruction) = bus.cpu.mode_state.current_instruction() && instruction.op_code() == OpCode::SEI =>
                 Status::set_interrupts_disabled(bus, true),
@@ -375,17 +365,9 @@ impl Cpu {
 
                 if cpu.b_flag.b_out(&cpu.reset_flip_flop, cpu.brk6e).is_active() {
                     cpu_pinout.data_bus = 0x00;
-                }
-
-                if cpu.reset_flip_flop.dores().is_active() {
-                    log::info!("DORES forcing data bus to 0x00");
-                    cpu.mode_state.interrupt_sequence(InterruptType::Reset);
-                } else if cpu.nmi_pending {
-                    cpu.mode_state.interrupt_sequence(InterruptType::Nmi);
-                } else if cpu.b_flag.b_out(&cpu.reset_flip_flop, cpu.brk6e).is_active() {
-                    cpu.mode_state.interrupt_sequence(InterruptType::Irq);
+                    cpu.mode_state.interrupt_sequence();
                 } else {
-                    cpu.mode_state.instruction(Instruction::from_code_point(value));
+                    cpu.mode_state.instruction(cpu.value, bus.cpu_pinout.address_bus);
                 }
             }
 
@@ -563,7 +545,6 @@ impl Cpu {
                         info!(target: "cpuflowcontrol", "Setting interrupt vector to IRQ.");
                         Some(InterruptType::Irq)
                     };
-                cpu.mode_state.interrupt_vector_set(cpu.current_interrupt_vector);
 
                 // Clear interrupt statuses now that the vector is set.
                 cpu.nmi_pending = false;
@@ -643,27 +624,17 @@ impl Cpu {
             ComputedTarget => self.computed_address,
             TopOfStack => self.stack_pointer_address(),
             InterruptVectorLow => {
-                if self.mode_state.is_irq_sequence_active() {
-                    // FIXME: Hack
-                    IRQ_VECTOR_LOW
-                } else {
-                    match self.current_interrupt_vector.unwrap() {
-                        InterruptType::Nmi => NMI_VECTOR_LOW,
-                        InterruptType::Reset => RESET_VECTOR_LOW,
-                        InterruptType::Irq => IRQ_VECTOR_LOW,
-                    }
+                match self.current_interrupt_vector.unwrap() {
+                    InterruptType::Nmi => NMI_VECTOR_LOW,
+                    InterruptType::Reset => RESET_VECTOR_LOW,
+                    InterruptType::Irq => IRQ_VECTOR_LOW,
                 }
             }
             InterruptVectorHigh => {
-                if self.mode_state.is_irq_sequence_active() {
-                    // FIXME: Hack
-                    IRQ_VECTOR_HIGH
-                } else {
-                    match self.current_interrupt_vector.unwrap() {
-                        InterruptType::Nmi => NMI_VECTOR_HIGH,
-                        InterruptType::Reset => RESET_VECTOR_HIGH,
-                        InterruptType::Irq => IRQ_VECTOR_HIGH,
-                    }
+                match self.current_interrupt_vector.unwrap() {
+                    InterruptType::Nmi => NMI_VECTOR_HIGH,
+                    InterruptType::Reset => RESET_VECTOR_HIGH,
+                    InterruptType::Irq => IRQ_VECTOR_HIGH,
                 }
             }
         }
@@ -839,9 +810,14 @@ impl Cpu {
     fn set_phi2(bus: &mut Bus, value: ActiveHigh) {
         bus.cpu.phi2 = value;
         if bus.cpu.phi2.is_inactive() {
+            if bus.cpu.clear_power_on_rst {
+                bus.cpu.clear_power_on_rst = false;
+                CpuPinout::set_reset(bus, ActiveLow::Inactive);
+            }
+
             if bus.cpu.just_powered_on {
                 bus.cpu.just_powered_on = false;
-                CpuPinout::set_reset(bus, ActiveLow::Inactive);
+                bus.cpu.clear_power_on_rst = true;
             }
 
             PpuPinout::set_data_bus_enabled(bus, ActiveLow::Inactive);
