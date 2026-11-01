@@ -1,5 +1,4 @@
 use crate::bus::Bus;
-use crate::cpu::b_flag::BFlag;
 use crate::cpu::cpu::Cpu;
 use crate::cpu::nmi_edge_detector::NmiEdgeDetector;
 use crate::memory::signal_level::{ActiveHigh, SignalLevel, nand};
@@ -26,7 +25,6 @@ impl InterruptCycleDetector {
         bus.cpu.brk6e = InterruptCycleDetector::brk6e_signal(&mut bus.cpu);
         bus.cpu.brk7 = InterruptCycleDetector::brk7_signal(&bus.cpu);
         NmiEdgeDetector::update(bus); // Depends on BRK6E and BRK7
-        BFlag::update(bus); // Depends on BRK6E and DONMI. Also T0 and BR2 from the current CPU step.
     }
 
     fn update_latches(bus: &mut Bus) {

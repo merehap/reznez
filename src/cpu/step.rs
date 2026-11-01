@@ -251,8 +251,8 @@ pub const BRK_STEPS: &[Step] = &[
     ReadField(Operand                , From::ProgramCounterTarget, &[InterpretOpCode, IncrementPC]),
     WriteField(ProgramCounterHighByte, To::TopOfStack, &[DecrementStackPointer]),
     WriteField(ProgramCounterLowByte , To::TopOfStack, &[DecrementStackPointer]),
-    WriteField(Status                , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
-    ReadField(Operand                , From::InterruptVectorLow , &[DisableInterrupts, Brk5]),
+    WriteField(Status                , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector, Brk5]),
+    ReadField(Operand                , From::InterruptVectorLow , &[DisableInterrupts]),
     ReadField(ProgramCounterHighByte , From::InterruptVectorHigh, &[ClearInterruptVector]),
     Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]),
 ];

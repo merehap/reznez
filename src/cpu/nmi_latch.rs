@@ -1,5 +1,6 @@
 use crate::bus::Bus;
 use crate::circuit::d_latch::{DLInputs, DLatch};
+use crate::cpu::nmi_edge_detector::NmiEdgeDetector;
 use crate::memory::signal_level::{ActiveLow, SignalLevel};
 
 pub struct NmiLatch {
@@ -17,10 +18,11 @@ impl NmiLatch {
         self.nmi.q().into()
     }
 
-    pub fn update(Bus { cpu, cpu_pinout, ..}: &mut Bus) {
-        cpu.nmi_latch.nmi.update(DLInputs {
-            e: *cpu.phi2,
-            d: *cpu_pinout.nmi(),
+    pub fn update(bus: &mut Bus) {
+        bus.cpu.nmi_latch.nmi.update(DLInputs {
+            e: *bus.cpu.phi2,
+            d: *bus.cpu_pinout.nmi(),
         });
+        NmiEdgeDetector::update(bus);
     }
 }

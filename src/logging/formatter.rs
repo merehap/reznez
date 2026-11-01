@@ -359,7 +359,7 @@ pub fn interrupts(nes: &Nes) -> String {
     interrupts.push(if nes.bus().cpu_pinout.frame_irq_asserted() { 'F' } else {'-'});
     interrupts.push(if nes.bus().cpu_pinout.dmc_irq_asserted() { 'D' } else {'-'});
     interrupts.push(if nes.bus().cpu_pinout.mapper_irq_asserted() { 'M' } else {'-'});
-    interrupts.push(if nes.cpu().nmi_pending() { 'N' } else {'-'});
+    interrupts.push(if nes.bus().cpu_pinout.nmi().is_active() { 'N' } else {'-'});
     interrupts.push(if nes.bus().oam_dma.dma_pending() { 'O' } else {'-'});
     interrupts.push(if nes.bus().dmc_dma.state() == DmcDmaState::Idle { '-' } else {'D'});
 

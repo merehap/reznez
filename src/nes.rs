@@ -335,7 +335,7 @@ impl Nes {
 
             self.snapshots.current().cpu_cycle(self.bus.cpu_cycle());
             self.snapshots.current().irq_status(self.bus.cpu.irq_status());
-            self.snapshots.current().nmi_pending(self.bus.cpu.nmi_pending());
+            self.snapshots.current().nmi_pending(self.bus.cpu_pinout.nmi());
         }
 
         self.detect_changes();
@@ -416,8 +416,8 @@ impl Nes {
             if latest.irq_status_detector.set_value_then_detect(self.bus.cpu.irq_status()) {
                 info!("IRQ status in CPU: {:?}. Cycle: {}", self.bus.cpu.irq_status(), self.bus.cpu_cycle());
             }
-            if latest.nmi_status_detector.set_value_then_detect(self.bus.cpu.nmi_pending()) {
-                info!("NMI pending: {:?}. Cycle: {}", self.bus.cpu.nmi_pending(), self.bus.cpu_cycle());
+            if latest.nmi_status_detector.set_value_then_detect(self.bus.cpu_pinout.nmi()) {
+                info!("NMI pending: {:?}. Cycle: {}", self.bus.cpu_pinout.nmi(), self.bus.cpu_cycle());
             }
             if latest.reset_status_detector.set_value_then_detect(self.bus.cpu.reset_status()) {
                 info!("RESET status: {:?}. Cycle: {}", self.bus.cpu.reset_status(), self.bus.cpu_cycle());
@@ -661,7 +661,7 @@ struct LatestValues {
     reset_signal_detector: EdgeDetector<ActiveLow>,
 
     irq_status_detector: EdgeDetector<ActiveLow>,
-    nmi_status_detector: EdgeDetector<bool>,
+    nmi_status_detector: EdgeDetector<ActiveLow>,
     reset_status_detector: EdgeDetector<ActiveHigh>,
 
     extended_cpu_mode: ExtendedCpuMode,
@@ -896,7 +896,7 @@ impl Snapshots {
             append(&mut instr, &center(&snapshot.instruction.clone()), true, skip);
             append(&mut fcw_status, &center(&format!("{:?}", snapshot.frame_counter_write_status)),
                 snapshot.frame_counter_write_status != ClockResetStatus::Inactive, skip);
-            append(&mut nmi_status, &center(&format!("{:?}", snapshot.nmi_pending)), snapshot.nmi_pending, skip);
+            append(&mut nmi_status, &center(&format!("{:?}", snapshot.nmi_pending)), snapshot.nmi_pending.is_active(), skip);
             append(&mut irq_status, &center(&format!("{:?}", snapshot.irq_status)), snapshot.irq_status.is_active(), skip);
             append(&mut frame_irq, &center("Raise IRQ"), snapshot.frame_irq, skip);
         };
@@ -953,7 +953,7 @@ struct Snapshot {
     frame_counter_write_status: ClockResetStatus,
     frame_irq: bool,
     irq_status: ActiveLow,
-    nmi_pending: bool,
+    nmi_pending: ActiveLow,
     ppu_pos: [(u16, u16); 3],
 }
 
@@ -966,7 +966,7 @@ struct SnapshotBuilder {
     frame_counter_write_status: Option<ClockResetStatus>,
     frame_irq: Option<bool>,
     irq_status: Option<ActiveLow>,
-    nmi_pending: Option<bool>,
+    nmi_pending: Option<ActiveLow>,
     ppu_pos: VecDeque<(u16, u16)>,
 }
 
@@ -1006,8 +1006,8 @@ impl SnapshotBuilder {
         self.irq_status = Some(irq_status);
     }
 
-    fn nmi_pending(&mut self, nmi_pending: bool) {
-        self.nmi_pending = Some(nmi_pending);
+    fn nmi_pending(&mut self, nmi: ActiveLow) {
+        self.nmi_pending = Some(nmi);
     }
 
     fn build(self) -> Snapshot {

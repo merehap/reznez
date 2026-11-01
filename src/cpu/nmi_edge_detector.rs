@@ -1,4 +1,5 @@
 use crate::bus::Bus;
+use crate::cpu::b_flag::BFlag;
 use crate::cpu::cpu::Cpu;
 use crate::memory::signal_level::{ActiveLow, SignalLevel, nor3};
 
@@ -56,5 +57,7 @@ impl NmiEdgeDetector {
             let last_source = ned.ff2.nor(ned.delay2).nor(ned.nmip);
             ned.donmi = nor3(!ned.brk7, ned.nmip, last_source);
         }
+
+        BFlag::update(bus); // Depends on BRK6E and DONMI. Also T0 and BR2 from the current CPU step.
     }
 }

@@ -63,9 +63,6 @@ pub struct Cpu {
     pub irq_latch: IrqLatch,
     pub b_flag: BFlag,
 
-    nmi_falling_edge_detected: bool,
-    nmi_pending: bool,
-
     current_interrupt_vector: Option<InterruptType>,
 
     pending_address_low: u8,
@@ -116,9 +113,6 @@ impl Cpu {
             irq_latch: IrqLatch::new(),
             b_flag: BFlag::new(),
 
-            nmi_falling_edge_detected: false,
-            nmi_pending: false,
-
             current_interrupt_vector: Some(InterruptType::Reset),
 
             pending_address_low: 0,
@@ -141,7 +135,6 @@ impl Cpu {
         self.step = Step::Read(From::ProgramCounterTarget, &[]);
 
         self.address_carry = 0;
-        self.nmi_pending = false;
     }
 
     pub fn accumulator(&self) -> u8 {
@@ -178,10 +171,6 @@ impl Cpu {
 
     pub fn reset_status(&self) -> ActiveHigh {
         self.reset_flip_flop.dores()
-    }
-
-    pub fn nmi_pending(&self) -> bool {
-        self.nmi_pending
     }
 
     pub fn current_address_bus_type(&self) -> AddressBusType {
@@ -233,8 +222,6 @@ impl Cpu {
         };
 
         Cpu::set_ready_and_brk5(bus);
-
-        bus.cpu.nmi_falling_edge_detected = bus.cpu.nmi_edge_detector.donmi_signal().is_low();
 
         bus.signals.stop_read_2007();
         bus.signals.stop_write_2007();
@@ -546,23 +533,10 @@ impl Cpu {
                         info!(target: "cpuflowcontrol", "Setting interrupt vector to IRQ.");
                         Some(InterruptType::Irq)
                     };
-
-                // Clear interrupt statuses now that the vector is set.
-                cpu.nmi_pending = false;
             }
             StepAction::ClearInterruptVector => cpu.current_interrupt_vector = None,
-            StepAction::PollInterrupts => {
-                if cpu.nmi_falling_edge_detected {
-                    cpu.nmi_pending = true;
-                }
-            }
-            StepAction::MaybePollInterrupts => {
-                if cpu.address_carry != 0 {
-                    if cpu.nmi_falling_edge_detected {
-                        cpu.nmi_pending = true;
-                    }
-                }
-            }
+            StepAction::PollInterrupts => {}
+            StepAction::MaybePollInterrupts => {}
 
             StepAction::SetDmcSampleBuffer => { /* Already done above. */ }
 
