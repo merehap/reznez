@@ -1,5 +1,6 @@
 use crate::apu::apu_clock::ApuClock;
 use crate::ppu::ppu_clock::PpuClock;
+use crate::ppu::register::ppu_registers::Mask;
 use crate::signals::Signals;
 
 // Master half-cycles
@@ -68,7 +69,7 @@ impl MasterClock {
         self.is_last_dot_of_frame
     }
 
-    pub fn tick(&mut self, signals: &mut Signals) -> bool {
+    pub fn tick(&mut self, signals: &mut Signals, mask: Mask) -> bool {
         self.m2_event = None;
         self.ppu_first_half = false;
         self.ppu_second_half = false;
@@ -100,7 +101,7 @@ impl MasterClock {
             8 => {
                 self.ppu_offset = 0;
 
-                self.is_last_dot_of_frame = self.ppu_clock.tick(signals).is_some();
+                self.is_last_dot_of_frame = self.ppu_clock.tick(signals, mask).is_some();
                 self.ppu_first_half = true;
             }
             4 => {

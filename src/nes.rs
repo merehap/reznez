@@ -243,7 +243,7 @@ impl Nes {
 
     pub fn step(&mut self, frame: &mut Frame) -> StepResult {
         let mut step = None;
-        let end_reached = self.bus.master_clock.tick(&mut self.bus.signals);
+        let end_reached = self.bus.master_clock.tick(&mut self.bus.signals, self.bus.ppu_regs.mask());
         if self.bus.master_clock.apu {
             self.apu_step();
             self.bus.master_clock.apu_clock.parity.toggle();

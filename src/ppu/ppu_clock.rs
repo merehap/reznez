@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{ppu::pixel_index::PixelRow, signals::Signals};
+use crate::{ppu::{pixel_index::PixelRow, register::ppu_registers::Mask}, signals::Signals};
 
 pub const MAX_SCANLINE: u16 = 261;
 
@@ -42,10 +42,10 @@ impl PpuClock {
         PixelRow::from_scanline(self.scanline)
     }
 
-    pub fn tick(&mut self, signals: &mut Signals) -> Option<LastCycle> {
+    pub fn tick(&mut self, signals: &mut Signals, mask: Mask) -> Option<LastCycle> {
         self.total_cycles += 1;
 
-        let skip_odd_frame_cycle = signals.rendering_enabled;
+        let skip_odd_frame_cycle = mask.background_enabled() || mask.sprites_enabled();
         let last_cycle = if skip_odd_frame_cycle && self.frame % 2 == 1 {
             LastCycle::Skipped
         } else {
