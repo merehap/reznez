@@ -148,8 +148,10 @@ impl PpuRegisters {
     }
 
     // Write 0x2001
-    pub fn write_mask(&mut self, signals: &Signals, value: u8) {
+    pub fn write_mask(&mut self, signals: &mut Signals, value: u8) {
         self.ppu_io_bus.update(value);
+
+        signals.write_2001 = true;
 
         let rendering_enabled_before = self.mask.background_enabled || self.mask.sprites_enabled;
 

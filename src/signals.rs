@@ -18,6 +18,10 @@ pub struct Signals {
 
     scanline_type: ScanlineType,
     sprite_rendering_dot_type: SpriteRenderingDotType,
+
+    pub write_2001: bool,
+    // FIXME: Hack
+    pub ppu_dot_skip_enabled: bool,
 }
 
 impl Signals {
@@ -38,6 +42,9 @@ impl Signals {
             // FIXME: This needs to come from the initial clock.
             scanline_type: ScanlineType::Visible,
             sprite_rendering_dot_type: SpriteRenderingDotType::Other,
+
+            write_2001: false,
+            ppu_dot_skip_enabled: false,
         }
     }
 

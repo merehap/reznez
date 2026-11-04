@@ -237,7 +237,7 @@ impl Cpu {
         CpuPinout::set_read_write(bus, rw);
     }
 
-    pub fn step_end_of_low(Bus {..}: &mut Bus) {
+    pub fn step_end_of_low(_bus: &mut Bus) {
 
     }
 
@@ -326,7 +326,11 @@ impl Cpu {
         Some(bus.cpu.step)
     }
 
-    pub fn step_end_of_m2_high(_bus: &mut Bus) {
+    pub fn step_end_of_m2_high(Bus { ppu_regs, signals, ..}: &mut Bus) {
+        if signals.write_2001 {
+            signals.write_2001 = false;
+            signals.ppu_dot_skip_enabled = ppu_regs.background_enabled() || ppu_regs.sprites_enabled();
+        }
     }
 
     fn execute_step_action(bus: &mut Bus, action: StepAction, value: u8) {
