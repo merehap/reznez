@@ -109,7 +109,7 @@ impl CpuModeState {
     }
 
     pub fn new_instruction_with_address(&self) -> Option<(Instruction, CpuAddress)> {
-        if matches!(self.mode, CpuMode::Instruction {..}) && self.step_index == 0 {
+        if matches!(self.mode, CpuMode::Instruction { pending_sub_state: SubState::Normal, ..}) && self.step_index == 0 {
             Some((self.instruction, self.code_point_address))
         } else {
             None
