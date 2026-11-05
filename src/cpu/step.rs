@@ -241,8 +241,8 @@ pub const RESET_STEPS: &[Step] = &[
     // Hopefully switching the writes to reads here is what is actually intended.
     Read(                             From::TopOfStack, &[DecrementStackPointer]),
     Read(                             From::TopOfStack, &[DecrementStackPointer]),
-    Read(                             From::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
-    ReadField(Operand               , From::InterruptVectorLow , &[DisableInterrupts, Brk5]),
+    Read(                             From::TopOfStack, &[DecrementStackPointer, SetInterruptVector, Brk5]),
+    ReadField(Operand               , From::InterruptVectorLow , &[DisableInterrupts]),
     ReadField(ProgramCounterHighByte, From::InterruptVectorHigh, &[ClearInterruptVector]),
     Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]),
 ];
