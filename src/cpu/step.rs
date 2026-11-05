@@ -235,18 +235,6 @@ pub const INDIRECT_INDEXED_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]),
 ];
 
-pub const RESET_STEPS: &[Step] = &[
-    Read(                             From::ProgramCounterTarget, &[]),
-    // NES Manual: "read/write line is disabled so that no writes to stack are accomplished".
-    // Hopefully switching the writes to reads here is what is actually intended.
-    Read(                             From::TopOfStack, &[DecrementStackPointer]),
-    Read(                             From::TopOfStack, &[DecrementStackPointer]),
-    Read(                             From::TopOfStack, &[DecrementStackPointer, SetInterruptVector, Brk5]),
-    ReadField(Operand               , From::InterruptVectorLow , &[DisableInterrupts]),
-    ReadField(ProgramCounterHighByte, From::InterruptVectorHigh, &[ClearInterruptVector]),
-    Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]),
-];
-
 pub const BRK_STEPS: &[Step] = &[
     ReadField(Operand                , From::ProgramCounterTarget, &[InterpretOpCode, IncrementPC]),
     WriteField(ProgramCounterHighByte, To::TopOfStack, &[DecrementStackPointer]),

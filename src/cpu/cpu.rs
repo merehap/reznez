@@ -46,6 +46,9 @@ pub struct Cpu {
     // The initial button power-on button press is very short so not CPU cycles are wasted for counting purposes.
     just_powered_on: bool,
     clear_power_on_rst: bool,
+    // NES Manual: "[During RESET, the] read/write line is disabled so that no writes to stack are accomplished".
+    // Hopefully switching the writes to reads here is what is actually intended.
+    force_reads: bool,
 
     // CPU-internal signals (TODO: make these pub-in-this-directory)
     pub phi2: ActiveHigh, // Internal clock with a 50/50 duty cycle (M2 is a modified form of it)
@@ -98,6 +101,7 @@ impl Cpu {
 
             just_powered_on: true,
             clear_power_on_rst: false,
+            force_reads: true,
 
             phi2: ActiveHigh::Inactive,
             ready: ActiveLow::Active,
@@ -130,6 +134,7 @@ impl Cpu {
 
     // From https://wiki.nesdev.org/w/index.php?title=CPU_power_up_state
     pub fn reset(&mut self) {
+        self.force_reads = true;
         self.mode_state = CpuModeState::startup();
         // TODO: Figure out the right right thing to do here.
         self.step = Step::Read(From::ProgramCounterTarget, &[]);
@@ -254,7 +259,7 @@ impl Cpu {
             bus.cpu_pinout.data_bus = bus.cpu.field_value(&mut bus.cpu_pinout, field);
         }
 
-        if !bus.cpu.step.is_read() {
+        if !bus.cpu.step.is_read() && !bus.cpu.force_reads {
             bus.cpu_write(mapper);
             bus.cpu.value = bus.cpu_pinout.data_bus;
         }
@@ -281,7 +286,7 @@ impl Cpu {
             return None;
         }
 
-        if bus.cpu.step.is_read() {
+        if bus.cpu.step.is_read() || bus.cpu.force_reads {
             bus.cpu.value = bus.cpu_read(mapper);
         }
 
@@ -524,6 +529,7 @@ impl Cpu {
 
             StepAction::DisableInterrupts => { /* Already done above. */ }
             StepAction::SetInterruptVector => {
+                cpu.force_reads = false;
                 cpu.current_interrupt_vector =
                     if cpu.reset_flip_flop.dores().is_active() {
                         info!(target: "cpuflowcontrol", "Setting interrupt vector to RESET.");

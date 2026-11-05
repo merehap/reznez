@@ -133,7 +133,7 @@ impl CpuModeState {
         // The last step of the previous mode is the head step of this new mode.
         self.head_step = self.current_step();
         self.instruction = Instruction::from_code_point(0x00);
-        self.tail_steps = if self.mode == CpuMode::FirstStep { RESET_STEPS } else { self.instruction.steps() };
+        self.tail_steps = self.instruction.steps();
     }
 
     pub fn jammed(&mut self) {
