@@ -244,10 +244,6 @@ impl Nes {
     pub fn step(&mut self, frame: &mut Frame) -> StepResult {
         let mut step = None;
         let end_reached = self.bus.master_clock.tick(&mut self.bus.signals);
-        if self.bus.master_clock.apu {
-            self.apu_step();
-            self.bus.master_clock.apu_clock.parity.toggle();
-        }
 
         match self.bus.master_clock.m2_event {
             Some(M2Event::Fall) => self.cpu_step_m2_falling(),
@@ -271,6 +267,11 @@ impl Nes {
 
         if self.bus.master_clock.ppu_second_half {
             self.ppu_step_pclk_low();
+        }
+
+        if self.bus.master_clock.apu {
+            self.apu_step();
+            self.bus.master_clock.apu_clock.parity.toggle();
         }
 
         if end_reached {
