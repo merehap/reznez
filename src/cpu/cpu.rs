@@ -197,8 +197,7 @@ impl Cpu {
             return;
         }
 
-        let halted = bus.dmc_dma.cpu_should_be_halted() || bus.oam_dma.cpu_should_be_halted();
-        if !halted {
+        if !bus.cpu_halted() {
             bus.cpu.mode_state.step();
         }
 
@@ -308,9 +307,8 @@ impl Cpu {
             Cpu::execute_step_action(bus, action, bus.cpu.value);
         }
 
-        let halted = bus.dmc_dma.cpu_should_be_halted() || bus.oam_dma.cpu_should_be_halted();
         if log_enabled!(target: "cpustep", Info) {
-            let step_name = if halted { "HALTED".to_string() } else { bus.cpu.mode_state.step_name() };
+            let step_name = if bus.cpu_halted() { "HALTED".to_string() } else { bus.cpu.mode_state.step_name() };
             let cpu_cycle = bus.cpu_cycle();
             let current_address = bus.cpu_address_bus();
             let prg_index = if *current_address < 0x6000 {

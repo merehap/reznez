@@ -317,7 +317,7 @@ impl Nes {
 
         let step = Cpu::step_m2_middle_of_high(&mut self.bus, &mut *self.mapper);
 
-        if self.diff_logging_enabled && log_enabled!(target: "cpuinstructions", Info) &&
+        if self.diff_logging_enabled && !self.bus.cpu_halted() && log_enabled!(target: "cpuinstructions", Info) &&
                 let Some((current_instruction, start_address)) = self.bus.cpu.mode_state().new_instruction_with_address() {
 
             let formatted_instruction = self.log_formatter.format_instruction(

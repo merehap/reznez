@@ -200,6 +200,10 @@ impl Bus {
         VBlankInterruptHandler::update(self);
     }
 
+    pub fn cpu_halted(&self) -> bool {
+        self.dmc_dma.cpu_should_be_halted() || self.oam_dma.cpu_should_be_halted()
+    }
+
     pub fn set_name_table_mirroring(&mut self, mirroring_index: u8) {
         let mirroring = *self.name_table_mirrorings.get(usize::from(mirroring_index))
             .expect("NameTableMirroring cannot be selected from the list since the list is empty.");
