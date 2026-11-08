@@ -73,15 +73,11 @@ impl DmcDma {
      *                                                      |   |               |   |
      *                                                      +---+               +---+
      */
-    pub fn start_load(&mut self, parity: CycleParity) {
+    pub fn start_load(&mut self) {
         assert_eq!(self.state, DmcDmaState::Idle);
         info!(target: "apuevents", "DMC DMA Load starting. CPU will halt soon.");
         self.latest_action = DmcDmaAction::DoNothing;
-        self.state = match parity {
-            // If we're already on a GET, then skip WaitingForGet.
-            CycleParity::Get => DmcDmaState::FirstSkip,
-            CycleParity::Put => DmcDmaState::WaitingForGet,
-        };
+        self.state = DmcDmaState::TryFirstSkip;
     }
 
     /*
@@ -122,9 +118,10 @@ impl DmcDma {
 
         (self.latest_action, self.state) = match (self.state, read_write, parity) {
             (State::Idle         , _    ,   _) => (Action::DoNothing, State::Idle),
-            (State::WaitingForGet, _    ,   _) => (Action::DoNothing, State::FirstSkip),
-            (State::FirstSkip    , _    ,   _) => (Action::DoNothing, State::SecondSkip),
-            (State::SecondSkip   , _    ,   _) => (Action::DoNothing, State::TryHalt),
+            (State::TryFirstSkip , _    , Put) => (Action::DoNothing, State::TryFirstSkip),
+            (State::TryFirstSkip , _    , Get) => (Action::DoNothing, State::SecondSkip),
+            (State::SecondSkip   , _    , Put) => (Action::DoNothing, State::TryHalt),
+            (State::SecondSkip   , _    , Get) => unreachable!("Second skip must be on a PUT"),
             (State::TryHalt      , Write,   _) => (Action::DoNothing, State::TryHalt),
             (State::TryHalt      , Read ,   _) => (Action::Halt     , State::Dummy),
             (State::Dummy        , _    ,   _) => (Action::Dummy    , State::TryRead),
@@ -148,8 +145,7 @@ impl DmcDma {
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum DmcDmaState {
     Idle,
-    WaitingForGet,
-    FirstSkip,
+    TryFirstSkip,
     SecondSkip,
     TryHalt,
     Dummy,

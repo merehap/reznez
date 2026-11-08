@@ -54,7 +54,7 @@ impl Dmc {
     pub(super) fn set_enabled(bus: &mut Bus, enable: bool) {
         CpuPinout::acknowledge_dmc_irq(bus);
 
-        let Bus { dmc_dma, apu_regs, master_clock, ..} = bus;
+        let Bus { dmc_dma, apu_regs, ..} = bus;
         let dmc = &mut apu_regs.dmc;
         if !enable {
             dmc_dma.disable_soon();
@@ -63,7 +63,7 @@ impl Dmc {
             dmc.sample_address = dmc.sample_start_address;
 
             if dmc.sample_buffer.is_none() {
-                dmc_dma.start_load(master_clock.apu_clock().cycle_parity());
+                dmc_dma.start_load();
             }
         }
     }
