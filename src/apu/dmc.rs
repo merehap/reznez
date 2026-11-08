@@ -69,7 +69,6 @@ impl Dmc {
     }
 
     pub(super) fn tick(&mut self, dmc_dma: &mut DmcDma) {
-        // If we don't early return here, then we must be on a PUT cycle since all NTSC_PERIODs are even.
         if self.cycles_remaining >= 1 {
             self.cycles_remaining -= 1;
             return;
