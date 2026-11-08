@@ -66,8 +66,7 @@ impl OamDmaState {
         }
 
         // DMA can't read on PUT steps.
-        // TODO: This should fail on PUTs, not GETS, but somehow the parity tracking is off.
-        if matches!(*self, Self::TryRead(_)) && parity == CycleParity::Get {
+        if matches!(*self, Self::TryRead(_)) && parity == CycleParity::Put {
             return OamDmaAction::Align;
         }
 
