@@ -5,6 +5,7 @@ use crate::cpu::step_action::StepAction;
 use crate::cpu::step_action::StepAction::*;
 use crate::cpu::step::Step::{Read, ReadField, WriteField, OamRead, OamWrite, DmcRead};
 use crate::bus::{AddressBusType, Bus};
+use crate::memory::cpu::cpu_pinout::ReadWrite;
 use crate::memory::signal_level::ActiveHigh;
 
 // TODO: Merge this with READ_OP_CODE_STEP.
@@ -352,6 +353,14 @@ impl Step {
             Step::Read(..) | Step::ReadField(..) | Step::Write(..) | Step::WriteField(..) => AddressBusType::Cpu,
             Step::OamRead(..) | Step::OamWrite(..) => AddressBusType::OamDma,
             Step::DmcRead(..) => AddressBusType::DmcDma,
+        }
+    }
+
+    pub fn read_write(&self) -> ReadWrite {
+        // TODO: Take this from the RW pin instead. CAUTION: Currently RW is only set after this is first used.
+        match self {
+            Step::Read(..) | Step::ReadField(..) | Step::OamRead(..) | Step::DmcRead(..) => ReadWrite::Read,
+            Step::Write(..) | Step::WriteField(..) | Step::OamWrite(..) => ReadWrite::Write,
         }
     }
 

@@ -4,6 +4,7 @@ use log::info;
 use splitbits::combinebits;
 
 use crate::apu::apu_clock::CycleParity;
+use crate::memory::cpu::cpu_pinout::ReadWrite;
 
 pub struct DmcDma {
     puts_until_disabled: Option<u8>,
@@ -113,20 +114,22 @@ impl DmcDma {
         }
     }
 
-    pub fn step(&mut self, is_cpu_read_step: bool, parity: CycleParity) {
+    pub fn step(&mut self, read_write: ReadWrite, parity: CycleParity) {
         use DmcDmaAction as Action;
         use DmcDmaState as State;
+        use ReadWrite::*;
+        use CycleParity::*;
 
-        (self.latest_action, self.state) = match self.state {
-            State::Idle                                  => (Action::DoNothing, State::Idle),
-            State::WaitingForGet                         => (Action::DoNothing, State::FirstSkip),
-            State::FirstSkip                             => (Action::DoNothing, State::SecondSkip),
-            State::SecondSkip                            => (Action::DoNothing, State::TryHalt),
-            State::TryHalt if !is_cpu_read_step          => (Action::DoNothing, State::TryHalt),
-            State::TryHalt                               => (Action::Halt     , State::Dummy),
-            State::Dummy                                 => (Action::Dummy    , State::TryRead),
-            State::TryRead if parity == CycleParity::Get => (Action::Align    , State::TryRead),
-            State::TryRead                               => (Action::Read     , State::Idle),
+        (self.latest_action, self.state) = match (self.state, read_write, parity) {
+            (State::Idle         , _    ,   _) => (Action::DoNothing, State::Idle),
+            (State::WaitingForGet, _    ,   _) => (Action::DoNothing, State::FirstSkip),
+            (State::FirstSkip    , _    ,   _) => (Action::DoNothing, State::SecondSkip),
+            (State::SecondSkip   , _    ,   _) => (Action::DoNothing, State::TryHalt),
+            (State::TryHalt      , Write,   _) => (Action::DoNothing, State::TryHalt),
+            (State::TryHalt      , Read ,   _) => (Action::Halt     , State::Dummy),
+            (State::Dummy        , _    ,   _) => (Action::Dummy    , State::TryRead),
+            (State::TryRead      , _    , Get) => (Action::Align    , State::TryRead),
+            (State::TryRead      , _    , Put) => (Action::Read     , State::Idle),
         };
 
         match self.puts_until_disabled {

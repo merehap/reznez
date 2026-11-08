@@ -21,7 +21,7 @@ use crate::cpu::step::*;
 use crate::mapper::mapper::Mapper;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::bus::{AddressBusType, Bus, IRQ_VECTOR_HIGH, IRQ_VECTOR_LOW, NMI_VECTOR_HIGH, NMI_VECTOR_LOW, RESET_VECTOR_HIGH, RESET_VECTOR_LOW};
-use crate::memory::cpu::cpu_pinout::{CpuPinout, ReadWrite};
+use crate::memory::cpu::cpu_pinout::CpuPinout;
 use crate::memory::ppu::ppu_pinout::PpuPinout;
 use crate::memory::signal_level::{ActiveHigh, ActiveLow};
 
@@ -209,7 +209,7 @@ impl Cpu {
         bus.cpu.step = bus.cpu.mode_state.current_step();
 
         let cycle_parity = bus.apu_clock().cycle_parity();
-        bus.dmc_dma.step(bus.cpu.step.is_read(), cycle_parity);
+        bus.dmc_dma.step(bus.cpu.step.read_write(), cycle_parity);
         bus.cpu.step = match bus.dmc_dma.latest_action() {
             DmcDmaAction::DoNothing => bus.cpu.step,
             DmcDmaAction::Halt | DmcDmaAction::Dummy | DmcDmaAction::Align => bus.cpu.step.with_actions_removed(),
@@ -233,12 +233,7 @@ impl Cpu {
     }
 
     pub fn step_read_write(bus: &mut Bus) {
-        let rw = if bus.cpu.step.is_read() {
-            ReadWrite::Read
-        } else {
-            ReadWrite::Write
-        };
-        CpuPinout::set_read_write(bus, rw);
+        CpuPinout::set_read_write(bus, bus.cpu.step.read_write());
     }
 
     pub fn step_end_of_low(_bus: &mut Bus) {
