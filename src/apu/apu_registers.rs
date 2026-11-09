@@ -185,14 +185,36 @@ impl ApuRegisters {
         }
 
         ApuRegisters::maybe_set_frame_irq_pending(bus);
-        bus.apu_regs.maybe_decrement_counters(&bus.master_clock.apu_clock);
-        bus.apu_regs.apply_length_counter_pending_values();
 
-        bus.apu_regs.pulse_1.tick_put();
-        bus.apu_regs.pulse_2.tick_put();
-        bus.apu_regs.noise.tick_put();
-        bus.apu_regs.triangle.tick();
-        bus.apu_regs.dmc.tick(&mut bus.dmc_dma);
+        let clock = bus.master_clock.apu_clock();
+        let apu_regs = &mut bus.apu_regs;
+        let (quarter_frame, half_frame) = match (clock.apu_cycle(), clock.step_mode()) {
+            (3728 , _                 ) => (true, false), // First quarter
+            (7456 , _                 ) => (true, true),  // Second quarter (first half)
+            (11185, _                 ) => (true, false), // Third quarter
+            (14914, StepMode::FourStep) => (true, true),  // Final quarter (final half), 4-step
+            (18640, StepMode::FiveStep) => (true, true),  // Final quarter (final half), 5-step
+            _ => (false, false),
+        };
+
+        if quarter_frame {
+            apu_regs.tick_envelopes();
+            apu_regs.triangle.decrement_linear_counter();
+            apu_regs.counter_suppression_cycles = 2;
+
+            if half_frame {
+                apu_regs.decrement_length_counters(clock);
+                apu_regs.tick_sweeps();
+            }
+        }
+
+        apu_regs.apply_length_counter_pending_values();
+
+        apu_regs.pulse_1.tick_put();
+        apu_regs.pulse_2.tick_put();
+        apu_regs.noise.tick_put();
+        apu_regs.triangle.tick();
+        apu_regs.dmc.tick(&mut bus.dmc_dma);
     }
 
     fn maybe_update_step_mode(&mut self, clock: &mut ApuClock) {
@@ -209,28 +231,6 @@ impl ApuRegisters {
             if clock.step_mode() == StepMode::FiveStep && self.counter_suppression_cycles == 0 {
                 self.decrement_length_counters(clock);
                 self.counter_suppression_cycles = 2;
-            }
-        }
-    }
-
-    fn maybe_decrement_counters(&mut self, clock: &ApuClock) {
-        let (quarter_frame, half_frame) = match (clock.apu_cycle(), clock.step_mode()) {
-            (3728 , _                 ) => (true, false), // First quarter
-            (7456 , _                 ) => (true, true),  // Second quarter (first half)
-            (11185, _                 ) => (true, false), // Third quarter
-            (14914, StepMode::FourStep) => (true, true),  // Final quarter (final half), 4-step
-            (18640, StepMode::FiveStep) => (true, true),  // Final quarter (final half), 5-step
-            _ => (false, false),
-        };
-
-        if quarter_frame {
-            self.tick_envelopes();
-            self.triangle.decrement_linear_counter();
-            self.counter_suppression_cycles = 2;
-
-            if half_frame {
-                self.decrement_length_counters(clock);
-                self.tick_sweeps();
             }
         }
     }
