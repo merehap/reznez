@@ -214,45 +214,24 @@ impl ApuRegisters {
     }
 
     fn maybe_decrement_counters(&mut self, clock: &ApuClock) {
-        const FIRST_STEP  : u16 = 3728;
-        const SECOND_STEP : u16 = 7456;
-        const THIRD_STEP  : u16 = 11185;
-        const FOURTH_STEP : u16 = 14914;
-        const FIFTH_STEP  : u16 = 18640;
+        let (quarter_frame, half_frame) = match (clock.apu_cycle(), clock.step_mode()) {
+            (3728 , _                 ) => (true, false), // First quarter
+            (7456 , _                 ) => (true, true),  // Second quarter (first half)
+            (11185, _                 ) => (true, false), // Third quarter
+            (14914, StepMode::FourStep) => (true, true),  // Final quarter (final half), 4-step
+            (18640, StepMode::FiveStep) => (true, true),  // Final quarter (final half), 5-step
+            _ => (false, false),
+        };
 
-        match clock.apu_cycle() {
-            FIRST_STEP => {
-                self.tick_envelopes();
-                self.triangle.decrement_linear_counter();
-                self.counter_suppression_cycles = 2;
-            }
-            SECOND_STEP => {
-                self.tick_envelopes();
-                self.triangle.decrement_linear_counter();
+        if quarter_frame {
+            self.tick_envelopes();
+            self.triangle.decrement_linear_counter();
+            self.counter_suppression_cycles = 2;
+
+            if half_frame {
                 self.decrement_length_counters(clock);
                 self.tick_sweeps();
-                self.counter_suppression_cycles = 2;
             }
-            THIRD_STEP => {
-                self.tick_envelopes();
-                self.triangle.decrement_linear_counter();
-                self.counter_suppression_cycles = 2;
-            }
-            FOURTH_STEP if clock.step_mode() == StepMode::FourStep => {
-                self.tick_envelopes();
-                self.triangle.decrement_linear_counter();
-                self.decrement_length_counters(clock);
-                self.tick_sweeps();
-                self.counter_suppression_cycles = 2;
-            }
-            FIFTH_STEP if clock.step_mode() == StepMode::FiveStep => {
-                self.tick_envelopes();
-                self.triangle.decrement_linear_counter();
-                self.decrement_length_counters(clock);
-                self.tick_sweeps();
-                self.counter_suppression_cycles = 2;
-            }
-            _ => { /* Do nothing. */ }
         }
     }
 
