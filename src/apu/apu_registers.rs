@@ -159,16 +159,14 @@ impl ApuRegisters {
     }
 
     pub fn tick(bus: &mut Bus) {
-        let parity = bus.master_clock.apu_clock.cycle_parity();
-        match parity {
+        if bus.apu_regs.counter_suppression_cycles > 0 {
+            bus.apu_regs.counter_suppression_cycles -= 1;
+        }
+
+        let apu_regs = &mut bus.apu_regs;
+        let clock = &mut bus.master_clock.apu_clock;
+        match clock.parity {
             CycleParity::Get => {
-                if bus.apu_regs.counter_suppression_cycles > 0 {
-                    bus.apu_regs.counter_suppression_cycles -= 1;
-                }
-
-                let clock = &mut bus.master_clock.apu_clock;
-                let apu_regs = &mut bus.apu_regs;
-
                 let apu_cycle = clock.cpu_cycle();
                 let is_ready = apu_regs.clock_reset_status.tick();
                 if is_ready {
@@ -185,28 +183,14 @@ impl ApuRegisters {
                     }
                 }
 
-                if bus.apu_regs.should_acknowledge_frame_irq {
+                if apu_regs.should_acknowledge_frame_irq {
                     info!(target: "apuevents", "Frame IRQ acknowledged by APUSTATUS read. APU Cycle: {}", bus.apu_clock().cpu_cycle());
                     CpuPinout::acknowledge_frame_irq(bus);
                     bus.apu_regs.frame_irq_status = false;
                     bus.apu_regs.should_acknowledge_frame_irq = false;
                 }
-
-                ApuRegisters::maybe_set_frame_irq_pending(bus);
-                bus.apu_regs.apply_length_counter_pending_values();
-
-                bus.apu_regs.triangle.tick();
-                bus.apu_regs.dmc.tick(&mut bus.dmc_dma);
             }
             CycleParity::Put => {
-                if bus.apu_regs.counter_suppression_cycles > 0 {
-                    bus.apu_regs.counter_suppression_cycles -= 1;
-                }
-
-                ApuRegisters::maybe_set_frame_irq_pending(bus);
-
-                let clock = bus.master_clock.apu_clock();
-                let apu_regs = &mut bus.apu_regs;
                 let (quarter_frame, half_frame) = match (clock.apu_cycle(), clock.step_mode()) {
                     (3728 , _                 ) => (true, false), // First quarter
                     (7456 , _                 ) => (true, true),  // Second quarter (first half)
@@ -227,15 +211,17 @@ impl ApuRegisters {
                     }
                 }
 
-                apu_regs.apply_length_counter_pending_values();
-
                 apu_regs.pulse_1.tick_put();
                 apu_regs.pulse_2.tick_put();
                 apu_regs.noise.tick_put();
-                apu_regs.triangle.tick();
-                apu_regs.dmc.tick(&mut bus.dmc_dma);
             }
         }
+
+        bus.apu_regs.apply_length_counter_pending_values();
+        bus.apu_regs.triangle.tick();
+        bus.apu_regs.dmc.tick(&mut bus.dmc_dma);
+
+        ApuRegisters::maybe_set_frame_irq_pending(bus);
     }
 
     fn tick_envelopes(&mut self) {
