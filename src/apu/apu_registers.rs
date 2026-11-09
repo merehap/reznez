@@ -201,13 +201,16 @@ impl ApuRegisters {
                 };
 
                 if quarter_frame {
-                    apu_regs.tick_envelopes();
+                    apu_regs.pulse_1.tick_envelope();
+                    apu_regs.pulse_2.tick_envelope();
+                    apu_regs.noise.tick_envelope();
                     apu_regs.triangle.decrement_linear_counter();
                     apu_regs.counter_suppression_cycles = 2;
 
                     if half_frame {
                         apu_regs.decrement_length_counters(clock);
-                        apu_regs.tick_sweeps();
+                        apu_regs.pulse_1.tick_sweep();
+                        apu_regs.pulse_2.tick_sweep();
                     }
                 }
 
@@ -217,17 +220,25 @@ impl ApuRegisters {
             }
         }
 
-        bus.apu_regs.apply_length_counter_pending_values();
+        bus.apu_regs.pulse_1.length_counter.apply_pending_values();
+        bus.apu_regs.pulse_2.length_counter.apply_pending_values();
+        bus.apu_regs.triangle.length_counter.apply_pending_values();
+        bus.apu_regs.noise.length_counter.apply_pending_values();
+
         bus.apu_regs.triangle.tick();
         bus.apu_regs.dmc.tick(&mut bus.dmc_dma);
 
-        ApuRegisters::maybe_set_frame_irq_pending(bus);
-    }
+        if bus.apu_clock().is_in_frame_irq_window() {
+            if !bus.apu_regs.suppress_frame_irq {
+                CpuPinout::assert_frame_irq(bus);
+            }
 
-    fn tick_envelopes(&mut self) {
-        self.pulse_1.tick_envelope();
-        self.pulse_2.tick_envelope();
-        self.noise.tick_envelope();
+            bus.apu_regs.frame_irq_status = if bus.apu_clock().cpu_cycle() == 0 {
+                !bus.apu_regs.suppress_frame_irq
+            } else {
+                true
+            };
+        }
     }
 
     fn decrement_length_counters(&mut self, clock: &ApuClock) {
@@ -240,32 +251,6 @@ impl ApuRegisters {
             self.pulse_1.length_counter, self.pulse_2.length_counter, self.triangle.length_counter,
             self.noise.length_counter, clock.cpu_cycle(),
         );
-    }
-
-    fn tick_sweeps(&mut self) {
-        self.pulse_1.tick_sweep();
-        self.pulse_2.tick_sweep();
-    }
-
-    fn apply_length_counter_pending_values(&mut self) {
-        self.pulse_1.length_counter.apply_pending_values();
-        self.pulse_2.length_counter.apply_pending_values();
-        self.triangle.length_counter.apply_pending_values();
-        self.noise.length_counter.apply_pending_values();
-    }
-
-    fn maybe_set_frame_irq_pending(bus: &mut Bus) {
-        if bus.apu_clock().is_in_frame_irq_window() {
-            if !bus.apu_regs.suppress_frame_irq {
-                CpuPinout::assert_frame_irq(bus);
-            }
-
-            bus.apu_regs.frame_irq_status = if bus.apu_clock().cpu_cycle() == 0 {
-                !bus.apu_regs.suppress_frame_irq
-            } else {
-                true
-            };
-        }
     }
 }
 
