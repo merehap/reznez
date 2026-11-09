@@ -3,7 +3,7 @@
 use log::info;
 use splitbits::{combinebits, splitbits};
 
-use crate::apu::apu_clock::{ApuClock, StepMode};
+use crate::apu::apu_clock::{ApuClock, CycleParity, StepMode};
 use crate::apu::sweep::NegateBehavior;
 use crate::apu::pulse_channel::PulseChannel;
 use crate::apu::triangle_channel::TriangleChannel;
@@ -158,79 +158,82 @@ impl ApuRegisters {
             bus.apu_regs.pending_step_mode, bus.apu_regs.suppress_frame_irq, bus.apu_regs.clock_reset_status, bus.apu_clock().cpu_cycle());
     }
 
-    pub fn tick_get(bus: &mut Bus) {
-        if bus.apu_regs.counter_suppression_cycles > 0 {
-            bus.apu_regs.counter_suppression_cycles -= 1;
-        }
+    pub fn tick(bus: &mut Bus) {
+        let parity = bus.master_clock.apu_clock.cycle_parity();
+        match parity {
+            CycleParity::Get => {
+                if bus.apu_regs.counter_suppression_cycles > 0 {
+                    bus.apu_regs.counter_suppression_cycles -= 1;
+                }
 
-        bus.apu_regs.maybe_update_step_mode(&mut bus.master_clock.apu_clock);
+                let clock = &mut bus.master_clock.apu_clock;
+                let apu_regs = &mut bus.apu_regs;
 
-        if bus.apu_regs.should_acknowledge_frame_irq {
-            info!(target: "apuevents", "Frame IRQ acknowledged by APUSTATUS read. APU Cycle: {}", bus.apu_clock().cpu_cycle());
-            CpuPinout::acknowledge_frame_irq(bus);
-            bus.apu_regs.frame_irq_status = false;
-            bus.apu_regs.should_acknowledge_frame_irq = false;
-        }
+                let apu_cycle = clock.cpu_cycle();
+                let is_ready = apu_regs.clock_reset_status.tick();
+                if is_ready {
+                    info!(
+                        target: "apuevents",
+                        "APU frame counter: Resetting APU cycle and setting step mode: {:?}. Skipped APU Cycle: {apu_cycle}",
+                        apu_regs.pending_step_mode,
+                    );
+                    clock.reset();
+                    clock.set_step_mode(apu_regs.pending_step_mode);
+                    if clock.step_mode() == StepMode::FiveStep && apu_regs.counter_suppression_cycles == 0 {
+                        apu_regs.decrement_length_counters(clock);
+                        apu_regs.counter_suppression_cycles = 2;
+                    }
+                }
 
-        ApuRegisters::maybe_set_frame_irq_pending(bus);
-        bus.apu_regs.apply_length_counter_pending_values();
+                if bus.apu_regs.should_acknowledge_frame_irq {
+                    info!(target: "apuevents", "Frame IRQ acknowledged by APUSTATUS read. APU Cycle: {}", bus.apu_clock().cpu_cycle());
+                    CpuPinout::acknowledge_frame_irq(bus);
+                    bus.apu_regs.frame_irq_status = false;
+                    bus.apu_regs.should_acknowledge_frame_irq = false;
+                }
 
-        bus.apu_regs.triangle.tick();
-        bus.apu_regs.dmc.tick(&mut bus.dmc_dma);
-    }
+                ApuRegisters::maybe_set_frame_irq_pending(bus);
+                bus.apu_regs.apply_length_counter_pending_values();
 
-    pub fn tick_put(bus: &mut Bus) {
-        if bus.apu_regs.counter_suppression_cycles > 0 {
-            bus.apu_regs.counter_suppression_cycles -= 1;
-        }
-
-        ApuRegisters::maybe_set_frame_irq_pending(bus);
-
-        let clock = bus.master_clock.apu_clock();
-        let apu_regs = &mut bus.apu_regs;
-        let (quarter_frame, half_frame) = match (clock.apu_cycle(), clock.step_mode()) {
-            (3728 , _                 ) => (true, false), // First quarter
-            (7456 , _                 ) => (true, true),  // Second quarter (first half)
-            (11185, _                 ) => (true, false), // Third quarter
-            (14914, StepMode::FourStep) => (true, true),  // Final quarter (final half), 4-step
-            (18640, StepMode::FiveStep) => (true, true),  // Final quarter (final half), 5-step
-            _ => (false, false),
-        };
-
-        if quarter_frame {
-            apu_regs.tick_envelopes();
-            apu_regs.triangle.decrement_linear_counter();
-            apu_regs.counter_suppression_cycles = 2;
-
-            if half_frame {
-                apu_regs.decrement_length_counters(clock);
-                apu_regs.tick_sweeps();
+                bus.apu_regs.triangle.tick();
+                bus.apu_regs.dmc.tick(&mut bus.dmc_dma);
             }
-        }
+            CycleParity::Put => {
+                if bus.apu_regs.counter_suppression_cycles > 0 {
+                    bus.apu_regs.counter_suppression_cycles -= 1;
+                }
 
-        apu_regs.apply_length_counter_pending_values();
+                ApuRegisters::maybe_set_frame_irq_pending(bus);
 
-        apu_regs.pulse_1.tick_put();
-        apu_regs.pulse_2.tick_put();
-        apu_regs.noise.tick_put();
-        apu_regs.triangle.tick();
-        apu_regs.dmc.tick(&mut bus.dmc_dma);
-    }
+                let clock = bus.master_clock.apu_clock();
+                let apu_regs = &mut bus.apu_regs;
+                let (quarter_frame, half_frame) = match (clock.apu_cycle(), clock.step_mode()) {
+                    (3728 , _                 ) => (true, false), // First quarter
+                    (7456 , _                 ) => (true, true),  // Second quarter (first half)
+                    (11185, _                 ) => (true, false), // Third quarter
+                    (14914, StepMode::FourStep) => (true, true),  // Final quarter (final half), 4-step
+                    (18640, StepMode::FiveStep) => (true, true),  // Final quarter (final half), 5-step
+                    _ => (false, false),
+                };
 
-    fn maybe_update_step_mode(&mut self, clock: &mut ApuClock) {
-        let apu_cycle = clock.cpu_cycle();
-        let is_ready = self.clock_reset_status.tick();
-        if is_ready {
-            info!(
-                target: "apuevents",
-                "APU frame counter: Resetting APU cycle and setting step mode: {:?}. Skipped APU Cycle: {apu_cycle}",
-                self.pending_step_mode,
-            );
-            clock.reset();
-            clock.set_step_mode(self.pending_step_mode);
-            if clock.step_mode() == StepMode::FiveStep && self.counter_suppression_cycles == 0 {
-                self.decrement_length_counters(clock);
-                self.counter_suppression_cycles = 2;
+                if quarter_frame {
+                    apu_regs.tick_envelopes();
+                    apu_regs.triangle.decrement_linear_counter();
+                    apu_regs.counter_suppression_cycles = 2;
+
+                    if half_frame {
+                        apu_regs.decrement_length_counters(clock);
+                        apu_regs.tick_sweeps();
+                    }
+                }
+
+                apu_regs.apply_length_counter_pending_values();
+
+                apu_regs.pulse_1.tick_put();
+                apu_regs.pulse_2.tick_put();
+                apu_regs.noise.tick_put();
+                apu_regs.triangle.tick();
+                apu_regs.dmc.tick(&mut bus.dmc_dma);
             }
         }
     }

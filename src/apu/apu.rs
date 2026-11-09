@@ -93,49 +93,44 @@ impl Apu {
         let mixed_sample = bus.apu.mixer.mix(&bus.apu_regs);
         bus.apu_regs.mixed_samples[sample_index] = mixed_sample;
 
-        match parity {
-            CycleParity::Get => {
-                ApuRegisters::tick_get(bus);
-            }
-            CycleParity::Put => {
-                bus.joypad1.tick();
-                bus.joypad2.tick();
-                ApuRegisters::tick_put(bus);
+        ApuRegisters::tick(bus);
+        if parity == CycleParity::Put {
+            bus.joypad1.tick();
+            bus.joypad2.tick();
 
-                bus.apu_regs.pulse1_volumes.push(u8::from(bus.apu_regs.pulse_1.sample_volume()).into());
-                bus.apu_regs.pulse2_volumes.push(u8::from(bus.apu_regs.pulse_2.sample_volume()).into());
-                bus.apu_regs.triangle_volumes.push(u8::from(bus.apu_regs.triangle.sample_volume()).into());
-                bus.apu_regs.noise_volumes.push(u8::from(bus.apu_regs.noise.sample_volume()).into());
-                bus.apu_regs.dmc_volumes.push(u8::from(bus.apu_regs.dmc.sample_volume()).into());
-                let audio_output = bus.apu_regs.mixed_samples.iter().sum::<f32>() / bus.apu_regs.mixed_samples.len() as f32;
-                bus.apu_regs.mixed_values.push(audio_output.into());
+            bus.apu_regs.pulse1_volumes.push(u8::from(bus.apu_regs.pulse_1.sample_volume()).into());
+            bus.apu_regs.pulse2_volumes.push(u8::from(bus.apu_regs.pulse_2.sample_volume()).into());
+            bus.apu_regs.triangle_volumes.push(u8::from(bus.apu_regs.triangle.sample_volume()).into());
+            bus.apu_regs.noise_volumes.push(u8::from(bus.apu_regs.noise.sample_volume()).into());
+            bus.apu_regs.dmc_volumes.push(u8::from(bus.apu_regs.dmc.sample_volume()).into());
+            let audio_output = bus.apu_regs.mixed_samples.iter().sum::<f32>() / bus.apu_regs.mixed_samples.len() as f32;
+            bus.apu_regs.mixed_values.push(audio_output.into());
 
-                if bus.apu_clock().raw_apu_cycle().is_multiple_of(20) {
-                    let mut queue = bus.apu.pulse_queue.lock().unwrap();
-                    if queue.len() < MAX_QUEUE_LENGTH {
-                        queue.push_back(audio_output);
-                    } else {
-                        warn!("Samples dropped: maximum APU queue length exceeded. Length: {}", queue.len());
+            if bus.apu_clock().raw_apu_cycle().is_multiple_of(20) {
+                let mut queue = bus.apu.pulse_queue.lock().unwrap();
+                if queue.len() < MAX_QUEUE_LENGTH {
+                    queue.push_back(audio_output);
+                } else {
+                    warn!("Samples dropped: maximum APU queue length exceeded. Length: {}", queue.len());
+                }
+
+                if log_enabled!(target: "apusamples", Level::Info) {
+                    fn disp(volume: u8) -> String {
+                        if volume == 0 { String::new() } else { volume.to_string() }
                     }
 
-                    if log_enabled!(target: "apusamples", Level::Info) {
-                        fn disp(volume: u8) -> String {
-                            if volume == 0 { String::new() } else { volume.to_string() }
-                        }
-
-                        let regs = &bus.apu_regs;
-                        info!("{:05} ({:08}), PPU Frame: {:05}, P1: {:>2}, P2: {:>2}, T: {:>2}, N: {:>2}, D: {:>2}, Mix: {:>4}",
-                            bus.master_clock.apu_clock.cpu_cycle(),
-                            bus.apu_clock().raw_apu_cycle(),
-                            bus.ppu_clock().frame(),
-                            disp(regs.pulse_1.sample_volume().into()),
-                            disp(regs.pulse_2.sample_volume().into()),
-                            disp(regs.triangle.sample_volume()),
-                            disp(regs.noise.sample_volume().into()),
-                            disp(regs.dmc.sample_volume()),
-                            mixed_sample.to_string(),
-                        );
-                    }
+                    let regs = &bus.apu_regs;
+                    info!("{:05} ({:08}), PPU Frame: {:05}, P1: {:>2}, P2: {:>2}, T: {:>2}, N: {:>2}, D: {:>2}, Mix: {:>4}",
+                        bus.master_clock.apu_clock.cpu_cycle(),
+                        bus.apu_clock().raw_apu_cycle(),
+                        bus.ppu_clock().frame(),
+                        disp(regs.pulse_1.sample_volume().into()),
+                        disp(regs.pulse_2.sample_volume().into()),
+                        disp(regs.triangle.sample_volume()),
+                        disp(regs.noise.sample_volume().into()),
+                        disp(regs.dmc.sample_volume()),
+                        mixed_sample.to_string(),
+                    );
                 }
             }
         }
