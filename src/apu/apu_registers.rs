@@ -191,12 +191,12 @@ impl ApuRegisters {
                 }
             }
             CycleParity::Put => {
-                let (quarter_frame, half_frame) = match (clock.apu_cycle(), clock.step_mode()) {
-                    (3728 , _                 ) => (true, false), // First quarter
-                    (7456 , _                 ) => (true, true),  // Second quarter (first half)
-                    (11185, _                 ) => (true, false), // Third quarter
-                    (14914, StepMode::FourStep) => (true, true),  // Final quarter (final half), 4-step
-                    (18640, StepMode::FiveStep) => (true, true),  // Final quarter (final half), 5-step
+                let (quarter_frame, half_frame) = match (clock.cpu_cycle(), clock.step_mode()) {
+                    (7457 , _                 ) => (true, false), // First quarter
+                    (14913, _                 ) => (true, true),  // Second quarter (first half)
+                    (22371, _                 ) => (true, false), // Third quarter
+                    (29829, StepMode::FourStep) => (true, true),  // Final quarter (final half), 4-step
+                    (37281, StepMode::FiveStep) => (true, true),  // Final quarter (final half), 5-step
                     _ => (false, false),
                 };
 
