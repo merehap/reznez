@@ -163,10 +163,10 @@ impl ApuRegisters {
             bus.apu_regs.counter_suppression_cycles -= 1;
         }
 
-        let apu_regs = &mut bus.apu_regs;
-        let clock = &mut bus.master_clock.apu_clock;
-        match clock.parity {
+        match bus.master_clock.apu_clock.parity {
             CycleParity::Get => {
+                let clock = &mut bus.master_clock.apu_clock;
+                let apu_regs = &mut bus.apu_regs;
                 let apu_cycle = clock.cpu_cycle();
                 let is_ready = apu_regs.clock_reset_status.tick();
                 if is_ready {
@@ -184,60 +184,63 @@ impl ApuRegisters {
                 }
 
                 if apu_regs.should_acknowledge_frame_irq {
+                    apu_regs.frame_irq_status = false;
+                    apu_regs.should_acknowledge_frame_irq = false;
                     info!(target: "apuevents", "Frame IRQ acknowledged by APUSTATUS read. APU Cycle: {}", bus.apu_clock().cpu_cycle());
                     CpuPinout::acknowledge_frame_irq(bus);
-                    bus.apu_regs.frame_irq_status = false;
-                    bus.apu_regs.should_acknowledge_frame_irq = false;
                 }
             }
             CycleParity::Put => {
-                let (quarter_frame, half_frame) = match (clock.cpu_cycle(), clock.step_mode()) {
-                    (7457 , _                 ) => (true, false), // First quarter
-                    (14913, _                 ) => (true, true),  // Second quarter (first half)
-                    (22371, _                 ) => (true, false), // Third quarter
-                    (29829, StepMode::FourStep) => (true, true),  // Final quarter (final half), 4-step
-                    (37281, StepMode::FiveStep) => (true, true),  // Final quarter (final half), 5-step
-                    _ => (false, false),
-                };
-
-                if quarter_frame {
-                    apu_regs.pulse_1.tick_envelope();
-                    apu_regs.pulse_2.tick_envelope();
-                    apu_regs.noise.tick_envelope();
-                    apu_regs.triangle.decrement_linear_counter();
-                    apu_regs.counter_suppression_cycles = 2;
-
-                    if half_frame {
-                        apu_regs.decrement_length_counters(clock);
-                        apu_regs.pulse_1.tick_sweep();
-                        apu_regs.pulse_2.tick_sweep();
-                    }
-                }
-
+                let apu_regs = &mut bus.apu_regs;
                 apu_regs.pulse_1.tick_put();
                 apu_regs.pulse_2.tick_put();
                 apu_regs.noise.tick_put();
             }
         }
 
-        bus.apu_regs.pulse_1.length_counter.apply_pending_values();
-        bus.apu_regs.pulse_2.length_counter.apply_pending_values();
-        bus.apu_regs.triangle.length_counter.apply_pending_values();
-        bus.apu_regs.noise.length_counter.apply_pending_values();
+        let apu_regs = &mut bus.apu_regs;
+        let clock = &mut bus.master_clock.apu_clock;
+        let (quarter_frame, half_frame) = match (clock.cpu_cycle(), clock.step_mode()) {
+            (7457 , _                 ) => (true, false), // First quarter
+            (14913, _                 ) => (true, true),  // Second quarter (first half)
+            (22371, _                 ) => (true, false), // Third quarter
+            (29829, StepMode::FourStep) => (true, true),  // Final quarter (final half), 4-step
+            (37281, StepMode::FiveStep) => (true, true),  // Final quarter (final half), 5-step
+            _ => (false, false),
+        };
 
-        bus.apu_regs.triangle.tick();
-        bus.apu_regs.dmc.tick(&mut bus.dmc_dma);
+        if quarter_frame {
+            apu_regs.pulse_1.tick_envelope();
+            apu_regs.pulse_2.tick_envelope();
+            apu_regs.noise.tick_envelope();
+            apu_regs.triangle.decrement_linear_counter();
+            apu_regs.counter_suppression_cycles = 2;
 
-        if bus.apu_clock().is_in_frame_irq_window() {
-            if !bus.apu_regs.suppress_frame_irq {
-                CpuPinout::assert_frame_irq(bus);
+            if half_frame {
+                apu_regs.decrement_length_counters(clock);
+                apu_regs.pulse_1.tick_sweep();
+                apu_regs.pulse_2.tick_sweep();
             }
+        }
 
-            bus.apu_regs.frame_irq_status = if bus.apu_clock().cpu_cycle() == 0 {
-                !bus.apu_regs.suppress_frame_irq
+        apu_regs.pulse_1.length_counter.apply_pending_values();
+        apu_regs.pulse_2.length_counter.apply_pending_values();
+        apu_regs.triangle.length_counter.apply_pending_values();
+        apu_regs.noise.length_counter.apply_pending_values();
+
+        apu_regs.triangle.tick();
+        apu_regs.dmc.tick(&mut bus.dmc_dma);
+
+        if clock.is_in_frame_irq_window() {
+            apu_regs.frame_irq_status = if clock.cpu_cycle() == 0 {
+                !apu_regs.suppress_frame_irq
             } else {
                 true
             };
+
+            if !apu_regs.suppress_frame_irq {
+                CpuPinout::assert_frame_irq(bus);
+            }
         }
     }
 
