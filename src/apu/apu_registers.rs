@@ -163,6 +163,7 @@ impl ApuRegisters {
             bus.apu_regs.counter_suppression_cycles -= 1;
         }
 
+        let mut force_half_frame = false;
         match bus.master_clock.apu_clock.parity {
             CycleParity::Get => {
                 let clock = &mut bus.master_clock.apu_clock;
@@ -178,8 +179,7 @@ impl ApuRegisters {
                     clock.reset();
                     clock.set_step_mode(apu_regs.pending_step_mode);
                     if clock.step_mode() == StepMode::FiveStep && apu_regs.counter_suppression_cycles == 0 {
-                        apu_regs.decrement_length_counters(clock);
-                        apu_regs.counter_suppression_cycles = 2;
+                        force_half_frame = true;
                     }
                 }
 
@@ -209,14 +209,14 @@ impl ApuRegisters {
             _ => (false, false),
         };
 
-        if quarter_frame {
+        if quarter_frame || force_half_frame {
             apu_regs.pulse_1.tick_envelope();
             apu_regs.pulse_2.tick_envelope();
             apu_regs.noise.tick_envelope();
             apu_regs.triangle.decrement_linear_counter();
             apu_regs.counter_suppression_cycles = 2;
 
-            if half_frame {
+            if half_frame || force_half_frame {
                 apu_regs.decrement_length_counters(clock);
                 apu_regs.pulse_1.tick_sweep();
                 apu_regs.pulse_2.tick_sweep();
